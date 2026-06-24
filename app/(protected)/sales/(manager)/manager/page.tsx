@@ -114,7 +114,7 @@ export default async function ManagerDashboard({
             <p className="text-[11px] text-[#AEAEB2] mt-0.5">Submitted today</p>
           </div>
           <Link
-            href={activeDate === today ? '/manager' : `/manager?date=${activeDate}`}
+            href={activeDate === today ? '/sales/manager' : `/sales/manager?date=${activeDate}`}
             className="flex items-center gap-1.5 text-[13px] text-[#6E6E73] hover:text-[#DC2626] transition border border-[#E5E5EA] rounded-xl px-3 py-2.5 bg-white hover:border-[#DC2626]"
             style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}
           >
@@ -163,10 +163,10 @@ export default async function ManagerDashboard({
       {/* Quick links */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { href: '/manager/activities', label: 'Activities',   desc: 'Edit tracked metrics' },
-          { href: '/manager/targets',    label: 'Targets',      desc: 'Set daily minimums' },
-          { href: '/manager/users',      label: 'Users',        desc: 'Manage team members' },
-          { href: '/manager/holidays',   label: 'Holidays',     desc: 'Mark non-working days' },
+          { href: '/sales/manager/activities', label: 'Activities',   desc: 'Edit tracked metrics' },
+          { href: '/sales/manager/targets',    label: 'Targets',      desc: 'Set daily minimums' },
+          { href: '/sales/manager/users',      label: 'Users',        desc: 'Manage team members' },
+          { href: '/sales/manager/holidays',   label: 'Holidays',     desc: 'Mark non-working days' },
         ].map(link => (
           <Link
             key={link.href}

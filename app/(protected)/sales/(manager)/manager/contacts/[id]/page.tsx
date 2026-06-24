@@ -441,14 +441,14 @@ export default function ManagerContactDetailPage({ params }: { params: Promise<{
                 <span className="text-[10px] text-[#AEAEB2]">Email</span>
               </a>
             )}
-            <Link href={`/manager/callbacks?contact=${id}`}
+            <Link href={`/sales/manager/followups?contact=${id}`}
               className="flex flex-col items-center gap-1 group cursor-pointer">
               <div className="w-9 h-9 rounded-full border border-[#E5E5EA] flex items-center justify-center group-hover:border-[#DC2626] group-hover:bg-red-50 transition">
                 <PhoneCall size={14} className="text-[#6E6E73] group-hover:text-[#DC2626]" />
               </div>
               <span className="text-[10px] text-[#AEAEB2]">Callback</span>
             </Link>
-            <Link href={`/manager/meetings?contact=${id}`}
+            <Link href={`/sales/manager/meetings?contact=${id}`}
               className="flex flex-col items-center gap-1 group cursor-pointer">
               <div className="w-9 h-9 rounded-full border border-[#E5E5EA] flex items-center justify-center group-hover:border-[#DC2626] group-hover:bg-red-50 transition">
                 <Calendar size={14} className="text-[#6E6E73] group-hover:text-[#DC2626]" />
@@ -1241,7 +1241,7 @@ export default function ManagerContactDetailPage({ params }: { params: Promise<{
             <p className="text-[11px] font-bold text-[#1D1D1F] uppercase tracking-wider">
               Callbacks ({followups.length})
             </p>
-            <Link href="/sales/manager/callbacks" className="text-[11px] text-[#DC2626] hover:underline">View all</Link>
+            <Link href="/sales/manager/followups" className="text-[11px] text-[#DC2626] hover:underline">View all</Link>
           </div>
           {followups.length === 0 ? (
             <p className="text-[12px] text-[#AEAEB2]">No callbacks yet</p>
