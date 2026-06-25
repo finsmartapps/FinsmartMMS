@@ -2,13 +2,10 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import * as XLSX from 'xlsx'
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@/lib/supabase/client'
 import type { Expense } from '@/lib/expenses/types'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+const supabase = createClient()
 
 // ── HELPERS ───────────────────────────────────────────────────────
 type FileEntry = { file: File; preview: string }
