@@ -125,12 +125,7 @@ function ModuleSection({
     '/sales/manager/access',
   ]
 
-  const isActiveSection = groups.some(g =>
-    g.links.some(l =>
-      exactRoots.includes(l.href) ? pathname === l.href : pathname.startsWith(l.href)
-    )
-  )
-  const [expanded, setExpanded] = useState(isActiveSection)
+  const [expanded, setExpanded] = useState(false)
 
   return (
     <div className="mb-2">
