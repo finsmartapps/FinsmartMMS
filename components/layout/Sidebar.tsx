@@ -120,12 +120,17 @@ function ModuleSection({
   pathname: string
   onNav?: () => void
 }) {
-  const [expanded, setExpanded] = useState(true)
-
   const exactRoots = [
     '/sales/manager', '/sales/telecaller', '/marketing', '/expenses',
     '/sales/manager/access',
   ]
+
+  const isActiveSection = groups.some(g =>
+    g.links.some(l =>
+      exactRoots.includes(l.href) ? pathname === l.href : pathname.startsWith(l.href)
+    )
+  )
+  const [expanded, setExpanded] = useState(isActiveSection)
 
   return (
     <div className="mb-2">
