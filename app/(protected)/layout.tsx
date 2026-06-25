@@ -10,7 +10,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('name, role, has_sales, has_marketing, has_expenses, is_active')
+    .select('name, role, has_sales, has_marketing, has_expenses, has_warehouse, is_active')
     .eq('id', user.id)
     .single()
 
@@ -37,6 +37,7 @@ export default async function ProtectedLayout({ children }: { children: React.Re
         hasSales={profile.has_sales}
         hasMarketing={profile.has_marketing}
         hasExpenses={profile.has_expenses}
+        hasWarehouse={profile.has_warehouse ?? false}
         allowedSalesModules={allowedSalesModules}
       />
       <div className="flex-1 min-w-0 overflow-y-auto pt-14 md:pt-0">

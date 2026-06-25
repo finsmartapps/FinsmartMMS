@@ -10,6 +10,7 @@ import {
   CalendarCheck, ListTodo, LogOut, Menu, X, Phone, BarChart2,
   Clock, BookUser, ShieldCheck, TrendingUp, ClipboardList,
   Inbox, Settings, Plane, ChevronDown, ChevronRight,
+  Package, CalendarDays, Truck, FileBarChart2,
 } from 'lucide-react'
 
 interface NavLink {
@@ -30,6 +31,7 @@ interface Props {
   hasSales: boolean
   hasMarketing: boolean
   hasExpenses: boolean
+  hasWarehouse: boolean
   allowedSalesModules: string[]
 }
 
@@ -98,6 +100,22 @@ const expenseGroups: NavGroup[] = [
   },
 ]
 
+// ── Warehouse nav ─────────────────────────────────────────────────────────────
+
+const warehouseGroups: NavGroup[] = [
+  {
+    label: null,
+    links: [
+      { href: '/warehouse',           label: 'Dashboard',  icon: LayoutDashboard },
+      { href: '/warehouse/inventory', label: 'Inventory',  icon: Package         },
+      { href: '/warehouse/events',    label: 'Events',     icon: CalendarDays    },
+      { href: '/warehouse/shipments', label: 'Shipments',  icon: Truck           },
+      { href: '/warehouse/reports',   label: 'Reports',    icon: FileBarChart2   },
+      { href: '/warehouse/settings',  label: 'Settings',   icon: Settings        },
+    ],
+  },
+]
+
 function filterByModules(groups: NavGroup[], allowedModules: string[]): NavGroup[] {
   if (!allowedModules.length) return groups
   return groups
@@ -121,7 +139,7 @@ function ModuleSection({
   onNav?: () => void
 }) {
   const exactRoots = [
-    '/sales/manager', '/sales/telecaller', '/marketing', '/expenses',
+    '/sales/manager', '/sales/telecaller', '/marketing', '/expenses', '/warehouse',
     '/sales/manager/access',
   ]
 
@@ -185,6 +203,7 @@ export function Sidebar({
   hasSales,
   hasMarketing,
   hasExpenses,
+  hasWarehouse,
   allowedSalesModules,
 }: Props) {
   const router = useRouter()
@@ -199,7 +218,8 @@ export function Sidebar({
   const homeHref = hasSales
     ? (salesRole === 'manager' ? '/sales/manager' : '/sales/telecaller')
     : hasMarketing ? '/marketing'
-    : '/expenses'
+    : hasExpenses ? '/expenses'
+    : '/warehouse'
 
   async function handleLogout() {
     setLoggingOut(true)
@@ -235,6 +255,15 @@ export function Sidebar({
             label="Expenses"
             color="bg-[#34C759]"
             groups={expenseGroups}
+            pathname={pathname}
+            onNav={onNav}
+          />
+        )}
+        {hasWarehouse && (
+          <ModuleSection
+            label="Warehouse"
+            color="bg-[#F97316]"
+            groups={warehouseGroups}
             pathname={pathname}
             onNav={onNav}
           />

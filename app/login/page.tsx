@@ -50,7 +50,7 @@ export default function LoginPage() {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, has_sales, has_marketing, has_expenses, is_active')
+      .select('role, has_sales, has_marketing, has_expenses, has_warehouse, is_active')
       .eq('id', data.user.id)
       .single()
 
@@ -67,6 +67,8 @@ export default function LoginPage() {
       router.push('/marketing')
     } else if (profile.has_expenses) {
       router.push('/expenses')
+    } else if (profile.has_warehouse) {
+      router.push('/warehouse')
     } else {
       setError('No modules assigned to your account. Contact your administrator.')
       await supabase.auth.signOut()
@@ -98,7 +100,7 @@ export default function LoginPage() {
     if (user) {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role, has_sales, has_marketing, has_expenses')
+        .select('role, has_sales, has_marketing, has_expenses, has_warehouse')
         .eq('id', user.id)
         .single()
       if (profile) {
@@ -106,6 +108,7 @@ export default function LoginPage() {
           if (profile.has_sales) router.push(profile.role === 'manager' ? '/sales/manager' : '/sales/telecaller')
           else if (profile.has_marketing) router.push('/marketing')
           else if (profile.has_expenses) router.push('/expenses')
+          else if (profile.has_warehouse) router.push('/warehouse')
         }, 1500)
       }
     }
