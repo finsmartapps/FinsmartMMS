@@ -415,40 +415,28 @@ function ExpenseManagerInner({ currentUser, onLogout }: { currentUser: AppUser; 
 
   return (
     <>
-      {/* HEADER */}
-      <header>
-        <div className="header-inner">
-          <div className="logo">
-            <div className="logo-icon">✈️</div>
-            <div className="logo-text">
-              <h1>Travel Expense Manager</h1>
-              <span>US Business Trip — June 2026</span>
-            </div>
-          </div>
-          <div className="header-badges">
-            {(Object.keys(CITIES) as CityKey[]).map(k => (
-              <div key={k} className={`city-badge ${k}`}>{CITIES[k].emoji} {CITIES[k].short}</div>
-            ))}
-          </div>
-          <div className="header-actions">
-            <button className="btn-print"
-              onClick={() => downloadAllReceipts(expenses, showToast, setDownloading)}
-              disabled={downloading || totalPhotos === 0}
-              title="Download all receipts as ZIP">
-              {downloading ? '⏳ Bundling…' : `📎 Receipts ZIP (${totalPhotos})`}
-            </button>
-            <button className="btn-print" onClick={() => exportXLS(expenses)} disabled={!expenses.length}>
-              📊 Export XLS
-            </button>
-            <button className="btn-print" onClick={() => window.print()}>🖨️ Print</button>
-            <div className="header-user">
-              <div className="user-avatar sm" style={{ background: currentUser.color }}>{currentUser.initials}</div>
-              <span className="header-username">{currentUser.name.split(' ')[0]}</span>
-            </div>
-            <button className="btn-logout" onClick={onLogout}>🔒 Logout</button>
+      {/* PAGE TITLE BAR */}
+      <div className="exp-page-header">
+        <div className="exp-page-title">
+          <span className="exp-page-icon">✈️</span>
+          <div>
+            <h2 className="exp-page-heading">Travel Expenses</h2>
+            <span className="exp-page-sub">US Business Trip — June 2026</span>
           </div>
         </div>
-      </header>
+        <div className="exp-page-actions">
+          <button className="exp-action-btn"
+            onClick={() => downloadAllReceipts(expenses, showToast, setDownloading)}
+            disabled={downloading || totalPhotos === 0}
+            title="Download all receipts as ZIP">
+            {downloading ? '⏳ Bundling…' : `📎 Receipts ZIP (${totalPhotos})`}
+          </button>
+          <button className="exp-action-btn" onClick={() => exportXLS(expenses)} disabled={!expenses.length}>
+            📊 Export XLS
+          </button>
+          <button className="exp-action-btn" onClick={() => window.print()}>🖨️ Print</button>
+        </div>
+      </div>
 
       {/* PRINT HEADER */}
       <div className="print-header">

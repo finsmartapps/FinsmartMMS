@@ -27,55 +27,40 @@
   color: var(--exp-text);
 }
 
-.expense-module header {
-  background: linear-gradient(135deg, var(--exp-primary) 0%, var(--exp-primary-light) 60%, #3b6fd4 100%);
-  color: #fff;
-  padding: 0 32px;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  box-shadow: 0 2px 16px rgba(26,60,110,0.25);
+/* Page title bar — fits inside app shell */
+.expense-module .exp-page-header {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+  padding: 24px 28px 0;
 }
-.expense-module .header-inner {
-  max-width: 1300px; margin: 0 auto;
-  display: flex; align-items: center; justify-content: space-between;
-  height: 72px; gap: 20px;
+.expense-module .exp-page-title {
+  display: flex; align-items: center; gap: 12px;
 }
-.expense-module .logo { display: flex; align-items: center; gap: 12px; }
-.expense-module .logo-icon {
-  width: 42px; height: 42px; background: rgba(255,255,255,0.15);
-  border-radius: 10px; display: grid; place-items: center; font-size: 20px;
+.expense-module .exp-page-icon {
+  font-size: 28px; line-height: 1;
 }
-.expense-module .logo-text h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
-.expense-module .logo-text span { font-size: 12px; opacity: 0.75; }
-.expense-module .header-badges { display: flex; gap: 8px; }
-.expense-module .city-badge {
-  padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 600;
-  letter-spacing: 0.3px; display: flex; align-items: center; gap: 6px;
+.expense-module .exp-page-heading {
+  font-size: 22px; font-weight: 700; color: var(--exp-text); margin: 0; letter-spacing: -0.3px;
 }
-.expense-module .city-badge.lv { background: rgba(180,100,210,0.25); border: 1px solid rgba(180,100,210,0.4); }
-.expense-module .city-badge.or { background: rgba(40,180,100,0.2);  border: 1px solid rgba(40,180,100,0.35); }
-.expense-module .city-badge.tx { background: rgba(220,110,20,0.2);  border: 1px solid rgba(220,110,20,0.35); }
-.expense-module .city-badge.nj { background: rgba(50,140,210,0.2);  border: 1px solid rgba(50,140,210,0.35); }
-.expense-module .btn-print {
-  background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25);
-  color: #fff; padding: 8px 18px; border-radius: var(--exp-radius-sm);
-  font-size: 13px; font-weight: 600; cursor: pointer;
-  display: flex; align-items: center; gap: 7px; transition: background 0.2s;
+.expense-module .exp-page-sub {
+  font-size: 12px; color: var(--exp-text-muted); margin-top: 2px; display: block;
 }
-.expense-module .btn-print:hover:not(:disabled) { background: rgba(255,255,255,0.25); }
-.expense-module .btn-print:disabled { opacity: 0.45; cursor: not-allowed; }
-.expense-module .header-actions { display: flex; gap: 8px; align-items: center; }
-.expense-module .header-user { display: flex; align-items: center; gap: 8px; }
-.expense-module .header-username { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.9); }
-.expense-module .btn-logout {
-  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
-  color: rgba(255,255,255,0.85); padding: 6px 12px; border-radius: var(--exp-radius-sm);
-  font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+.expense-module .exp-page-actions {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
 }
-.expense-module .btn-logout:hover { background: rgba(255,255,255,0.22); color: #fff; }
+.expense-module .exp-action-btn {
+  background: #fff; border: 1px solid var(--exp-border); color: var(--exp-text-muted);
+  padding: 7px 14px; border-radius: var(--exp-radius-sm);
+  font-size: 12px; font-weight: 600; cursor: pointer;
+  display: flex; align-items: center; gap: 6px;
+  transition: border-color 0.15s, color 0.15s, background 0.15s;
+  box-shadow: var(--exp-shadow-sm);
+}
+.expense-module .exp-action-btn:hover:not(:disabled) {
+  border-color: var(--exp-primary-light); color: var(--exp-primary); background: #f4f7fb;
+}
+.expense-module .exp-action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
 
-.expense-module .container { max-width: 1300px; margin: 0 auto; padding: 32px 24px 60px; }
+.expense-module .container { max-width: 1300px; margin: 0 auto; padding: 20px 28px 60px; }
 
 .expense-module .summary-grid {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
