@@ -12,35 +12,53 @@ async function assertManager() {
   return { user, db, authAdmin }
 }
 
-// GET — list all profiles
+// GET — list all profiles with module flags
 export async function GET() {
   const { user, db } = await assertManager()
   if (!user || !db) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   const { data: users, error } = await db
-    .from('profiles').select('id, name, email, role, is_active, created_at')
-    .order('role').order('name')
+    .from('profiles')
+    .select('id, name, email, role, is_active, has_sales, has_marketing, has_expenses, has_warehouse, created_at')
+    .order('name')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ users })
 }
 
-// POST — create user
+// POST — create user with module access
 export async function POST(req: NextRequest) {
   const { user, db, authAdmin } = await assertManager()
   if (!user || !db || !authAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
-  const { name, email, password, role } = await req.json()
+
+  const { name, email, password, role, has_sales, has_marketing, has_expenses, has_warehouse } = await req.json()
+
   if (!name?.trim() || !email?.trim() || !password?.trim())
     return NextResponse.json({ error: 'Name, email and password are required.' }, { status: 400 })
   if (password.length < 6)
     return NextResponse.json({ error: 'Password must be at least 6 characters.' }, { status: 400 })
-  if (!['manager', 'telecaller'].includes(role))
-    return NextResponse.json({ error: 'Invalid role.' }, { status: 400 })
+  if (!has_sales && !has_marketing && !has_expenses && !has_warehouse)
+    return NextResponse.json({ error: 'Select at least one module.' }, { status: 400 })
+  if (has_sales && !['manager', 'telecaller'].includes(role))
+    return NextResponse.json({ error: 'Select a valid role for Sales access.' }, { status: 400 })
+
   const { data: authData, error: authError } = await authAdmin.auth.admin.createUser({
-    email: email.trim(), password, email_confirm: true,
-    user_metadata: { name: name.trim(), role },
+    email: email.trim(),
+    password,
+    email_confirm: true,
+    user_metadata: { name: name.trim(), role: has_sales ? role : null },
   })
   if (authError) return NextResponse.json({ error: authError.message }, { status: 400 })
-  const { error: profileError } = await db.from('profiles')
-    .insert({ id: authData.user.id, name: name.trim(), email: email.trim(), role })
+
+  const { error: profileError } = await db.from('profiles').insert({
+    id: authData.user.id,
+    name: name.trim(),
+    email: email.trim(),
+    role: has_sales ? role : null,
+    has_sales: Boolean(has_sales),
+    has_marketing: Boolean(has_marketing),
+    has_expenses: Boolean(has_expenses),
+    has_warehouse: Boolean(has_warehouse),
+  })
+
   if (profileError) {
     await authAdmin.auth.admin.deleteUser(authData.user.id)
     return NextResponse.json({ error: profileError.message }, { status: 500 })
@@ -48,21 +66,31 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ success: true })
 }
 
-// PATCH — update role and/or is_active
+// PATCH — update role, is_active, and/or module flags
 export async function PATCH(req: NextRequest) {
   const { user, db } = await assertManager()
   if (!user || !db) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
   const body = await req.json()
   const { id, ...fields } = body
   if (!id) return NextResponse.json({ error: 'ID required.' }, { status: 400 })
+
   const updates: Record<string, unknown> = {}
+
   if ('is_active' in fields) updates.is_active = Boolean(fields.is_active)
+
   if ('role' in fields) {
-    if (!['manager', 'telecaller'].includes(fields.role))
+    if (fields.role !== null && !['manager', 'telecaller'].includes(fields.role))
       return NextResponse.json({ error: 'Invalid role.' }, { status: 400 })
-    updates.role = fields.role
+    updates.role = fields.role ?? null
   }
+
+  for (const key of ['has_sales', 'has_marketing', 'has_expenses', 'has_warehouse'] as const) {
+    if (key in fields) updates[key] = Boolean(fields[key])
+  }
+
   if (!Object.keys(updates).length) return NextResponse.json({ error: 'Nothing to update.' }, { status: 400 })
+
   const { error } = await db.from('profiles').update(updates).eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
