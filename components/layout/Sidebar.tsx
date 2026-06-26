@@ -9,7 +9,7 @@ import {
   LayoutDashboard, CalendarCheck, ListTodo, LogOut, Menu, X,
   Phone, BarChart2, BookUser, TrendingUp, ClipboardList,
   Inbox, Settings, Plane, ChevronDown, ChevronRight,
-  Package, CalendarDays, Truck, FileBarChart2,
+  Package, CalendarDays, Truck, FileBarChart2, Users,
 } from 'lucide-react'
 
 interface NavLink {
@@ -89,6 +89,17 @@ const expenseGroups: NavGroup[] = [
   },
 ]
 
+// ── Admin nav ─────────────────────────────────────────────────────────────────
+
+const adminGroups: NavGroup[] = [
+  {
+    label: null,
+    links: [
+      { href: '/settings', label: 'Users & Access', icon: Users },
+    ],
+  },
+]
+
 // ── Warehouse nav ─────────────────────────────────────────────────────────────
 
 const warehouseGroups: NavGroup[] = [
@@ -116,7 +127,7 @@ function filterByModules(groups: NavGroup[], allowedModules: string[]): NavGroup
 
 const exactRoots = [
   '/sales/manager', '/sales/telecaller', '/marketing', '/expenses', '/warehouse',
-  '/sales/manager/settings',
+  '/sales/manager/settings', '/settings',
 ]
 
 function ModuleSection({
@@ -197,13 +208,14 @@ interface NavContentProps {
   hasMarketing: boolean
   hasExpenses: boolean
   hasWarehouse: boolean
+  isManager: boolean
   salesGroups: NavGroup[]
   pathname: string
   onNav?: () => void
 }
 
 function NavContent({
-  hasSales, hasMarketing, hasExpenses, hasWarehouse,
+  hasSales, hasMarketing, hasExpenses, hasWarehouse, isManager,
   salesGroups, pathname, onNav,
 }: NavContentProps) {
   return (
@@ -240,6 +252,15 @@ function NavContent({
           label="Warehouse"
           color="bg-[#F97316]"
           groups={warehouseGroups}
+          pathname={pathname}
+          onNav={onNav}
+        />
+      )}
+      {isManager && (
+        <ModuleSection
+          label="Admin"
+          color="bg-[#6E6E73]"
+          groups={adminGroups}
           pathname={pathname}
           onNav={onNav}
         />
@@ -320,6 +341,7 @@ export function Sidebar({
 
   const navProps: NavContentProps = {
     hasSales, hasMarketing, hasExpenses, hasWarehouse, salesGroups, pathname,
+    isManager: salesRole === 'manager',
   }
   const footerProps: FooterProps = {
     userName, salesRole, hasMarketing, loggingOut, onLogout: handleLogout,
