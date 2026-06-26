@@ -6,9 +6,8 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import {
-  LayoutDashboard, Activity, Target, Users, Calendar,
-  CalendarCheck, ListTodo, LogOut, Menu, X, Phone, BarChart2,
-  Clock, BookUser, ShieldCheck, TrendingUp, ClipboardList,
+  LayoutDashboard, CalendarCheck, ListTodo, LogOut, Menu, X,
+  Phone, BarChart2, BookUser, TrendingUp, ClipboardList,
   Inbox, Settings, Plane, ChevronDown, ChevronRight,
   Package, CalendarDays, Truck, FileBarChart2,
 } from 'lucide-react'
@@ -46,17 +45,7 @@ const managerGroups: NavGroup[] = [
       { href: '/sales/manager/meetings',  label: 'Meetings',  icon: CalendarCheck,   module: 'meetings'  },
       { href: '/sales/manager/followups', label: 'Callbacks', icon: ListTodo,        module: 'callbacks' },
       { href: '/sales/manager/reports',   label: 'Reports',   icon: BarChart2,       module: 'reports'   },
-    ],
-  },
-  {
-    label: 'Settings',
-    links: [
-      { href: '/sales/manager/activities', label: 'Activities',   icon: Activity,    module: 'activities' },
-      { href: '/sales/manager/targets',    label: 'Targets',      icon: Target,      module: 'targets'    },
-      { href: '/sales/manager/users',      label: 'Users',        icon: Users,       module: 'users'      },
-      { href: '/sales/manager/holidays',   label: 'Holidays',     icon: Calendar,    module: 'holidays'   },
-      { href: '/sales/manager/timings',    label: 'Settings',     icon: Clock,       module: 'settings'   },
-      { href: '/sales/manager/access',     label: 'Module Access',icon: ShieldCheck, module: 'settings'   },
+      { href: '/sales/manager/settings',  label: 'Settings',  icon: Settings,        module: 'settings'  },
     ],
   },
 ]
@@ -127,7 +116,7 @@ function filterByModules(groups: NavGroup[], allowedModules: string[]): NavGroup
 
 const exactRoots = [
   '/sales/manager', '/sales/telecaller', '/marketing', '/expenses', '/warehouse',
-  '/sales/manager/access',
+  '/sales/manager/settings',
 ]
 
 function ModuleSection({
