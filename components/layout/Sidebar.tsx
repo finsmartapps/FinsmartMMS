@@ -27,7 +27,7 @@ interface NavGroup {
 
 interface Props {
   userName: string
-  salesRole: 'manager' | 'telecaller' | null  // profile.role
+  salesRole: 'manager' | 'telecaller' | null
   hasSales: boolean
   hasMarketing: boolean
   hasExpenses: boolean
@@ -125,6 +125,11 @@ function filterByModules(groups: NavGroup[], allowedModules: string[]): NavGroup
 
 // ── Module section ────────────────────────────────────────────────────────────
 
+const exactRoots = [
+  '/sales/manager', '/sales/telecaller', '/marketing', '/expenses', '/warehouse',
+  '/sales/manager/access',
+]
+
 function ModuleSection({
   label,
   color,
@@ -138,12 +143,13 @@ function ModuleSection({
   pathname: string
   onNav?: () => void
 }) {
-  const exactRoots = [
-    '/sales/manager', '/sales/telecaller', '/marketing', '/expenses', '/warehouse',
-    '/sales/manager/access',
-  ]
+  const isCurrentSection = groups.some(g =>
+    g.links.some(({ href }) =>
+      exactRoots.includes(href) ? pathname === href : pathname.startsWith(href)
+    )
+  )
 
-  const [expanded, setExpanded] = useState(false)
+  const [expanded, setExpanded] = useState(isCurrentSection)
 
   return (
     <div className="mb-2">
@@ -195,6 +201,100 @@ function ModuleSection({
   )
 }
 
+// ── Nav content (must be outside Sidebar to avoid remounting on re-renders) ───
+
+interface NavContentProps {
+  hasSales: boolean
+  hasMarketing: boolean
+  hasExpenses: boolean
+  hasWarehouse: boolean
+  salesGroups: NavGroup[]
+  pathname: string
+  onNav?: () => void
+}
+
+function NavContent({
+  hasSales, hasMarketing, hasExpenses, hasWarehouse,
+  salesGroups, pathname, onNav,
+}: NavContentProps) {
+  return (
+    <div className="space-y-1">
+      {hasSales && (
+        <ModuleSection
+          label="Sales"
+          color="bg-[#DC2626]"
+          groups={salesGroups}
+          pathname={pathname}
+          onNav={onNav}
+        />
+      )}
+      {hasMarketing && (
+        <ModuleSection
+          label="Marketing"
+          color="bg-[#007AFF]"
+          groups={marketingGroups}
+          pathname={pathname}
+          onNav={onNav}
+        />
+      )}
+      {hasExpenses && (
+        <ModuleSection
+          label="Expenses"
+          color="bg-[#34C759]"
+          groups={expenseGroups}
+          pathname={pathname}
+          onNav={onNav}
+        />
+      )}
+      {hasWarehouse && (
+        <ModuleSection
+          label="Warehouse"
+          color="bg-[#F97316]"
+          groups={warehouseGroups}
+          pathname={pathname}
+          onNav={onNav}
+        />
+      )}
+    </div>
+  )
+}
+
+// ── Footer (must be outside Sidebar to avoid remounting on re-renders) ────────
+
+interface FooterProps {
+  userName: string
+  salesRole: 'manager' | 'telecaller' | null
+  hasMarketing: boolean
+  loggingOut: boolean
+  onLogout: () => void
+}
+
+function Footer({ userName, salesRole, hasMarketing, loggingOut, onLogout }: FooterProps) {
+  return (
+    <div className="px-3 pb-4 pt-3 border-t border-[#F2F2F7]">
+      <div className="flex items-center gap-2.5 px-3 py-2 mb-1">
+        <div className="w-8 h-8 rounded-full gradient-brand flex items-center justify-center flex-shrink-0">
+          <span className="text-white text-xs font-bold">{userName.charAt(0).toUpperCase()}</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[13px] font-semibold text-[#1D1D1F] truncate leading-tight">{userName}</p>
+          <p className="text-[11px] text-[#AEAEB2] capitalize leading-tight">
+            {salesRole ?? (hasMarketing ? 'marketing' : 'staff')}
+          </p>
+        </div>
+      </div>
+      <button
+        onClick={onLogout}
+        disabled={loggingOut}
+        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] text-[#6E6E73] hover:text-[#DC2626] hover:bg-red-50 transition font-medium"
+      >
+        <LogOut size={15} />
+        Sign out
+      </button>
+    </div>
+  )
+}
+
 // ── Main sidebar ──────────────────────────────────────────────────────────────
 
 export function Sidebar({
@@ -229,73 +329,11 @@ export function Sidebar({
     router.refresh()
   }
 
-  function NavContent({ onNav }: { onNav?: () => void }) {
-    return (
-      <div className="space-y-1">
-        {hasSales && (
-          <ModuleSection
-            label="Sales"
-            color="bg-[#DC2626]"
-            groups={salesGroups}
-            pathname={pathname}
-            onNav={onNav}
-          />
-        )}
-        {hasMarketing && (
-          <ModuleSection
-            label="Marketing"
-            color="bg-[#007AFF]"
-            groups={marketingGroups}
-            pathname={pathname}
-            onNav={onNav}
-          />
-        )}
-        {hasExpenses && (
-          <ModuleSection
-            label="Expenses"
-            color="bg-[#34C759]"
-            groups={expenseGroups}
-            pathname={pathname}
-            onNav={onNav}
-          />
-        )}
-        {hasWarehouse && (
-          <ModuleSection
-            label="Warehouse"
-            color="bg-[#F97316]"
-            groups={warehouseGroups}
-            pathname={pathname}
-            onNav={onNav}
-          />
-        )}
-      </div>
-    )
+  const navProps: NavContentProps = {
+    hasSales, hasMarketing, hasExpenses, hasWarehouse, salesGroups, pathname,
   }
-
-  function Footer() {
-    return (
-      <div className="px-3 pb-4 pt-3 border-t border-[#F2F2F7]">
-        <div className="flex items-center gap-2.5 px-3 py-2 mb-1">
-          <div className="w-8 h-8 rounded-full gradient-brand flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-xs font-bold">{userName.charAt(0).toUpperCase()}</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[13px] font-semibold text-[#1D1D1F] truncate leading-tight">{userName}</p>
-            <p className="text-[11px] text-[#AEAEB2] capitalize leading-tight">
-              {salesRole ?? (hasMarketing ? 'marketing' : 'staff')}
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={handleLogout}
-          disabled={loggingOut}
-          className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-[13px] text-[#6E6E73] hover:text-[#DC2626] hover:bg-red-50 transition font-medium"
-        >
-          <LogOut size={15} />
-          Sign out
-        </button>
-      </div>
-    )
+  const footerProps: FooterProps = {
+    userName, salesRole, hasMarketing, loggingOut, onLogout: handleLogout,
   }
 
   return (
@@ -315,10 +353,10 @@ export function Sidebar({
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <NavContent />
+          <NavContent {...navProps} />
         </nav>
 
-        <Footer />
+        <Footer {...footerProps} />
       </aside>
 
       {/* Mobile top bar */}
@@ -367,9 +405,9 @@ export function Sidebar({
           </button>
         </div>
         <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <NavContent onNav={() => setOpen(false)} />
+          <NavContent {...navProps} onNav={() => setOpen(false)} />
         </nav>
-        <Footer />
+        <Footer {...footerProps} />
       </div>
     </>
   )
