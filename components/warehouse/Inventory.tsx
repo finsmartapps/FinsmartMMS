@@ -26,13 +26,34 @@ const EMPTY_ITEM: WmsItem = {
   quantity: 0, unit: 'pcs', minStock: 5, notes: '', location: '', images: [], createdAt: '',
 }
 
+async function compressImage(file: File, maxDim = 1200, quality = 0.82): Promise<Blob> {
+  return new Promise((resolve) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      URL.revokeObjectURL(url)
+      let { width, height } = img
+      if (width > maxDim || height > maxDim) {
+        if (width > height) { height = Math.round(height * maxDim / width); width = maxDim }
+        else { width = Math.round(width * maxDim / height); height = maxDim }
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width; canvas.height = height
+      canvas.getContext('2d')!.drawImage(img, 0, 0, width, height)
+      canvas.toBlob(blob => resolve(blob ?? file), 'image/jpeg', quality)
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file) }
+    img.src = url
+  })
+}
+
 async function uploadItemImages(files: File[], itemId: string): Promise<string[]> {
   const supabase = createClient()
   const urls: string[] = []
   for (const file of files) {
-    const ext = file.name.split('.').pop()
-    const path = `${itemId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    const { error } = await supabase.storage.from('wms-item-images').upload(path, file, { upsert: false })
+    const compressed = await compressImage(file)
+    const path = `${itemId}/${Date.now()}-${Math.random().toString(36).slice(2)}.jpg`
+    const { error } = await supabase.storage.from('wms-item-images').upload(path, compressed, { upsert: false, contentType: 'image/jpeg' })
     if (!error) {
       const { data } = supabase.storage.from('wms-item-images').getPublicUrl(path)
       urls.push(data.publicUrl)
