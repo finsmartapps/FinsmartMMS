@@ -496,7 +496,7 @@ export default function Inventory({ data, addItem, updateItem, deleteItem }: {
           <button onClick={handleExport} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 text-xs font-semibold transition-all">
             <FileDown size={15} /> Export XLS
           </button>
-          <button onClick={() => setModal({ ...EMPTY_ITEM, label: getNextLabel(items) })} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all shadow-lg shadow-blue-500/20">
+          <button onClick={() => setModal({ ...EMPTY_ITEM })} className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all shadow-lg shadow-blue-500/20">
             <Plus size={15} /> Add Item
           </button>
         </div>
