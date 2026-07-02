@@ -10,6 +10,7 @@ import {
   Phone, BarChart2, BookUser, TrendingUp, ClipboardList,
   Inbox, Settings, Plane, ChevronDown, ChevronRight,
   Package, CalendarDays, Truck, FileBarChart2, Users,
+  Megaphone, Trophy, LayoutList,
 } from 'lucide-react'
 
 interface NavLink {
@@ -31,6 +32,7 @@ interface Props {
   hasMarketing: boolean
   hasExpenses: boolean
   hasWarehouse: boolean
+  hasAdvocacy: boolean
   allowedSalesModules: string[]
 }
 
@@ -127,7 +129,7 @@ function filterByModules(groups: NavGroup[], allowedModules: string[]): NavGroup
 
 const exactRoots = [
   '/sales/manager', '/sales/telecaller', '/marketing', '/expenses', '/warehouse',
-  '/sales/manager/settings', '/settings',
+  '/sales/manager/settings', '/settings', '/advocacy',
 ]
 
 function ModuleSection({
@@ -208,14 +210,26 @@ interface NavContentProps {
   hasMarketing: boolean
   hasExpenses: boolean
   hasWarehouse: boolean
+  hasAdvocacy: boolean
   isManager: boolean
   salesGroups: NavGroup[]
   pathname: string
   onNav?: () => void
 }
 
+function getAdvocacyGroups(isAdmin: boolean): NavGroup[] {
+  const links: NavLink[] = [
+    { href: '/advocacy',             label: 'Mission Feed',    icon: Megaphone  },
+    { href: '/advocacy/leaderboard', label: 'Leaderboard',     icon: Trophy     },
+  ]
+  if (isAdmin) {
+    links.push({ href: '/advocacy/admin', label: 'Manage Missions', icon: LayoutList })
+  }
+  return [{ label: null, links }]
+}
+
 function NavContent({
-  hasSales, hasMarketing, hasExpenses, hasWarehouse, isManager,
+  hasSales, hasMarketing, hasExpenses, hasWarehouse, hasAdvocacy, isManager,
   salesGroups, pathname, onNav,
 }: NavContentProps) {
   return (
@@ -252,6 +266,15 @@ function NavContent({
           label="Warehouse"
           color="bg-[#F97316]"
           groups={warehouseGroups}
+          pathname={pathname}
+          onNav={onNav}
+        />
+      )}
+      {hasAdvocacy && (
+        <ModuleSection
+          label="Advocacy"
+          color="bg-[#5856D6]"
+          groups={getAdvocacyGroups(isManager || hasMarketing)}
           pathname={pathname}
           onNav={onNav}
         />
@@ -314,6 +337,7 @@ export function Sidebar({
   hasMarketing,
   hasExpenses,
   hasWarehouse,
+  hasAdvocacy,
   allowedSalesModules,
 }: Props) {
   const router = useRouter()
@@ -340,7 +364,7 @@ export function Sidebar({
   }
 
   const navProps: NavContentProps = {
-    hasSales, hasMarketing, hasExpenses, hasWarehouse, salesGroups, pathname,
+    hasSales, hasMarketing, hasExpenses, hasWarehouse, hasAdvocacy, salesGroups, pathname,
     isManager: salesRole === 'manager',
   }
   const footerProps: FooterProps = {

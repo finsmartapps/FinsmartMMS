@@ -153,3 +153,29 @@ export interface FollowUp {
   created_at: string
   updated_at: string
 }
+
+// ── Advocacy Module ───────────────────────────────────────────────────────────
+export type MissionType = 'follow' | 'like' | 'comment' | 'share' | 'original_post'
+export type MissionStatus = 'draft' | 'active' | 'ended'
+
+export interface AdvocacyMission {
+  id: string
+  title: string
+  type: MissionType
+  description: string | null
+  post_copy: string | null
+  linkedin_url: string | null
+  points: number
+  deadline: string | null
+  status: MissionStatus
+  created_by: string | null
+  created_at: string
+}
+
+export const MISSION_POINTS: Record<MissionType, number> = {
+  follow:        5,
+  like:          2,
+  comment:       5,
+  share:         10,
+  original_post: 15,
+}
