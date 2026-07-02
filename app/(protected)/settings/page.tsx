@@ -9,20 +9,35 @@ type Role = 'manager' | 'telecaller'
 interface UserRow {
   id: string; name: string; email: string; role: Role | null
   is_active: boolean
-  has_sales: boolean; has_marketing: boolean; has_expenses: boolean; has_warehouse: boolean
+  has_sales: boolean; has_marketing: boolean; has_expenses: boolean
+  has_warehouse: boolean; has_advocacy: boolean
   created_at: string
 }
 
-const MODULES_LIST = [
-  { key: 'has_sales'     as const, label: 'Sales',     dot: 'bg-[#DC2626]' },
-  { key: 'has_marketing' as const, label: 'Marketing', dot: 'bg-[#007AFF]' },
-  { key: 'has_expenses'  as const, label: 'Expenses',  dot: 'bg-[#34C759]' },
-  { key: 'has_warehouse' as const, label: 'Warehouse', dot: 'bg-[#F97316]' },
+type ModuleKey = 'has_sales' | 'has_marketing' | 'has_expenses' | 'has_warehouse' | 'has_advocacy'
+type TabKey = 'all' | 'sales' | 'marketing' | 'expenses' | 'warehouse' | 'advocacy'
+
+const MODULES_LIST: { key: ModuleKey; label: string; dot: string; tab: TabKey }[] = [
+  { key: 'has_sales',     label: 'Sales',     dot: 'bg-[#DC2626]', tab: 'sales'     },
+  { key: 'has_marketing', label: 'Marketing', dot: 'bg-[#007AFF]', tab: 'marketing' },
+  { key: 'has_expenses',  label: 'Expenses',  dot: 'bg-[#34C759]', tab: 'expenses'  },
+  { key: 'has_warehouse', label: 'Warehouse', dot: 'bg-[#F97316]', tab: 'warehouse' },
+  { key: 'has_advocacy',  label: 'Advocacy',  dot: 'bg-[#5856D6]', tab: 'advocacy'  },
+]
+
+const TABS: { key: TabKey; label: string; color: string }[] = [
+  { key: 'all',       label: 'All',       color: 'text-[#1D1D1F]'  },
+  { key: 'sales',     label: 'Sales',     color: 'text-[#DC2626]'  },
+  { key: 'marketing', label: 'Marketing', color: 'text-[#007AFF]'  },
+  { key: 'expenses',  label: 'Expenses',  color: 'text-[#34C759]'  },
+  { key: 'warehouse', label: 'Warehouse', color: 'text-[#F97316]'  },
+  { key: 'advocacy',  label: 'Advocacy',  color: 'text-[#5856D6]'  },
 ]
 
 const BLANK_FORM = {
   name: '', email: '', password: '', role: 'telecaller' as Role,
-  has_sales: false, has_marketing: false, has_expenses: false, has_warehouse: false,
+  has_sales: false, has_marketing: false, has_expenses: false,
+  has_warehouse: false, has_advocacy: false,
 }
 
 const inputCls = 'w-full border border-[#E5E5EA] rounded-xl px-3 py-2.5 text-sm text-[#1D1D1F] focus:outline-none focus:border-[#DC2626] focus:ring-2 focus:ring-[#DC2626]/10 transition bg-[#FAFAFA] placeholder-[#AEAEB2]'
@@ -59,6 +74,7 @@ export default function SettingsPage() {
   const [toast, setToast]               = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null)
   const [savingId, setSavingId]         = useState<string | null>(null)
+  const [activeTab, setActiveTab]       = useState<TabKey>('all')
 
   // Add user modal
   const [showAdd, setShowAdd]   = useState(false)
@@ -69,8 +85,8 @@ export default function SettingsPage() {
   // Edit access modal
   const [editUser, setEditUser] = useState<UserRow | null>(null)
   const [editAccess, setEditAccess] = useState({
-    has_sales: false, has_marketing: false, has_expenses: false, has_warehouse: false,
-    role: 'telecaller' as Role,
+    has_sales: false, has_marketing: false, has_expenses: false,
+    has_warehouse: false, has_advocacy: false, role: 'telecaller' as Role,
   })
   const [accessError, setAccessError] = useState('')
   const [savingAccess, setSavingAccess] = useState(false)
@@ -88,9 +104,37 @@ export default function SettingsPage() {
 
   useEffect(() => { fetchUsers() }, [fetchUsers])
 
+  // Filtered list for active tab
+  const filteredUsers = activeTab === 'all'
+    ? users
+    : users.filter(u => {
+        const m = MODULES_LIST.find(x => x.tab === activeTab)
+        return m ? u[m.key] : true
+      })
+
+  // Count per tab
+  function tabCount(tab: TabKey) {
+    if (tab === 'all') return users.length
+    const m = MODULES_LIST.find(x => x.tab === tab)
+    return m ? users.filter(u => u[m.key]).length : 0
+  }
+
+  function openAddModal() {
+    const preset = { ...BLANK_FORM }
+    if (activeTab !== 'all') {
+      const m = MODULES_LIST.find(x => x.tab === activeTab)
+      if (m) (preset as Record<string, unknown>)[m.key] = true
+    }
+    setForm(preset); setFormError(''); setShowAdd(true)
+  }
+
   function openEditModal(u: UserRow) {
     setEditUser(u)
-    setEditAccess({ has_sales: u.has_sales, has_marketing: u.has_marketing, has_expenses: u.has_expenses, has_warehouse: u.has_warehouse, role: u.role ?? 'telecaller' })
+    setEditAccess({
+      has_sales: u.has_sales, has_marketing: u.has_marketing,
+      has_expenses: u.has_expenses, has_warehouse: u.has_warehouse,
+      has_advocacy: u.has_advocacy, role: u.role ?? 'telecaller',
+    })
     setAccessError('')
   }
 
@@ -98,7 +142,8 @@ export default function SettingsPage() {
     setFormError('')
     if (!form.name.trim() || !form.email.trim() || !form.password.trim()) { setFormError('All fields are required.'); return }
     if (form.password.length < 6) { setFormError('Password must be at least 6 characters.'); return }
-    if (!form.has_sales && !form.has_marketing && !form.has_expenses && !form.has_warehouse) { setFormError('Select at least one module.'); return }
+    const anyModule = MODULES_LIST.some(m => form[m.key])
+    if (!anyModule) { setFormError('Select at least one module.'); return }
     setCreating(true)
     const res = await fetch('/api/manager/users', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
     const data = await res.json()
@@ -111,9 +156,8 @@ export default function SettingsPage() {
   async function handleSaveAccess() {
     if (!editUser) return
     setAccessError('')
-    if (!editAccess.has_sales && !editAccess.has_marketing && !editAccess.has_expenses && !editAccess.has_warehouse) {
-      setAccessError('Select at least one module.'); return
-    }
+    const anyModule = MODULES_LIST.some(m => editAccess[m.key])
+    if (!anyModule) { setAccessError('Select at least one module.'); return }
     setSavingAccess(true)
     const res = await fetch('/api/manager/users', {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
@@ -121,6 +165,7 @@ export default function SettingsPage() {
         id: editUser.id,
         has_sales: editAccess.has_sales, has_marketing: editAccess.has_marketing,
         has_expenses: editAccess.has_expenses, has_warehouse: editAccess.has_warehouse,
+        has_advocacy: editAccess.has_advocacy,
         role: editAccess.has_sales ? editAccess.role : null,
       }),
     })
@@ -177,11 +222,37 @@ export default function SettingsPage() {
             </div>
           </div>
           <button
-            onClick={() => { setShowAdd(true); setFormError(''); setForm(BLANK_FORM) }}
+            onClick={openAddModal}
             className="flex items-center gap-1.5 bg-[#DC2626] text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl hover:bg-[#B91C1C] transition"
           >
             <Plus size={15} /> Add User
           </button>
+        </div>
+
+        {/* Tabs */}
+        <div className="flex items-center gap-1 px-6 pt-3 pb-0 border-b border-[#F2F2F7] overflow-x-auto">
+          {TABS.map(tab => {
+            const count = tabCount(tab.key)
+            const isActive = activeTab === tab.key
+            return (
+              <button
+                key={tab.key}
+                onClick={() => setActiveTab(tab.key)}
+                className={`flex items-center gap-1.5 px-3 py-2 text-[13px] font-semibold whitespace-nowrap border-b-2 transition-colors -mb-px ${
+                  isActive
+                    ? `border-[#DC2626] ${tab.color}`
+                    : 'border-transparent text-[#AEAEB2] hover:text-[#6E6E73]'
+                }`}
+              >
+                {tab.label}
+                <span className={`text-[11px] px-1.5 py-0.5 rounded-full font-semibold ${
+                  isActive ? 'bg-[#DC2626]/10 text-[#DC2626]' : 'bg-[#F5F5F7] text-[#AEAEB2]'
+                }`}>
+                  {count}
+                </span>
+              </button>
+            )
+          })}
         </div>
 
         {/* Table */}
@@ -189,8 +260,10 @@ export default function SettingsPage() {
           <div className="flex items-center justify-center py-16 text-[#AEAEB2]">
             <Loader2 size={20} className="animate-spin mr-2" />Loading users…
           </div>
-        ) : users.length === 0 ? (
-          <div className="py-16 text-center text-[#AEAEB2] text-[13px]">No users yet. Add one to get started.</div>
+        ) : filteredUsers.length === 0 ? (
+          <div className="py-16 text-center text-[#AEAEB2] text-[13px]">
+            {activeTab === 'all' ? 'No users yet. Add one to get started.' : `No users with ${TABS.find(t => t.key === activeTab)?.label} access.`}
+          </div>
         ) : (
           <table className="w-full text-left">
             <thead>
@@ -201,7 +274,7 @@ export default function SettingsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#F2F2F7]">
-              {users.map(u => (
+              {filteredUsers.map(u => (
                 <tr key={u.id} className="hover:bg-[#F5F5F7] transition-colors">
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2.5">
