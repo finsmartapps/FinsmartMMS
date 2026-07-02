@@ -474,7 +474,11 @@ export default function Inventory({ data, addItem, updateItem, deleteItem }: {
             <p className="text-xs text-slate-500 mb-6">{deleteTarget.label} · {deleteTarget.name} will be removed.</p>
             <div className="flex gap-3">
               <button onClick={() => setDeleteTarget(null)} className="flex-1 px-4 py-2.5 rounded-lg text-xs font-medium text-slate-500 bg-slate-100 hover:bg-slate-200 transition-all">Cancel</button>
-              <button onClick={() => { deleteItem(deleteTarget.id); setDeleteTarget(null) }} className="flex-1 px-4 py-2.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white transition-all">Delete</button>
+              <button onClick={async () => {
+                const item = deleteTarget; setDeleteTarget(null)
+                await Promise.all((item.images ?? []).map(deleteItemImage))
+                deleteItem(item.id)
+              }} className="flex-1 px-4 py-2.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white transition-all">Delete</button>
             </div>
           </div>
         </div>
