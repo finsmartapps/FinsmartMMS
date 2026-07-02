@@ -15,7 +15,7 @@ export function DateNav({ activeDate, todayDate }: Props) {
     if (date === todayDate) {
       router.push('/sales/telecaller')
     } else {
-      router.push(`/telecaller?date=${date}`)
+      router.push(`/sales/telecaller?date=${date}`)
     }
   }
 

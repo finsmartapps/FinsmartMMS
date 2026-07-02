@@ -15,7 +15,7 @@ export function ManagerDateNav({ activeDate, todayDate }: Props) {
     if (date === todayDate) {
       router.push('/sales/manager')
     } else {
-      router.push(`/manager?date=${date}`)
+      router.push(`/sales/manager?date=${date}`)
     }
   }
 
