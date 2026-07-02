@@ -2,7 +2,8 @@
 import { useState, useMemo, useRef } from 'react'
 import {
   Package, Plus, Search, Edit2, Trash2, X, AlertTriangle, CheckCircle2,
-  Tag, MapPin, Send, ImagePlus, Image as ImageIcon, Loader2, ZoomIn, FileDown
+  Tag, MapPin, Send, ImagePlus, Image as ImageIcon, Loader2, ZoomIn, FileDown,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { downloadXls } from '@/lib/warehouse/exportXls'
@@ -104,6 +105,145 @@ function ImageUploader({ existingUrls, pendingFiles, onAddFiles, onRemoveExistin
           <span className="text-xs">Click to attach photos of this item</span>
         </button>
       )}
+    </div>
+  )
+}
+
+function ItemDetailModal({ item, out, onEdit, onClose, onLightbox }: {
+  item: WmsItem; out: number
+  onEdit: () => void; onClose: () => void; onLightbox: (url: string) => void
+}) {
+  const [imgIdx, setImgIdx] = useState(0)
+  const available = Math.max(0, item.quantity - out)
+  const allOut = out >= item.quantity && out > 0
+  const partialOut = out > 0 && !allOut
+  const low = available <= item.minStock && !allOut
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 flex-shrink-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Tag size={14} className="text-blue-600 flex-shrink-0" />
+            <span className="text-sm font-mono font-bold text-blue-600">{item.label}</span>
+            <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${CAT_COLORS[item.category] || 'bg-slate-100 text-slate-600'}`}>{item.category}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={onEdit} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:text-slate-900 text-xs font-medium transition-colors">
+              <Edit2 size={12} /> Edit
+            </button>
+            <button onClick={onClose} className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 hover:text-slate-900 transition-colors">
+              <X size={14} />
+            </button>
+          </div>
+        </div>
+
+        <div className="overflow-y-auto flex-1">
+          {/* Image viewer */}
+          {item.images?.length > 0 ? (
+            <div>
+              <div className="relative aspect-video bg-slate-100">
+                <img
+                  src={item.images[imgIdx]}
+                  alt=""
+                  className="w-full h-full object-contain cursor-zoom-in"
+                  onClick={() => onLightbox(item.images[imgIdx])}
+                />
+                {item.images.length > 1 && (
+                  <>
+                    {imgIdx > 0 && (
+                      <button onClick={() => setImgIdx(i => i - 1)}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white hover:bg-black/60 transition-colors">
+                        <ChevronLeft size={16} />
+                      </button>
+                    )}
+                    {imgIdx < item.images.length - 1 && (
+                      <button onClick={() => setImgIdx(i => i + 1)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-white hover:bg-black/60 transition-colors">
+                        <ChevronRight size={16} />
+                      </button>
+                    )}
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+                      {item.images.map((_, i) => (
+                        <button key={i} onClick={() => setImgIdx(i)}
+                          className={`h-1.5 rounded-full transition-all ${i === imgIdx ? 'bg-white w-4' : 'bg-white/60 w-1.5'}`} />
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
+              {item.images.length > 1 && (
+                <div className="flex gap-2 p-3 bg-slate-50 overflow-x-auto">
+                  {item.images.map((url, i) => (
+                    <button key={i} onClick={() => setImgIdx(i)}
+                      className={`w-14 h-14 flex-shrink-0 rounded-lg overflow-hidden border-2 transition-all ${i === imgIdx ? 'border-blue-500' : 'border-transparent opacity-60 hover:opacity-100'}`}>
+                      <img src={url} alt="" className="w-full h-full object-cover" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="h-36 bg-slate-50 flex items-center justify-center">
+              <div className="text-center">
+                <Package size={28} className="text-slate-200 mx-auto mb-2" />
+                <p className="text-xs text-slate-400">No photos added</p>
+              </div>
+            </div>
+          )}
+
+          {/* Details */}
+          <div className="px-6 py-5 space-y-4">
+            <div>
+              <h3 className="text-base font-semibold text-slate-900">{item.name}</h3>
+              {item.description && <p className="text-sm text-slate-500 mt-1">{item.description}</p>}
+            </div>
+
+            {/* Stats row */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="bg-slate-50 rounded-xl px-3 py-3 text-center">
+                <p className="text-xl font-bold text-slate-900">{item.quantity}</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">{item.unit} total</p>
+              </div>
+              <div className="bg-slate-50 rounded-xl px-3 py-3 text-center">
+                <p className={`text-xl font-bold ${allOut ? 'text-rose-500' : low ? 'text-amber-600' : 'text-emerald-600'}`}>{available}</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">available</p>
+              </div>
+              <div className="bg-slate-50 rounded-xl px-3 py-3 text-center">
+                <p className="text-xl font-bold text-slate-400">{item.minStock}</p>
+                <p className="text-[10px] text-slate-400 mt-0.5">min stock</p>
+              </div>
+            </div>
+
+            {/* Status */}
+            <div className="flex items-center gap-2">
+              {allOut
+                ? <div className="flex items-center gap-1.5"><Send size={12} className="text-rose-500" /><span className="text-xs font-medium text-rose-500">All out at event</span></div>
+                : partialOut
+                  ? <div className="flex items-center gap-1.5"><Send size={12} className="text-amber-600" /><span className="text-xs font-medium text-amber-600">Partial out ({out} {item.unit} at event)</span></div>
+                  : low
+                    ? <div className="flex items-center gap-1.5"><AlertTriangle size={12} className="text-amber-600" /><span className="text-xs font-medium text-amber-600">Low stock</span></div>
+                    : <div className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-600" /><span className="text-xs font-medium text-emerald-600">In stock</span></div>}
+            </div>
+
+            {/* Location */}
+            {item.location && (
+              <div className="flex items-center gap-2">
+                <MapPin size={14} className="text-slate-400 flex-shrink-0" />
+                <span className="text-sm text-slate-600">{item.location}</span>
+              </div>
+            )}
+
+            {/* Notes */}
+            {item.notes && (
+              <div className="bg-amber-50 border border-amber-200/60 rounded-xl px-4 py-3">
+                <p className="text-xs text-amber-700 leading-relaxed">{item.notes}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -242,6 +382,7 @@ export default function Inventory({ data, addItem, updateItem, deleteItem }: {
   const [search, setSearch] = useState('')
   const [catFilter, setCatFilter] = useState('All')
   const [modal, setModal] = useState<WmsItem | null>(null)
+  const [detailItem, setDetailItem] = useState<WmsItem | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<WmsItem | null>(null)
   const [lightbox, setLightbox] = useState<string | null>(null)
 
@@ -294,6 +435,15 @@ export default function Inventory({ data, addItem, updateItem, deleteItem }: {
   return (
     <div className="space-y-5 max-w-7xl mx-auto">
       {lightbox && <Lightbox url={lightbox} onClose={() => setLightbox(null)} />}
+      {detailItem && (
+        <ItemDetailModal
+          item={detailItem}
+          out={itemsOut[detailItem.id] || 0}
+          onEdit={() => { setModal({ ...detailItem }); setDetailItem(null) }}
+          onClose={() => setDetailItem(null)}
+          onLightbox={url => setLightbox(url)}
+        />
+      )}
       {modal && <ItemModal item={modal} items={items} onSave={handleSave} onClose={() => setModal(null)} />}
       {deleteTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -365,10 +515,10 @@ export default function Inventory({ data, addItem, updateItem, deleteItem }: {
               return (
                 <tr key={item.id} className="border-b border-slate-200 last:border-0 hover:bg-slate-100/50 transition-colors group">
                   <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-2">
+                    <button onClick={() => setDetailItem(item)} className="flex items-center gap-2 hover:opacity-75 transition-opacity group/lbl">
                       <Tag size={13} className="text-blue-600 flex-shrink-0" />
-                      <span className="text-sm font-mono font-bold text-blue-600">{item.label}</span>
-                    </div>
+                      <span className="text-sm font-mono font-bold text-blue-600 group-hover/lbl:underline underline-offset-2">{item.label}</span>
+                    </button>
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-2">
