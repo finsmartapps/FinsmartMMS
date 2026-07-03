@@ -3,11 +3,10 @@ import { createClient } from '@/lib/supabase/server'
 import { deriveTargets, formatCurrency, formatNumber, getStatus } from '@/lib/calculations'
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/marketing/ui/table'
 import type { Settings, Segment, Channel, PlanEvent, MonthlyActual } from '@/types'
-import MonthlyActualsForm from '@/components/marketing/dashboard/monthly-actuals-form'
 import { ConversionFunnel, DonutChart, HBarChart, RadialGauge } from '@/components/marketing/charts/dashboard-charts'
-import { Panel, Th, Pill, ConvBadge, QuarterPill } from '@/components/marketing/ui/panel'
+import { Panel, Th, ConvBadge, QuarterPill } from '@/components/marketing/ui/panel'
 import {
-  TrendingUp, Users, Zap, Trophy, Sparkles, Activity,
+  TrendingUp, Users, Zap, Trophy, Activity,
   ArrowUpRight, Layers, Radio,
 } from 'lucide-react'
 
@@ -165,53 +164,6 @@ export default async function DashboardPage() {
           </div>
         </Panel>
       </div>
-
-      {/* ══ Monthly data entry ═══════════════════════════════════════════ */}
-      <Panel icon={Sparkles} title="Enter Monthly Actuals" accent="indigo"
-        caption="Pick a month, fill the highlighted fields, and save">
-        <div className="pt-1">
-          <MonthlyActualsForm channels={chs} segments={segs} events={evts} settings={settings} existingMonths={months} />
-        </div>
-      </Panel>
-
-      {/* ══ Segment scorecard ════════════════════════════════════════════ */}
-      <Panel icon={Trophy} title="Segment Scorecard" accent="violet" noPad>
-        <DataTable>
-          <TableHeader>
-            <TableRow className="bg-slate-50/80 hover:bg-slate-50/80 border-b border-slate-100">
-              <Th className="pl-5">Segment</Th>
-              <Th right>Monthly SQL</Th>
-              <Th right>Annual SQL</Th>
-              <Th right>Seats</Th>
-              <Th right>Deal Value</Th>
-              <Th right className="pr-5">ARR Target</Th>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {segs.map(seg => {
-              const sqls = seg.annual_seats_target > 0 ? Math.ceil(seg.annual_seats_target / settings.sql_seat_conversion) : 0
-              return (
-                <TableRow key={seg.id} className="hover:bg-indigo-50/40 transition-colors border-b border-slate-50 last:border-0">
-                  <TableCell className="font-semibold text-slate-800 py-3.5 pl-5">{seg.name}</TableCell>
-                  <TableCell className="text-right text-slate-600 tabular-nums">{Math.ceil(sqls / 12)}</TableCell>
-                  <TableCell className="text-right text-slate-600 tabular-nums">{sqls}</TableCell>
-                  <TableCell className="text-right"><Pill>{seg.annual_seats_target}</Pill></TableCell>
-                  <TableCell className="text-right text-slate-600 tabular-nums">{formatCurrency(seg.avg_deal_value)}/mo</TableCell>
-                  <TableCell className="text-right font-bold text-slate-800 tabular-nums pr-5">{formatCurrency(seg.annual_seats_target * seg.avg_deal_value * 12)}</TableCell>
-                </TableRow>
-              )
-            })}
-            <TableRow className="bg-gradient-to-r from-indigo-50 to-violet-50 font-bold border-t-2 border-indigo-100">
-              <TableCell className="text-slate-900 py-3.5 pl-5">Total</TableCell>
-              <TableCell className="text-right text-slate-700 tabular-nums">{Math.round(targets.monthly_sqls)}</TableCell>
-              <TableCell className="text-right text-slate-700 tabular-nums">{targets.annual_sqls}</TableCell>
-              <TableCell className="text-right"><Pill strong>{settings.annual_seats_target}</Pill></TableCell>
-              <TableCell />
-              <TableCell className="text-right text-indigo-700 tabular-nums pr-5">{formatCurrency(totalArr)}</TableCell>
-            </TableRow>
-          </TableBody>
-        </DataTable>
-      </Panel>
 
       {/* ══ Channel performance ══════════════════════════════════════════ */}
       <Panel icon={Layers} title="Channel Performance — Targets" accent="emerald" noPad>
