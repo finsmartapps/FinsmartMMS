@@ -22,7 +22,7 @@ export default async function LeadsPage() {
   const supabase = await createClient()
   const [{ data: settingsRows }, { data: leadRows }] = await Promise.all([
     supabase.from('marketing_settings').select('*').limit(1),
-    supabase.from('leads').select('*').order('sr_no', { ascending: false }).limit(200),
+    supabase.from('leads').select('*').order('sr_no', { ascending: false }),
   ])
 
   const settings = settingsRows?.[0] as Settings | undefined
