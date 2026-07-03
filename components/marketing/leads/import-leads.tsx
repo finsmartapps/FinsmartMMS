@@ -74,6 +74,9 @@ function buildLeads(text: string, hasHeader: boolean): { rows: ParsedLead[]; ski
   for (const line of dataLines) {
     const cells = parseDelimitedLine(line, delim)
     const c = (i: number) => (cells[i] ?? '').trim()
+    // Silently drop rows where every cell is blank (e.g. empty rows
+    // included in an Excel copy selection — arrive as a row of tabs/commas)
+    if (cells.every(cell => !cell.trim())) continue
     const name = c(2)
     if (!name) { skipped++; continue }
     const email = c(3)
