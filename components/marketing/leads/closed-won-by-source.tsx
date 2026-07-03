@@ -160,7 +160,14 @@ export default function ClosedWonBySource({ won }: { won: Lead[] }) {
 
   const { data, months } = useMemo(() => {
     const today = new Date()
-    const anchor = new Date(today.getFullYear(), today.getMonth() - offset * MONTHS, 1)
+    // If any deal has a future closed_date, extend the right edge to cover it
+    const latestYm = won.reduce((max, l) => {
+      const ym = (l.closed_date ?? '').slice(0, 7)
+      return ym > max ? ym : max
+    }, '')
+    const latestDate = latestYm ? new Date(latestYm + '-01') : today
+    const base = latestDate > today ? latestDate : today
+    const anchor = new Date(base.getFullYear(), base.getMonth() - offset * MONTHS, 1)
 
     const months: MonthMeta[] = Array.from({ length: MONTHS }, (_, i) => {
       const d = new Date(anchor.getFullYear(), anchor.getMonth() - (MONTHS - 1 - i), 1)
