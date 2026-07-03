@@ -9,6 +9,7 @@ import CustomerCard from '@/components/marketing/leads/customer-card'
 import SeatsSection from '@/components/marketing/leads/seats-section'
 import WeeklyFunnelChart from '@/components/marketing/leads/weekly-funnel-chart'
 import EventFunnelChart from '@/components/marketing/leads/event-funnel-chart'
+import OtherSourcesFunnelChart from '@/components/marketing/leads/other-sources-funnel-chart'
 import ClosedWonBySource from '@/components/marketing/leads/closed-won-by-source'
 import {
   classifyLeadSource, CATEGORY_STYLES,
@@ -120,6 +121,9 @@ export default async function LeadsPage() {
 
       {/* ── Event MQL + SQL (SNH / AICPA / NJCPA / TXCPA) ── */}
       <EventFunnelChart leads={leads.map(l => ({ data_source: l.data_source, lead_status: l.lead_status }))} />
+
+      {/* ── MQL + SQL by other (non-Event) sources ── */}
+      <OtherSourcesFunnelChart leads={leads.map(l => ({ lead_source: l.lead_source, lead_status: l.lead_status }))} />
 
       {/* ── Closed Won by Lead Source (month-wise) ── */}
       <ClosedWonBySource won={won} />
