@@ -5,6 +5,7 @@ import { DonutChart, HBarChart, VBarChart, RadialGauge } from '@/components/mark
 import AddLeadForm from '@/components/marketing/leads/add-lead-form'
 import ImportLeads from '@/components/marketing/leads/import-leads'
 import LeadsTable from '@/components/marketing/leads/leads-table'
+import CustomerCard from '@/components/marketing/leads/customer-card'
 import {
   classifyLeadSource, CATEGORY_STYLES,
   DIGITAL_MQL_SOURCES, EVENT_SQL_SOURCES, DIRECT_SQL_SOURCES, LEAD_STAGES,
@@ -14,7 +15,7 @@ import {
 } from '@/lib/leads'
 import type { Settings, Lead } from '@/types'
 import {
-  Users, Zap, Trophy, Layers, BookOpen, Inbox, ArrowUpRight,
+  Users, Zap, Layers, BookOpen, Inbox, ArrowUpRight,
   Target, DollarSign, Repeat, Sparkles, Armchair, Database,
 } from 'lucide-react'
 
@@ -33,7 +34,7 @@ export default async function LeadsPage() {
   const mqlCount        = leads.filter(l => l.lead_status === 'MQL').length
   const sqlCount        = leads.filter(l => l.lead_status === 'SQL').length
   const opportunityCount = leads.filter(l => l.lead_status === 'Opportunity').length
-  const customerCount   = leads.filter(l => l.lead_status === 'Customer' || l.lead_status === 'Existing Customer').length
+  const customers       = leads.filter(l => l.lead_status === 'Customer' || l.lead_status === 'Existing Customer')
 
   // ── source-based classification (for charts / legend) ──
   const withCat = leads.map(l => ({ ...l, cat: classifyLeadSource(l.lead_source) }))
@@ -160,9 +161,7 @@ export default async function LeadsPage() {
         <RollupCard icon={Zap}    label="SQLs"          value={sqlCount}
           foot={targets ? `target ${targets.monthly_sqls.toFixed(0)}/mo` : 'Sales Qualified Leads'}
           gradient="from-emerald-500 via-teal-600 to-cyan-700" glow="glow-emerald" />
-        <RollupCard icon={Trophy} label="Customers"     value={customerCount}
-          foot={opportunityCount > 0 ? `+ ${opportunityCount} opportunities` : 'Customer + Existing Customer'}
-          gradient="from-fuchsia-500 via-purple-600 to-pink-700" glow="glow-violet" />
+        <CustomerCard customers={customers} opportunityCount={opportunityCount} />
       </div>
 
       {/* ── Seats Closed performance (Closed Won only) ── */}
