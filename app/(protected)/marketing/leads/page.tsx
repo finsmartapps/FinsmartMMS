@@ -1,22 +1,21 @@
 ﻿import { createClient } from '@/lib/supabase/server'
 import { deriveTargets } from '@/lib/calculations'
 import { Panel, PageHero } from '@/components/marketing/ui/panel'
-import { DonutChart, HBarChart, VBarChart, RadialGauge } from '@/components/marketing/charts/dashboard-charts'
+import { DonutChart, HBarChart } from '@/components/marketing/charts/dashboard-charts'
 import AddLeadForm from '@/components/marketing/leads/add-lead-form'
 import ImportLeads from '@/components/marketing/leads/import-leads'
 import LeadsTable from '@/components/marketing/leads/leads-table'
 import CustomerCard from '@/components/marketing/leads/customer-card'
+import SeatsSection from '@/components/marketing/leads/seats-section'
 import {
   classifyLeadSource, CATEGORY_STYLES,
   DIGITAL_MQL_SOURCES, EVENT_SQL_SOURCES, DIRECT_SQL_SOURCES, LEAD_STAGES,
-  ASSIGNEE_SUGGESTIONS, CLOSED_WON_STAGE, hoursToSeats, formatSeats,
-  annualContractValue, formatUSD,
-  fiscalYearStart, fiscalYearLabel, FISCAL_MONTHS, FISCAL_QUARTERS,
+  ASSIGNEE_SUGGESTIONS, CLOSED_WON_STAGE,
 } from '@/lib/leads'
 import type { Settings, Lead } from '@/types'
 import {
   Users, Zap, Layers, BookOpen, Inbox, ArrowUpRight,
-  Target, DollarSign, Repeat, Sparkles, Armchair, Database,
+  Armchair, Database,
 } from 'lucide-react'
 
 export default async function LeadsPage() {
@@ -69,59 +68,8 @@ export default async function LeadsPage() {
     ? [...byDataSourceAll.slice(0, DS_TOP), { name: `Other (${byDataSourceAll.length - DS_TOP})`, value: byDataSourceAll.slice(DS_TOP).reduce((s, d) => s + d.value, 0) }]
     : byDataSourceAll
 
-  // ── Seats Closed statistics (Closed Won only) — Indian fiscal year (Apr→Mar) ──
-  const seatsTarget = settings?.annual_seats_target ?? 100   // annual seats goal (editable in Settings)
-  const monthlyTarget = seatsTarget / 12                      // ≈ 8.3
-  const quarterlyTarget = seatsTarget / 4                     // 25
-  const fyStartYear = fiscalYearStart(new Date())
-  const fyLabel = fiscalYearLabel(fyStartYear)                // e.g. "FY 2026-27"
-  const fyStart = `${fyStartYear}-04-01`
-  const fyEnd   = `${fyStartYear + 1}-03-31`
-
+  const seatsTarget = settings?.annual_seats_target ?? 100
   const won = leads.filter(l => l.lead_stage === CLOSED_WON_STAGE)
-  // closed within this fiscal year (ISO date strings sort lexicographically)
-  const wonFY = won.filter(l => { const d = l.closed_date ?? ''; return d >= fyStart && d <= fyEnd })
-
-  const sum = (arr: Lead[], k: 'closed_hours' | 'mrr_value' | 'one_time_revenue') =>
-    arr.reduce((s, l) => s + (Number(l[k]) || 0), 0)
-
-  const seatsFY   = hoursToSeats(sum(wonFY, 'closed_hours'))
-  const mrrFY     = sum(wonFY, 'mrr_value')
-  const oneTimeFY = sum(wonFY, 'one_time_revenue')
-  const acvFY     = annualContractValue(mrrFY, oneTimeFY)
-  const wonCount  = wonFY.length
-  const avgSeats  = wonCount ? seatsFY / wonCount : 0
-
-  // seats per month in fiscal order (Apr → Mar)
-  const seatsByMonth = FISCAL_MONTHS.map(({ name, mm }) => {
-    const hours = wonFY.filter(l => (l.closed_date ?? '').slice(5, 7) === mm).reduce((s, l) => s + (Number(l.closed_hours) || 0), 0)
-    return { name, value: Number(hoursToSeats(hours).toFixed(2)) }
-  })
-
-  // seats per fiscal quarter (Q1 = Apr-Jun … Q4 = Jan-Mar)
-  const seatsByQuarter = FISCAL_QUARTERS.map(q => {
-    const hours = wonFY.filter(l => q.months.includes((l.closed_date ?? '').slice(5, 7))).reduce((s, l) => s + (Number(l.closed_hours) || 0), 0)
-    return { label: q.label, seats: hoursToSeats(hours) }
-  })
-
-  // seats by funnel category
-  const seatsByCategory = (['Digital MQL', 'Direct SQL', 'Event SQL'] as const)
-    .map(cat => ({
-      name: cat,
-      value: Number(hoursToSeats(wonFY.filter(l => classifyLeadSource(l.lead_source) === cat).reduce((s, l) => s + (Number(l.closed_hours) || 0), 0)).toFixed(2)),
-    }))
-    .filter(d => d.value > 0)
-
-  // seats by owner / SDR
-  const seatsByOwner = Object.entries(
-    wonFY.reduce<Record<string, number>>((acc, l) => {
-      const who = l.assigned_to?.trim() || 'Unassigned'
-      acc[who] = (acc[who] ?? 0) + (Number(l.closed_hours) || 0)
-      return acc
-    }, {})
-  ).map(([name, hours]) => ({ name, value: Number(hoursToSeats(hours).toFixed(2)) }))
-    .filter(d => d.value > 0)
-    .sort((a, b) => b.value - a.value)
 
   // ── autocomplete suggestions ──
   const distinct = (key: keyof Lead) => Array.from(new Set(leads.map(l => (l[key] as string)).filter(Boolean))).sort()
@@ -169,74 +117,11 @@ export default async function LeadsPage() {
         <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
           <Armchair className="h-4 w-4" strokeWidth={2.5} />
         </div>
-        <h2 className="text-base font-extrabold text-slate-800">Seats Closed — {fyLabel}</h2>
-        <span className="text-xs text-slate-400 font-medium">Closed Won deals only · Apr–Mar · 160 hrs = 1 seat</span>
+        <h2 className="text-base font-extrabold text-slate-800">Seats Closed</h2>
+        <span className="text-xs text-slate-400 font-medium">Closed Won deals only · 160 hrs = 1 seat</span>
       </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <RollupCard icon={Armchair} label="Seats Closed" value={formatSeats(seatsFY)}
-          foot={`${wonCount} deal${wonCount === 1 ? '' : 's'} · avg ${formatSeats(avgSeats)}/deal`}
-          gradient="from-emerald-500 via-teal-600 to-cyan-700" glow="glow-emerald" />
-        <RollupCard icon={Repeat} label="MRR Closed" value={formatUSD(mrrFY)}
-          foot="monthly recurring"
-          gradient="from-indigo-500 via-indigo-600 to-violet-700" glow="glow-indigo" />
-        <RollupCard icon={DollarSign} label="One-time Closed" value={formatUSD(oneTimeFY)}
-          foot="one-time revenue"
-          gradient="from-violet-500 via-purple-600 to-fuchsia-700" glow="glow-violet" />
-        <RollupCard icon={Sparkles} label="ACV Closed" value={formatUSD(acvFY)}
-          foot="MRR × 12 + one-time"
-          gradient="from-amber-500 via-orange-600 to-rose-600" glow="glow-amber" />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* gauge + quarterly */}
-        <Panel icon={Target} title="Seats vs Annual Target" accent="emerald"
-          caption={`Goal ${seatsTarget} seats/yr · ${quarterlyTarget}/qtr · ${monthlyTarget.toFixed(1)}/mo`}>
-          <div className="flex flex-col items-center pt-1">
-            <RadialGauge value={seatsFY} max={seatsTarget} label="of target" color="#10b981" />
-            <p className="text-center text-2xl font-extrabold text-slate-800 tabular-nums mt-2">
-              {formatSeats(seatsFY)}<span className="text-base text-slate-400 font-bold"> / {seatsTarget}</span>
-            </p>
-            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">seats closed</p>
-            <div className="grid grid-cols-4 gap-1.5 w-full mt-4">
-              {seatsByQuarter.map(q => (
-                <div key={q.label} className="rounded-lg bg-slate-50 ring-1 ring-slate-100 px-1 py-2 text-center">
-                  <p className="text-[10px] font-bold text-slate-400">{q.label}</p>
-                  <p className="text-sm font-extrabold text-slate-700 tabular-nums">{formatSeats(q.seats)}</p>
-                  <p className="text-[9px] text-slate-400">/ {quarterlyTarget}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </Panel>
-
-        {/* monthly trend */}
-        <Panel icon={Armchair} title="Seats Closed per Month" accent="indigo"
-          caption={`${fyLabel} · Apr→Mar · dashed line = monthly pace (${monthlyTarget.toFixed(1)})`} className="lg:col-span-2">
-          <div className="pt-1">
-            <VBarChart data={seatsByMonth} unit=" seats" target={Number(monthlyTarget.toFixed(2))} targetLabel={`pace ${monthlyTarget.toFixed(1)}`} />
-          </div>
-        </Panel>
-      </div>
-
-      {(seatsByCategory.length > 0 || seatsByOwner.length > 0) && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Panel icon={Layers} title="Seats by Funnel Category" accent="violet">
-            <div className="pt-2">
-              {seatsByCategory.length > 0
-                ? <HBarChart data={seatsByCategory} unit=" seats" />
-                : <EmptyHint text="No closed-won seats yet" />}
-            </div>
-          </Panel>
-          <Panel icon={Users} title="Seats by Owner" accent="emerald">
-            <div className="pt-2">
-              {seatsByOwner.length > 0
-                ? <HBarChart data={seatsByOwner} unit=" seats" />
-                : <EmptyHint text="No closed-won seats yet" />}
-            </div>
-          </Panel>
-        </div>
-      )}
+      <SeatsSection won={won} seatsTarget={seatsTarget} />
 
       {/* ── Classification legend ── */}
       <Panel icon={BookOpen} title="How leads map to the funnel" accent="amber"
@@ -301,10 +186,6 @@ function RollupCard({ icon: Icon, label, value, foot, gradient, glow }: {
       </div>
     </div>
   )
-}
-
-function EmptyHint({ text }: { text: string }) {
-  return <p className="text-xs text-slate-400 py-8 text-center">{text}</p>
 }
 
 function LegendBlock({ title, cat, sources, note }: {
