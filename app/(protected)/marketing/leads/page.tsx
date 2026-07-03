@@ -35,7 +35,7 @@ export default async function LeadsPage() {
   const mqlCount        = leads.filter(l => l.lead_status === 'MQL').length
   const sqlCount        = leads.filter(l => l.lead_status === 'SQL').length
   const opportunityCount = leads.filter(l => l.lead_status === 'Opportunity').length
-  const customers       = leads.filter(l => l.lead_status === 'Customer' || l.lead_status === 'Existing Customer')
+  const customers       = leads.filter(l => l.lead_stage === 'Closed Won' && ((l.mrr_value ?? 0) > 0 || (l.one_time_revenue ?? 0) > 0))
 
   // ── source-based classification (for charts / legend) ──
   const withCat = leads.map(l => ({ ...l, cat: classifyLeadSource(l.lead_source) }))

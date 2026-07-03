@@ -33,7 +33,7 @@ export default function CustomerCard({ customers, opportunityCount }: Props) {
           <p className="text-[11px] font-bold text-white/75 uppercase tracking-widest mt-2">Customers</p>
           <p className="text-[10px] text-white/60 mt-1 flex items-center gap-1 leading-tight">
             <ArrowUpRight className="h-3 w-3 shrink-0" />
-            {opportunityCount > 0 ? `+ ${opportunityCount} opportunities` : 'Customer + Existing Customer'}
+            {opportunityCount > 0 ? `+ ${opportunityCount} opportunities` : 'Closed Won with revenue'}
           </p>
         </div>
       </button>
@@ -51,7 +51,7 @@ export default function CustomerCard({ customers, opportunityCount }: Props) {
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <div>
                 <h2 className="text-base font-bold text-slate-900">Customers</h2>
-                <p className="text-xs text-slate-400 mt-0.5">{customers.length} total · Customer + Existing Customer</p>
+                <p className="text-xs text-slate-400 mt-0.5">{customers.length} total · Closed Won with revenue</p>
               </div>
               <button
                 onClick={() => setOpen(false)}
