@@ -23,6 +23,10 @@ function getSuggestions(rows: ParsedLead[]): Suggestion[] {
     const hasMRR   = Number(r.mrr_value) > 0
     const hasOT    = Number(r.one_time_revenue) > 0
 
+    // No email → can't dedup on future imports, may create duplicates
+    if (!(r.email as string)?.trim())
+      out.push({ level: 'warn', name, text: `has no email — can't be deduplicated on future imports, may create duplicate entries` })
+
     if ((hasSeats || hasMRR || hasOT) && !isWon)
       out.push({ level: 'warn', name, text: `Lead Stage is not "Closed Won" but has seat/MRR data — won't count toward closed metrics` })
 
