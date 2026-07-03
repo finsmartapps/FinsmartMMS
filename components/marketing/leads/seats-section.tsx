@@ -63,6 +63,7 @@ export default function SeatsSection({ won, seatsTarget }: Props) {
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
   const [showModal, setShowModal] = useState(false)
+  const [activeMonthYm, setActiveMonthYm] = useState<string | null>(null)
 
   const range = useMemo(() => getRange(mode, pickMonth, customFrom, customTo), [mode, pickMonth, customFrom, customTo])
 
@@ -108,7 +109,7 @@ export default function SeatsSection({ won, seatsTarget }: Props) {
       const hours = filtered
         .filter(l => (l.closed_date ?? '').startsWith(ym))
         .reduce((s, l) => s + (Number(l.closed_hours) || 0), 0)
-      return { name, value: Number(hoursToSeats(hours).toFixed(2)) }
+      return { name, value: Number(hoursToSeats(hours).toFixed(2)), ym }
     })
   }, [filtered])
 
@@ -140,10 +141,24 @@ export default function SeatsSection({ won, seatsTarget }: Props) {
     ? `${customFrom || '…'} → ${customTo || '…'}`
     : PILLS.find(p => p.mode === mode)!.label
 
-  // sorted by closed_date desc for modal table
+  // sorted by closed_date desc for modal table (all-period modal)
   const sortedForModal = useMemo(() =>
     [...filtered].sort((a, b) => (b.closed_date ?? '').localeCompare(a.closed_date ?? '')),
     [filtered])
+
+  // deals for the clicked month bar
+  const monthModalDeals = useMemo(() => {
+    if (!activeMonthYm) return []
+    return filtered
+      .filter(l => (l.closed_date ?? '').startsWith(activeMonthYm))
+      .sort((a, b) => (b.closed_date ?? '').localeCompare(a.closed_date ?? ''))
+  }, [filtered, activeMonthYm])
+
+  const monthModalLabel = useMemo(() => {
+    if (!activeMonthYm) return ''
+    const [y, m] = activeMonthYm.split('-').map(Number)
+    return new Date(y, m - 1, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+  }, [activeMonthYm])
 
   return (
     <div className="space-y-4">
@@ -217,10 +232,19 @@ export default function SeatsSection({ won, seatsTarget }: Props) {
         </Panel>
 
         <Panel icon={Armchair} title="Seats by Month" accent="indigo" className="lg:col-span-2"
-          caption={monthBars.length === 0 ? 'No closed deals in this period' : `${rangeLabel} · dashed = monthly pace (${monthly.toFixed(1)})`}>
+          caption={monthBars.length === 0 ? 'No closed deals in this period' : `${rangeLabel} · dashed = monthly pace (${monthly.toFixed(1)}) · click bar for details`}>
           <div className="pt-1">
             {monthBars.length > 0
-              ? <VBarChart data={monthBars} unit=" seats" target={Number(monthly.toFixed(2))} targetLabel={`pace ${monthly.toFixed(1)}`} />
+              ? <VBarChart
+                  data={monthBars}
+                  unit=" seats"
+                  target={Number(monthly.toFixed(2))}
+                  targetLabel={`pace ${monthly.toFixed(1)}`}
+                  onBarClick={name => {
+                    const bar = monthBars.find(b => b.name === name)
+                    if (bar) setActiveMonthYm(bar.ym)
+                  }}
+                />
               : <p className="text-xs text-slate-400 py-10 text-center">No Closed Won deals with seat data in this period</p>}
           </div>
         </Panel>
@@ -246,13 +270,31 @@ export default function SeatsSection({ won, seatsTarget }: Props) {
         </div>
       )}
 
-      {/* ── Deal details modal ── */}
+      {/* ── Deal details modal (stat cards) ── */}
       {showModal && (
         <DealsModal
           deals={sortedForModal}
           rangeLabel={rangeLabel}
           totals={{ seats, mrr, oneTime, acv }}
           onClose={() => setShowModal(false)}
+        />
+      )}
+
+      {/* ── Month-bar drill-down modal ── */}
+      {activeMonthYm && (
+        <DealsModal
+          deals={monthModalDeals}
+          rangeLabel={monthModalLabel}
+          totals={{
+            seats:   monthModalDeals.reduce((s, l) => s + hoursToSeats(Number(l.closed_hours) || 0), 0),
+            mrr:     monthModalDeals.reduce((s, l) => s + (Number(l.mrr_value) || 0), 0),
+            oneTime: monthModalDeals.reduce((s, l) => s + (Number(l.one_time_revenue) || 0), 0),
+            acv:     annualContractValue(
+              monthModalDeals.reduce((s, l) => s + (Number(l.mrr_value) || 0), 0),
+              monthModalDeals.reduce((s, l) => s + (Number(l.one_time_revenue) || 0), 0),
+            ),
+          }}
+          onClose={() => setActiveMonthYm(null)}
         />
       )}
     </div>

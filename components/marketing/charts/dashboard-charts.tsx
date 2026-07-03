@@ -183,16 +183,24 @@ export function VBarChart({
   unit = '',
   target,
   targetLabel,
+  onBarClick,
 }: {
   data: { name: string; value: number }[]
   unit?: string
   target?: number
   targetLabel?: string
+  onBarClick?: (name: string) => void
 }) {
   return (
     <div className="w-full" style={{ height: 260 }}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 18, right: 16, left: -12, bottom: 4 }} barCategoryGap={8}>
+        <BarChart
+          data={data}
+          margin={{ top: 18, right: 16, left: -12, bottom: 4 }}
+          barCategoryGap={8}
+          onClick={onBarClick ? (state) => { if (state?.activeLabel) onBarClick(state.activeLabel as string) } : undefined}
+          style={onBarClick ? { cursor: 'pointer' } : undefined}
+        >
           <defs>
             <linearGradient id="vbarGrad" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor="#6366f1" />
@@ -203,7 +211,7 @@ export function VBarChart({
           <XAxis dataKey="name" tick={{ fontSize: 11, fill: '#64748b', fontWeight: 600 }} axisLine={false} tickLine={false} />
           <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals width={40} />
           <Tooltip
-            cursor={{ fill: '#f8fafc' }}
+            cursor={{ fill: 'rgba(99,102,241,0.06)' }}
             contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', fontSize: 12, padding: '8px 12px' }}
             formatter={(value) => [`${Number(value).toLocaleString()}${unit}`, '']}
           />
