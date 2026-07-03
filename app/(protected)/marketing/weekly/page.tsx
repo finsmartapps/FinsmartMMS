@@ -37,7 +37,7 @@ export default async function WeeklyReviewPage() {
     supabase.from('segments').select('*').order('sort_order'),
     supabase.from('channels').select('*').order('sort_order'),
     supabase.from('weekly_actuals').select('*').order('week_start', { ascending: false }).limit(8),
-    supabase.from('leads').select('lead_date, became_sql_date, lead_source').limit(2000),
+    supabase.from('leads').select('lead_date, became_sql_date, lead_source, lead_status, assigned_to'),
   ])
 
   const settings = settingsRows?.[0] as Settings | undefined
@@ -47,7 +47,7 @@ export default async function WeeklyReviewPage() {
   const segs = (segments ?? []) as Segment[]
   const chs = (channels ?? []) as Channel[]
   const weeks = (weeklyRows ?? []) as WeeklyActual[]
-  const leads = (leadRows ?? []) as Pick<Lead, 'lead_date' | 'became_sql_date' | 'lead_source'>[]
+  const leads = (leadRows ?? []) as Pick<Lead, 'lead_date' | 'became_sql_date' | 'lead_source' | 'lead_status' | 'assigned_to'>[]
 
   // ── Build last N Mon–Sun weeks and bucket achieved MQL/SQL from the leads ──
   const thisMonday = mondayOf(new Date())
@@ -76,7 +76,7 @@ export default async function WeeklyReviewPage() {
         subtitle="Founder ↔ Marketing Head · Fill the highlighted fields before the review · Numbers first"
       />
       <WeeklyTrend series={trend} reqMql={targets.weekly_mqls} reqSql={targets.weekly_sqls} />
-      <WeeklyReviewForm targets={targets} settings={settings} segments={segs} channels={chs} existingWeeks={weeks} leads={leads} />
+      <WeeklyReviewForm targets={targets} settings={settings} existingWeeks={weeks} leads={leads} />
     </div>
   )
 }
