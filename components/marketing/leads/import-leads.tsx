@@ -8,7 +8,12 @@ import { Button } from '@/components/marketing/ui/button'
 import { Upload, X, Loader2, Check, FileText, ClipboardPaste, AlertCircle } from 'lucide-react'
 import { parseDelimitedLine, parseSheetDate, classifyLeadSource, defaultStatusFromSource, normalizeStatus, CATEGORY_STYLES, HOURS_PER_SEAT } from '@/lib/leads'
 
-type ParsedLead = Record<string, string | null>
+type ParsedLead = Record<string, string | number | null>
+
+const parseNum = (s: string): number | null => {
+  const n = Number(s.replace(/[$,\s]/g, ''))
+  return isNaN(n) || s.trim() === '' ? null : n
+}
 
 function buildLeads(text: string, hasHeader: boolean): { rows: ParsedLead[]; skipped: number; inBatchDup: number } {
   const today = new Date().toISOString().split('T')[0]
@@ -55,9 +60,9 @@ function buildLeads(text: string, hasHeader: boolean): { rows: ParsedLead[]; ski
       lead_stage: c(18) || 'New',
       customer_type: c(19),
       closed_date: parseSheetDate(c(20)),
-      closed_hours: c(21) ? (Number(c(21)) || 0) * HOURS_PER_SEAT : null,
-      mrr_value: c(22) ? Number(c(22)) || null : null,
-      one_time_revenue: c(23) ? Number(c(23)) || null : null,
+      closed_hours: c(21) ? (parseNum(c(21)) ?? 0) * HOURS_PER_SEAT : null,
+      mrr_value: parseNum(c(22)),
+      one_time_revenue: parseNum(c(23)),
       category: classifyLeadSource(lead_source),
       updated_at: new Date().toISOString(),
     }
