@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, CalendarCheck, ListTodo, LogOut, Menu, X,
-  Phone, BarChart2, BookUser, TrendingUp, ClipboardList,
+  Phone, BarChart2, BookUser, ClipboardList,
   Inbox, Settings, Plane, ChevronDown, ChevronRight,
   Package, CalendarDays, Truck, FileBarChart2, Users,
   Megaphone, Trophy, LayoutList,
@@ -74,7 +74,6 @@ const marketingGroups: NavGroup[] = [
       { href: '/marketing/leads',        label: 'Leads',        icon: Inbox           },
       { href: '/marketing/weekly',       label: 'Weekly Review',icon: ClipboardList   },
       { href: '/marketing/kpi-scorecard',label: 'KPI Scorecard',icon: BarChart2       },
-      { href: '/marketing/lead-model',   label: 'Lead Model',   icon: TrendingUp      },
     ],
   },
 ]
