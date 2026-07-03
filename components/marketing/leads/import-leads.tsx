@@ -54,6 +54,10 @@ function buildLeads(text: string, hasHeader: boolean): { rows: ParsedLead[]; ski
       became_sql_date: parseSheetDate(c(17)),
       lead_stage: c(18) || 'New',
       customer_type: c(19),
+      closed_date: parseSheetDate(c(20)),
+      closed_hours: c(21) ? Number(c(21)) || null : null,
+      mrr_value: c(22) ? Number(c(22)) || null : null,
+      one_time_revenue: c(23) ? Number(c(23)) || null : null,
       category: classifyLeadSource(lead_source),
       updated_at: new Date().toISOString(),
     }
@@ -173,7 +177,7 @@ export default function ImportLeads({ existingEmails = [] }: { existingEmails?: 
             <div className="p-6 space-y-4">
               {/* column order hint */}
               <div className="text-[11px] text-slate-500 bg-slate-50 rounded-lg px-3 py-2 ring-1 ring-slate-100 leading-relaxed">
-                <span className="font-bold text-slate-600">Expected column order:</span> Sr · Date · Name · Email · Phone · Website · Company · Industry · Service · Data Source · Lead From · Lead Source · State · Country · Comment · Assigned · Lead Status (MQL/SQL) · Became SQL · Lead Stage · Customer Type
+                <span className="font-bold text-slate-600">Expected column order:</span> Sr · Date · Name · Email · Phone · Website · Company · Industry · Service · Data Source · Lead From · Lead Source · State · Country · Comment · Assigned · Lead Status · Became SQL Date · Lead Stage · Customer Type · <span className="text-emerald-700 font-bold">Closed Date · Closed Hours · MRR Value · One-time Revenue</span>
               </div>
 
               {/* paste */}
