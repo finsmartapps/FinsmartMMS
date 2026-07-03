@@ -103,7 +103,8 @@ function buildLeads(text: string, hasHeader: boolean): { rows: ParsedLead[]; ski
   const dataRows = hasHeader ? allRows.slice(1) : allRows
 
   const rows: ParsedLead[] = []
-  const idxByEmail = new Map<string, number>()
+  // Key: email (non-CW) or email|closed_date (CW) → row index
+  const idxByKey = new Map<string, number>()
   const skipped: SkippedRow[] = []
   let inBatchDup = 0
   for (let i = 0; i < dataRows.length; i++) {
@@ -119,6 +120,8 @@ function buildLeads(text: string, hasHeader: boolean): { rows: ParsedLead[]; ski
     const email = c(3)
     const emailKey = email.toLowerCase()
     const lead_source = c(11)
+    const closedDate = parseSheetDate(c(19))
+    const leadStage = c(17) || 'New'
     const row: ParsedLead = {
       lead_date: parseSheetDate(c(1)) || today,
       name,
@@ -136,21 +139,25 @@ function buildLeads(text: string, hasHeader: boolean): { rows: ParsedLead[]; ski
       comment: c(14),
       assigned_to: c(15),
       lead_status: normalizeStatus(c(16)) || defaultStatusFromSource(lead_source),
-      lead_stage: c(17) || 'New',
+      lead_stage: leadStage,
       customer_type: c(18),
-      closed_date: parseSheetDate(c(19)),
+      closed_date: closedDate,
       closed_hours: c(20) ? (parseNum(c(20)) ?? 0) * HOURS_PER_SEAT : null,
       mrr_value: parseNum(c(21)),
       one_time_revenue: parseNum(c(22)),
       category: classifyLeadSource(lead_source),
       updated_at: new Date().toISOString(),
     }
-    // dedupe rows that repeat the same email WITHIN the file (last row wins)
-    if (emailKey && idxByEmail.has(emailKey)) {
-      rows[idxByEmail.get(emailKey)!] = row
+    // For Closed Won rows with a closed date, use email|date as the dedup key so
+    // the same client with multiple packages (different dates) are kept as separate rows.
+    const rowKey = emailKey
+      ? (leadStage === CLOSED_WON && closedDate ? `${emailKey}|${closedDate}` : emailKey)
+      : null
+    if (rowKey && idxByKey.has(rowKey)) {
+      rows[idxByKey.get(rowKey)!] = row
       inBatchDup++
     } else {
-      if (emailKey) idxByEmail.set(emailKey, rows.length)
+      if (rowKey) idxByKey.set(rowKey, rows.length)
       rows.push(row)
     }
   }
@@ -171,10 +178,16 @@ export default function ImportLeads({ existingEmails = [] }: { existingEmails?: 
   const emailSet = new Set(existingEmails.map(e => e.trim().toLowerCase()).filter(Boolean))
   const preview = text.trim() ? buildLeads(text, hasHeader) : { rows: [], skipped: [] as SkippedRow[], inBatchDup: 0 }
 
-  // split preview rows into new vs already-existing (by email) for the summary
+  // split preview rows into new vs already-existing (by email or email+date for CW) for the summary
   const emailKey = (r: ParsedLead) => ((r.email as string) || '').trim().toLowerCase()
-  const newRows = preview.rows.filter(r => { const k = emailKey(r); return !k || !emailSet.has(k) })
-  const existingRows = preview.rows.filter(r => { const k = emailKey(r); return k && emailSet.has(k) })
+  const newRows = preview.rows.filter(r => {
+    const k = emailKey(r)
+    return !k || !emailSet.has(k)
+  })
+  const existingRows = preview.rows.filter(r => {
+    const k = emailKey(r)
+    return k !== '' && emailSet.has(k)
+  })
   const newCount = newRows.length
   const existingCount = existingRows.length
 
@@ -196,16 +209,31 @@ export default function ImportLeads({ existingEmails = [] }: { existingEmails?: 
 
     // Fetch the current id↔email map fresh so we update the right rows and
     // never collide with the unique-email index.
-    const { data: dbLeads, error: fetchErr } = await supabase.from('leads').select('id, email')
+    const { data: dbLeads, error: fetchErr } = await supabase.from('leads').select('id, email, closed_date, lead_stage')
     if (fetchErr) { setImporting(false); setError(fetchErr.message); return }
-    const idByEmail = new Map<string, string>()
+    const idByEmail = new Map<string, string>()        // email → id
+    const idByEmailDate = new Map<string, string>()    // email|closed_date → id (Closed Won)
     for (const l of dbLeads ?? []) {
       const k = (l.email || '').trim().toLowerCase()
-      if (k) idByEmail.set(k, l.id as string)
+      if (!k) continue
+      idByEmail.set(k, l.id as string)
+      if (l.lead_stage === CLOSED_WON && l.closed_date)
+        idByEmailDate.set(`${k}|${l.closed_date}`, l.id as string)
     }
 
-    const toInsert = preview.rows.filter(r => { const k = emailKey(r); return !k || !idByEmail.has(k) })
-    const toUpdate = preview.rows.filter(r => { const k = emailKey(r); return k && idByEmail.has(k) })
+    // For Closed Won rows with a closed_date, match by email+date so that one
+    // client with multiple packages (different dates) maps to the right DB row.
+    const matchKey = (r: ParsedLead) => {
+      const k = emailKey(r)
+      if (!k) return null
+      if ((r.lead_stage as string) === CLOSED_WON && r.closed_date)
+        return idByEmailDate.has(`${k}|${r.closed_date}`) ? `${k}|${r.closed_date}` : k
+      return k
+    }
+    const idMap = new Map([...idByEmail, ...idByEmailDate])
+
+    const toInsert = preview.rows.filter(r => { const k = matchKey(r); return !k || !idMap.has(k) })
+    const toUpdate = preview.rows.filter(r => { const k = matchKey(r); return k !== null && idMap.has(k) })
 
     let inserted = 0, updated = 0
 
@@ -218,7 +246,8 @@ export default function ImportLeads({ existingEmails = [] }: { existingEmails?: 
     // Only overwrite existing leads when the user chose "replace"
     if (dupMode === 'replace' && toUpdate.length) {
       for (const r of toUpdate) {
-        const id = idByEmail.get(emailKey(r))!
+        const k = matchKey(r)!
+        const id = idMap.get(k)!
         const { error } = await supabase.from('leads').update(r).eq('id', id)
         if (error) { setImporting(false); setError(error.message); return }
         updated++
