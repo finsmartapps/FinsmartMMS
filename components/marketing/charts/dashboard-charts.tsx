@@ -136,14 +136,20 @@ export function DonutChart({
 export function HBarChart({
   data,
   unit = '',
+  onBarClick,
 }: {
   data: { name: string; value: number }[]
   unit?: string
+  onBarClick?: (name: string) => void
 }) {
   return (
     <div className="w-full" style={{ height: Math.max(data.length * 46, 120) }}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} layout="vertical" margin={{ top: 4, right: 36, left: 4, bottom: 4 }} barCategoryGap={10}>
+        <BarChart
+          data={data} layout="vertical" margin={{ top: 4, right: 36, left: 4, bottom: 4 }} barCategoryGap={10}
+          onClick={onBarClick ? (state) => { if (state?.activeLabel) onBarClick(state.activeLabel as string) } : undefined}
+          style={onBarClick ? { cursor: 'pointer' } : undefined}
+        >
           <defs>
             <linearGradient id="barGrad" x1="0" y1="0" x2="1" y2="0">
               <stop offset="0%" stopColor="#6366f1" />

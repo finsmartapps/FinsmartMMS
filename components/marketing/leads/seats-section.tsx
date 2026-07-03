@@ -64,6 +64,8 @@ export default function SeatsSection({ won, seatsTarget }: Props) {
   const [customTo, setCustomTo] = useState('')
   const [showModal, setShowModal] = useState(false)
   const [activeMonthYm, setActiveMonthYm] = useState<string | null>(null)
+  const [activeCat, setActiveCat] = useState<string | null>(null)
+  const [activeOwner, setActiveOwner] = useState<string | null>(null)
 
   const range = useMemo(() => getRange(mode, pickMonth, customFrom, customTo), [mode, pickMonth, customFrom, customTo])
 
@@ -145,6 +147,20 @@ export default function SeatsSection({ won, seatsTarget }: Props) {
   const sortedForModal = useMemo(() =>
     [...filtered].sort((a, b) => (b.closed_date ?? '').localeCompare(a.closed_date ?? '')),
     [filtered])
+
+  const catModalDeals = useMemo(() => {
+    if (!activeCat) return []
+    return filtered
+      .filter(l => classifyLeadSource(l.lead_source) === activeCat)
+      .sort((a, b) => (b.closed_date ?? '').localeCompare(a.closed_date ?? ''))
+  }, [filtered, activeCat])
+
+  const ownerModalDeals = useMemo(() => {
+    if (!activeOwner) return []
+    return filtered
+      .filter(l => (l.assigned_to?.trim() || 'Unassigned') === activeOwner)
+      .sort((a, b) => (b.closed_date ?? '').localeCompare(a.closed_date ?? ''))
+  }, [filtered, activeOwner])
 
   // deals for the clicked month bar
   const monthModalDeals = useMemo(() => {
@@ -253,17 +269,17 @@ export default function SeatsSection({ won, seatsTarget }: Props) {
       {/* ── By owner / by category ── */}
       {(byCategory.length > 0 || byOwner.length > 0) && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Panel icon={Layers} title="Seats by Funnel Category" accent="violet">
+          <Panel icon={Layers} title="Seats by Funnel Category" accent="violet" caption="Click a bar for deal details">
             <div className="pt-2">
               {byCategory.length > 0
-                ? <HBarChart data={byCategory} unit=" seats" />
+                ? <HBarChart data={byCategory} unit=" seats" onBarClick={name => setActiveCat(name)} />
                 : <p className="text-xs text-slate-400 py-8 text-center">No data</p>}
             </div>
           </Panel>
-          <Panel icon={Users} title="Seats by Owner" accent="emerald">
+          <Panel icon={Users} title="Seats by Owner" accent="emerald" caption="Click a bar for deal details">
             <div className="pt-2">
               {byOwner.length > 0
-                ? <HBarChart data={byOwner} unit=" seats" />
+                ? <HBarChart data={byOwner} unit=" seats" onBarClick={name => setActiveOwner(name)} />
                 : <p className="text-xs text-slate-400 py-8 text-center">No data</p>}
             </div>
           </Panel>
@@ -295,6 +311,42 @@ export default function SeatsSection({ won, seatsTarget }: Props) {
             ),
           }}
           onClose={() => setActiveMonthYm(null)}
+        />
+      )}
+
+      {/* ── Funnel category drill-down modal ── */}
+      {activeCat && (
+        <DealsModal
+          deals={catModalDeals}
+          rangeLabel={`${activeCat} · ${rangeLabel}`}
+          totals={{
+            seats:   catModalDeals.reduce((s, l) => s + hoursToSeats(Number(l.closed_hours) || 0), 0),
+            mrr:     catModalDeals.reduce((s, l) => s + (Number(l.mrr_value) || 0), 0),
+            oneTime: catModalDeals.reduce((s, l) => s + (Number(l.one_time_revenue) || 0), 0),
+            acv:     annualContractValue(
+              catModalDeals.reduce((s, l) => s + (Number(l.mrr_value) || 0), 0),
+              catModalDeals.reduce((s, l) => s + (Number(l.one_time_revenue) || 0), 0),
+            ),
+          }}
+          onClose={() => setActiveCat(null)}
+        />
+      )}
+
+      {/* ── Owner drill-down modal ── */}
+      {activeOwner && (
+        <DealsModal
+          deals={ownerModalDeals}
+          rangeLabel={`${activeOwner} · ${rangeLabel}`}
+          totals={{
+            seats:   ownerModalDeals.reduce((s, l) => s + hoursToSeats(Number(l.closed_hours) || 0), 0),
+            mrr:     ownerModalDeals.reduce((s, l) => s + (Number(l.mrr_value) || 0), 0),
+            oneTime: ownerModalDeals.reduce((s, l) => s + (Number(l.one_time_revenue) || 0), 0),
+            acv:     annualContractValue(
+              ownerModalDeals.reduce((s, l) => s + (Number(l.mrr_value) || 0), 0),
+              ownerModalDeals.reduce((s, l) => s + (Number(l.one_time_revenue) || 0), 0),
+            ),
+          }}
+          onClose={() => setActiveOwner(null)}
         />
       )}
     </div>
