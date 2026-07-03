@@ -19,6 +19,12 @@ export default function LoginPage() {
   const [resetLoading, setResetLoading] = useState(false)
   const [resetDone, setResetDone] = useState(false)
 
+  const [forgotMode, setForgotMode] = useState(false)
+  const [forgotEmail, setForgotEmail] = useState('')
+  const [forgotLoading, setForgotLoading] = useState(false)
+  const [forgotSent, setForgotSent] = useState(false)
+  const [forgotError, setForgotError] = useState('')
+
   useEffect(() => {
     const hash = window.location.hash
     if (!hash.includes('access_token') || !hash.includes('type=recovery')) return
@@ -77,6 +83,23 @@ export default function LoginPage() {
     }
 
     router.refresh()
+  }
+
+  async function handleForgotPassword(e: React.FormEvent) {
+    e.preventDefault()
+    setForgotError('')
+    setForgotLoading(true)
+    const supabase = createClient()
+    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail, {
+      redirectTo: `${window.location.origin}/login`,
+    })
+    if (error) {
+      setForgotError(error.message)
+      setForgotLoading(false)
+      return
+    }
+    setForgotSent(true)
+    setForgotLoading(false)
   }
 
   async function handlePasswordReset(e: React.FormEvent) {
@@ -165,6 +188,61 @@ export default function LoginPage() {
     )
   }
 
+  if (forgotMode) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5F5F7] px-4">
+        <div className="mb-8 text-center">
+          <div className="inline-flex items-center justify-center w-[52px] h-[52px] rounded-[14px] gradient-brand mb-4 shadow-md">
+            <span className="text-white text-xl font-bold tracking-tight">F</span>
+          </div>
+          <h1 className="text-[22px] font-semibold text-[#1D1D1F] tracking-tight">Reset Password</h1>
+          <p className="text-[#6E6E73] mt-1 text-sm">We'll send a reset link to your email</p>
+        </div>
+        <div className="w-full max-w-[360px] bg-white rounded-2xl border border-[#E5E5EA] shadow-sm p-8">
+          {forgotSent ? (
+            <div className="flex flex-col items-center gap-3 py-4 text-center">
+              <CheckCircle className="text-green-500" size={40} />
+              <p className="text-[#1D1D1F] font-medium">Check your email</p>
+              <p className="text-[#6E6E73] text-sm">A reset link was sent to <span className="font-medium text-[#1D1D1F]">{forgotEmail}</span></p>
+              <button
+                onClick={() => { setForgotMode(false); setForgotSent(false) }}
+                className="mt-2 text-[13px] text-[#DC2626] hover:underline"
+              >
+                Back to sign in
+              </button>
+            </div>
+          ) : (
+            <form onSubmit={handleForgotPassword} className="space-y-5">
+              <div>
+                <label className="block text-[13px] font-medium text-[#1D1D1F] mb-1.5">Email address</label>
+                <input
+                  type="email"
+                  value={forgotEmail}
+                  onChange={e => setForgotEmail(e.target.value)}
+                  required
+                  autoFocus
+                  placeholder="you@example.com"
+                  className="w-full border border-[#E5E5EA] rounded-xl px-4 py-3 text-[#1D1D1F] text-sm placeholder-[#AEAEB2] focus:outline-none focus:border-[#DC2626] focus:ring-2 focus:ring-[#DC2626]/10 transition bg-[#FAFAFA]"
+                />
+              </div>
+              {forgotError && (
+                <div className="bg-red-50 border border-red-100 text-red-600 text-[13px] rounded-xl px-4 py-3">{forgotError}</div>
+              )}
+              <button type="submit" disabled={forgotLoading} className="w-full bg-[#DC2626] hover:bg-[#C91C1C] active:bg-[#B91C1C] text-white font-semibold py-3 rounded-xl disabled:opacity-50 transition flex items-center justify-center gap-2 text-sm mt-1">
+                {forgotLoading && <Loader2 size={16} className="animate-spin" />}
+                {forgotLoading ? 'Sending…' : 'Send Reset Link'}
+              </button>
+              <button type="button" onClick={() => setForgotMode(false)} className="w-full text-[13px] text-[#6E6E73] hover:text-[#1D1D1F] transition text-center">
+                Back to sign in
+              </button>
+            </form>
+          )}
+        </div>
+        <p className="text-[#AEAEB2] text-xs mt-6">© {new Date().getFullYear()} Finsmart Accounting</p>
+      </div>
+    )
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-[#F5F5F7] px-4">
 
@@ -216,6 +294,16 @@ export default function LoginPage() {
                 {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
               </button>
             </div>
+          </div>
+
+          <div className="flex justify-end -mt-2">
+            <button
+              type="button"
+              onClick={() => { setForgotMode(true); setForgotEmail(email); setError('') }}
+              className="text-[12px] text-[#6E6E73] hover:text-[#DC2626] transition"
+            >
+              Forgot password?
+            </button>
           </div>
 
           {error && (
