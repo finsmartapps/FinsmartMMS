@@ -5,7 +5,7 @@ import { VBarChart, HBarChart, RadialGauge } from '@/components/marketing/charts
 import { Panel } from '@/components/marketing/ui/panel'
 import { hoursToSeats, annualContractValue, formatSeats, formatUSD, classifyLeadSource } from '@/lib/leads'
 import type { Lead } from '@/types'
-import { Armchair, Repeat, DollarSign, Sparkles, Target, Layers, Users, ArrowUpRight } from 'lucide-react'
+import { Armchair, Repeat, DollarSign, Sparkles, Target, Layers, Users, ArrowUpRight, X, ExternalLink } from 'lucide-react'
 
 type FilterMode = 'week' | 'month' | 'pick-month' | 'custom' | 'alltime'
 
@@ -49,6 +49,12 @@ function defaultPickMonth() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
 }
 
+function fmtDate(iso: string | null) {
+  if (!iso) return '—'
+  const [y, m, d] = iso.split('-')
+  return new Date(Number(y), Number(m) - 1, Number(d)).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
 interface Props { won: Lead[]; seatsTarget: number }
 
 export default function SeatsSection({ won, seatsTarget }: Props) {
@@ -56,6 +62,7 @@ export default function SeatsSection({ won, seatsTarget }: Props) {
   const [pickMonth, setPickMonth] = useState(defaultPickMonth)
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
+  const [showModal, setShowModal] = useState(false)
 
   const range = useMemo(() => getRange(mode, pickMonth, customFrom, customTo), [mode, pickMonth, customFrom, customTo])
 
@@ -116,6 +123,11 @@ export default function SeatsSection({ won, seatsTarget }: Props) {
     ? `${customFrom || '…'} → ${customTo || '…'}`
     : PILLS.find(p => p.mode === mode)!.label
 
+  // sorted by closed_date desc for modal table
+  const sortedForModal = useMemo(() =>
+    [...filtered].sort((a, b) => (b.closed_date ?? '').localeCompare(a.closed_date ?? '')),
+    [filtered])
+
   return (
     <div className="space-y-4">
 
@@ -159,13 +171,17 @@ export default function SeatsSection({ won, seatsTarget }: Props) {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard icon={Armchair}   gradient="from-emerald-500 via-teal-600 to-cyan-700"    glow="glow-emerald"
           label="Seats Closed"   value={formatSeats(seats)}
-          foot={`${count} deal${count === 1 ? '' : 's'} · avg ${formatSeats(avg)}/deal`} />
+          foot={`${count} deal${count === 1 ? '' : 's'} · avg ${formatSeats(avg)}/deal`}
+          onClick={() => setShowModal(true)} />
         <StatCard icon={Repeat}     gradient="from-indigo-500 via-indigo-600 to-violet-700" glow="glow-indigo"
-          label="MRR Closed"     value={formatUSD(mrr)}       foot="monthly recurring" />
+          label="MRR Closed"     value={formatUSD(mrr)}       foot="monthly recurring"
+          onClick={() => setShowModal(true)} />
         <StatCard icon={DollarSign} gradient="from-violet-500 via-purple-600 to-fuchsia-700" glow="glow-violet"
-          label="One-time"       value={formatUSD(oneTime)}   foot="one-time revenue" />
+          label="One-time"       value={formatUSD(oneTime)}   foot="one-time revenue"
+          onClick={() => setShowModal(true)} />
         <StatCard icon={Sparkles}   gradient="from-amber-500 via-orange-600 to-rose-600"    glow="glow-amber"
-          label="ACV Closed"     value={formatUSD(acv)}       foot="MRR × 12 + one-time" />
+          label="ACV Closed"     value={formatUSD(acv)}       foot="MRR × 12 + one-time"
+          onClick={() => setShowModal(true)} />
       </div>
 
       {/* ── Gauge + bar chart ── */}
@@ -210,16 +226,40 @@ export default function SeatsSection({ won, seatsTarget }: Props) {
           </Panel>
         </div>
       )}
+
+      {/* ── Deal details modal ── */}
+      {showModal && (
+        <DealsModal
+          deals={sortedForModal}
+          rangeLabel={rangeLabel}
+          totals={{ seats, mrr, oneTime, acv }}
+          onClose={() => setShowModal(false)}
+        />
+      )}
     </div>
   )
 }
 
-function StatCard({ icon: Icon, label, value, foot, gradient, glow }: {
-  icon: React.ElementType; label: string; value: string; foot: string; gradient: string; glow: string
+/* ── Stat card ── */
+
+function StatCard({ icon: Icon, label, value, foot, gradient, glow, onClick }: {
+  icon: React.ElementType; label: string; value: string; foot: string
+  gradient: string; glow: string; onClick?: () => void
 }) {
   return (
-    <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} p-5 hover-lift ${glow}`}>
+    <div
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={onClick ? e => e.key === 'Enter' && onClick() : undefined}
+      className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} p-5 hover-lift ${glow}${onClick ? ' cursor-pointer group' : ''}`}
+    >
       <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full blur-2xl" aria-hidden />
+      {onClick && (
+        <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+          <ExternalLink className="h-3.5 w-3.5 text-white/70" />
+        </div>
+      )}
       <div className="relative">
         <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center ring-1 ring-white/25 mb-3">
           <Icon className="text-white" style={{ width: 18, height: 18 }} strokeWidth={2.5} />
@@ -229,6 +269,121 @@ function StatCard({ icon: Icon, label, value, foot, gradient, glow }: {
         <p className="text-[10px] text-white/60 mt-1 flex items-center gap-1 leading-tight">
           <ArrowUpRight className="h-3 w-3 shrink-0" /> {foot}
         </p>
+      </div>
+    </div>
+  )
+}
+
+/* ── Deal details modal ── */
+
+function DealsModal({ deals, rangeLabel, totals, onClose }: {
+  deals: Lead[]
+  rangeLabel: string
+  totals: { seats: number; mrr: number; oneTime: number; acv: number }
+  onClose: () => void
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      role="dialog" aria-modal="true"
+    >
+      {/* backdrop */}
+      <div
+        className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+        onClick={onClose}
+        aria-hidden
+      />
+
+      {/* panel */}
+      <div className="relative bg-white rounded-2xl shadow-2xl ring-1 ring-slate-200 w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden">
+
+        {/* header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-700 rounded-t-2xl">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-white/20 backdrop-blur flex items-center justify-center ring-1 ring-white/25">
+              <Armchair className="h-4 w-4 text-white" strokeWidth={2.5} />
+            </div>
+            <div>
+              <p className="text-sm font-extrabold text-white">Closed Won Deals</p>
+              <p className="text-[11px] text-white/70">{rangeLabel} · {deals.length} deal{deals.length === 1 ? '' : 's'}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4 text-white" />
+          </button>
+        </div>
+
+        {/* summary strip */}
+        <div className="grid grid-cols-4 divide-x divide-slate-100 border-b border-slate-100">
+          {[
+            { label: 'Total Seats', value: formatSeats(totals.seats) },
+            { label: 'MRR',         value: formatUSD(totals.mrr)     },
+            { label: 'One-time',    value: formatUSD(totals.oneTime) },
+            { label: 'ACV',         value: formatUSD(totals.acv)     },
+          ].map(({ label, value }) => (
+            <div key={label} className="px-5 py-3 text-center">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</p>
+              <p className="text-base font-extrabold text-slate-800 tabular-nums mt-0.5">{value}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* table */}
+        <div className="overflow-auto flex-1">
+          {deals.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-16">No Closed Won deals in this period.</p>
+          ) : (
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 bg-slate-50 border-b border-slate-100">
+                <tr>
+                  {['#', 'Name', 'Company', 'Closed Date', 'Seats', 'MRR', 'One-time', 'ACV', 'Assigned', 'Service'].map(h => (
+                    <th key={h} className="px-4 py-2.5 text-left font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {deals.map((d, i) => {
+                  const s   = hoursToSeats(Number(d.closed_hours) || 0)
+                  const m   = Number(d.mrr_value) || 0
+                  const ot  = Number(d.one_time_revenue) || 0
+                  const a   = annualContractValue(m, ot)
+                  return (
+                    <tr key={d.id} className="hover:bg-emerald-50/40 transition-colors">
+                      <td className="px-4 py-3 text-slate-400 tabular-nums">{i + 1}</td>
+                      <td className="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">{d.name || '—'}</td>
+                      <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.company_name || '—'}</td>
+                      <td className="px-4 py-3 text-slate-600 whitespace-nowrap tabular-nums">{fmtDate(d.closed_date)}</td>
+                      <td className="px-4 py-3 font-bold text-emerald-700 tabular-nums">{s > 0 ? formatSeats(s) : '—'}</td>
+                      <td className="px-4 py-3 text-slate-700 tabular-nums">{m > 0 ? formatUSD(m) : '—'}</td>
+                      <td className="px-4 py-3 text-slate-700 tabular-nums">{ot > 0 ? formatUSD(ot) : '—'}</td>
+                      <td className="px-4 py-3 font-semibold text-indigo-700 tabular-nums">{a > 0 ? formatUSD(a) : '—'}</td>
+                      <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{d.assigned_to || '—'}</td>
+                      <td className="px-4 py-3 text-slate-500 whitespace-nowrap max-w-[150px] truncate">{d.service_required || '—'}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+              {/* totals row */}
+              <tfoot className="sticky bottom-0 bg-slate-50 border-t-2 border-slate-200">
+                <tr>
+                  <td className="px-4 py-2.5" colSpan={4}>
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total · {deals.length} deals</span>
+                  </td>
+                  <td className="px-4 py-2.5 font-extrabold text-emerald-700 tabular-nums">{formatSeats(totals.seats)}</td>
+                  <td className="px-4 py-2.5 font-extrabold text-slate-700 tabular-nums">{formatUSD(totals.mrr)}</td>
+                  <td className="px-4 py-2.5 font-extrabold text-slate-700 tabular-nums">{formatUSD(totals.oneTime)}</td>
+                  <td className="px-4 py-2.5 font-extrabold text-indigo-700 tabular-nums">{formatUSD(totals.acv)}</td>
+                  <td colSpan={2} />
+                </tr>
+              </tfoot>
+            </table>
+          )}
+        </div>
+
       </div>
     </div>
   )
