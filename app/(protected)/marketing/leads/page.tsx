@@ -7,9 +7,7 @@ import ImportLeads from '@/components/marketing/leads/import-leads'
 import LeadsTable from '@/components/marketing/leads/leads-table'
 import CustomerCard from '@/components/marketing/leads/customer-card'
 import SeatsSection from '@/components/marketing/leads/seats-section'
-import WeeklyFunnelChart from '@/components/marketing/leads/weekly-funnel-chart'
-import EventFunnelChart from '@/components/marketing/leads/event-funnel-chart'
-import OtherSourcesFunnelChart from '@/components/marketing/leads/other-sources-funnel-chart'
+import LeadsFunnelSection from '@/components/marketing/leads/leads-funnel-section'
 import ClosedWonBySource from '@/components/marketing/leads/closed-won-by-source'
 import {
   classifyLeadSource, CATEGORY_STYLES,
@@ -116,14 +114,13 @@ export default async function LeadsPage() {
         <CustomerCard customers={customers} opportunityCount={opportunityCount} />
       </div>
 
-      {/* ── Weekly MQL + SQL trend ── */}
-      <WeeklyFunnelChart leads={leads.map(l => ({ lead_date: l.lead_date, lead_status: l.lead_status }))} />
-
-      {/* ── Event MQL + SQL (SNH / AICPA / NJCPA / TXCPA) ── */}
-      <EventFunnelChart leads={leads.map(l => ({ data_source: l.data_source, lead_status: l.lead_status }))} />
-
-      {/* ── MQL + SQL by other (non-Event) sources ── */}
-      <OtherSourcesFunnelChart leads={leads.map(l => ({ lead_source: l.lead_source, lead_status: l.lead_status }))} />
+      {/* ── Funnel charts with shared date filter ── */}
+      <LeadsFunnelSection leads={leads.map(l => ({
+        lead_date:   l.lead_date,
+        lead_status: l.lead_status,
+        lead_source: l.lead_source,
+        data_source: l.data_source,
+      }))} />
 
       {/* ── Closed Won by Lead Source (month-wise) ── */}
       <ClosedWonBySource won={won} />
