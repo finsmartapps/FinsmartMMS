@@ -58,7 +58,7 @@ function fmtDate(iso: string | null) {
 interface Props { won: Lead[]; seatsTarget: number }
 
 export default function SeatsSection({ won, seatsTarget }: Props) {
-  const [mode, setMode] = useState<FilterMode>('month')
+  const [mode, setMode] = useState<FilterMode>('alltime')
   const [pickMonth, setPickMonth] = useState(defaultPickMonth)
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
