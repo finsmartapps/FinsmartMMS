@@ -21,15 +21,51 @@ interface Suggestion { level: 'warn' | 'info'; text: string; names: string }
 function getSuggestions(rows: ParsedLead[]): Suggestion[] {
   const out: Suggestion[] = []
 
+  // Seat/MRR data but stage is not Closed Won → won't count
   const seatsButNotWon = rows.filter(r =>
-    (Number(r.closed_hours) > 0 || Number(r.mrr_value) > 0) && r.lead_stage !== CLOSED_WON
+    (Number(r.closed_hours) > 0 || Number(r.mrr_value) > 0 || Number(r.one_time_revenue) > 0) &&
+    r.lead_stage !== CLOSED_WON
   )
   if (seatsButNotWon.length)
-    out.push({ level: 'warn', text: `has seat/MRR data but Lead Stage is not "Closed Won" — won't count toward seats`, names: nameList(seatsButNotWon) })
+    out.push({ level: 'warn', text: `has seat/MRR data but Lead Stage is not "Closed Won" — won't count toward closed metrics`, names: nameList(seatsButNotWon) })
 
+  // Closed Won but no closed date → invisible in date filters
   const wonNoDate = rows.filter(r => r.lead_stage === CLOSED_WON && !r.closed_date)
   if (wonNoDate.length)
-    out.push({ level: 'warn', text: `is "Closed Won" but has no Closed Date — won't appear in date filters`, names: nameList(wonNoDate) })
+    out.push({ level: 'warn', text: `is "Closed Won" but has no Closed Date — won't appear in any date filter`, names: nameList(wonNoDate) })
+
+  // Closed Won but no revenue at all → deal adds nothing to metrics
+  const wonNoRevenue = rows.filter(r =>
+    r.lead_stage === CLOSED_WON &&
+    !Number(r.closed_hours) && !Number(r.mrr_value) && !Number(r.one_time_revenue)
+  )
+  if (wonNoRevenue.length)
+    out.push({ level: 'warn', text: `is "Closed Won" but has no Seats, MRR, or One-time value — deal won't contribute to any metrics`, names: nameList(wonNoRevenue) })
+
+  // Has a closed date but stage is not Closed Won → date will be ignored
+  const dateButNotWon = rows.filter(r =>
+    r.closed_date && r.lead_stage !== CLOSED_WON
+  )
+  if (dateButNotWon.length)
+    out.push({ level: 'warn', text: `has a Closed Date but Lead Stage is not "Closed Won" — date will be ignored`, names: nameList(dateButNotWon) })
+
+  // Closed date is in the future (possible data entry error)
+  const today = new Date().toISOString().split('T')[0]
+  const futureClosed = rows.filter(r => r.closed_date && (r.closed_date as string) > today)
+  if (futureClosed.length)
+    out.push({ level: 'info', text: `has a Closed Date in the future — double-check if this is correct`, names: nameList(futureClosed) })
+
+  // Lead date is in the future
+  const futureLeadDate = rows.filter(r => r.lead_date && (r.lead_date as string) > today)
+  if (futureLeadDate.length)
+    out.push({ level: 'info', text: `has a Lead Date in the future — double-check if this is correct`, names: nameList(futureLeadDate) })
+
+  // Closed date is before lead date (logically impossible)
+  const closedBeforeLead = rows.filter(r =>
+    r.closed_date && r.lead_date && (r.closed_date as string) < (r.lead_date as string)
+  )
+  if (closedBeforeLead.length)
+    out.push({ level: 'warn', text: `has a Closed Date earlier than its Lead Date — likely a data entry error`, names: nameList(closedBeforeLead) })
 
   return out
 }
