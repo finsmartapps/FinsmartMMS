@@ -59,7 +59,9 @@ const parseNum = (s: string): number | null => {
   return isNaN(n) || s.trim() === '' ? null : n
 }
 
-function buildLeads(text: string, hasHeader: boolean): { rows: ParsedLead[]; skipped: number; inBatchDup: number } {
+interface SkippedRow { sr: string; rowNum: number; preview: string }
+
+function buildLeads(text: string, hasHeader: boolean): { rows: ParsedLead[]; skipped: SkippedRow[]; inBatchDup: number } {
   const today = new Date().toISOString().split('T')[0]
   const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim() !== '')
   // Detect delimiter from the FIRST line only — a stray tab inside a later
@@ -73,16 +75,23 @@ function buildLeads(text: string, hasHeader: boolean): { rows: ParsedLead[]; ski
 
   const rows: ParsedLead[] = []
   const idxByEmail = new Map<string, number>() // emailKey → index in rows (for within-batch dedup)
-  let skipped = 0
+  const skipped: SkippedRow[] = []
   let inBatchDup = 0
-  for (const line of dataLines) {
+  for (let i = 0; i < dataLines.length; i++) {
+    const line = dataLines[i]
     const cells = parseDelimitedLine(line, delim)
-    const c = (i: number) => (cells[i] ?? '').trim()
+    const c = (idx: number) => (cells[idx] ?? '').trim()
     // Silently drop rows where every cell is blank (e.g. empty rows
     // included in an Excel copy selection — arrive as a row of tabs/commas)
     if (cells.every(cell => !cell.trim())) continue
     const name = c(2)
-    if (!name) { skipped++; continue }
+    if (!name) {
+      // Collect enough info for the user to find the row in their sheet
+      const sr = c(0) || `row ${i + (hasHeader ? 2 : 1)}`
+      const nonEmpty = cells.filter(v => v.trim()).slice(0, 3).join(' · ')
+      skipped.push({ sr, rowNum: i + (hasHeader ? 2 : 1), preview: nonEmpty || '(all empty)' })
+      continue
+    }
     const email = c(3)
     const emailKey = email.toLowerCase()
     const lead_source = c(11)
@@ -136,7 +145,7 @@ export default function ImportLeads({ existingEmails = [] }: { existingEmails?: 
   const [error, setError] = useState('')
 
   const emailSet = new Set(existingEmails.map(e => e.trim().toLowerCase()).filter(Boolean))
-  const preview = text.trim() ? buildLeads(text, hasHeader) : { rows: [], skipped: 0, inBatchDup: 0 }
+  const preview = text.trim() ? buildLeads(text, hasHeader) : { rows: [], skipped: [] as SkippedRow[], inBatchDup: 0 }
 
   // split preview rows into new vs already-existing (by email) for the summary
   const emailKey = (r: ParsedLead) => ((r.email as string) || '').trim().toLowerCase()
@@ -296,7 +305,7 @@ export default function ImportLeads({ existingEmails = [] }: { existingEmails?: 
                         · {existingCount} {dupMode === 'replace' ? 'to update' : 'to skip (already exist)'}
                       </span>
                     )}
-                    {preview.skipped > 0 && <span className="text-xs text-amber-600">· {preview.skipped} skipped (no name)</span>}
+                    {preview.skipped.length > 0 && <span className="text-xs text-rose-600 font-semibold">· {preview.skipped.length} skipped (no name)</span>}
                     {preview.inBatchDup > 0 && <span className="text-xs text-slate-400">· {preview.inBatchDup} merged (repeated in file)</span>}
                   </div>
                   <div className="flex flex-wrap gap-2 mt-2.5">
@@ -314,6 +323,28 @@ export default function ImportLeads({ existingEmails = [] }: { existingEmails?: 
                       {preview.rows[0].lead_date ? ` · ${preview.rows[0].lead_date}` : ''}
                     </p>
                   )}
+                </div>
+              )}
+
+              {preview.skipped.length > 0 && (
+                <div className="rounded-xl ring-1 ring-rose-200 bg-rose-50 overflow-hidden">
+                  <div className="px-3 py-2 border-b border-rose-100 flex items-center gap-1.5">
+                    <AlertCircle className="h-3.5 w-3.5 text-rose-500 shrink-0" />
+                    <span className="text-[11px] font-bold text-rose-700 uppercase tracking-wider">
+                      {preview.skipped.length} row{preview.skipped.length === 1 ? '' : 's'} skipped — Name column (column C) is empty
+                    </span>
+                  </div>
+                  <div className="divide-y divide-rose-100">
+                    {preview.skipped.map((s, i) => (
+                      <div key={i} className="flex items-center gap-3 px-3 py-2 text-xs text-rose-800">
+                        <span className="font-bold text-rose-500 shrink-0">Sr {s.sr}</span>
+                        <span className="text-rose-400">row {s.rowNum} in file</span>
+                        {s.preview !== '(all empty)' && (
+                          <span className="text-rose-600 truncate">{s.preview}</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
