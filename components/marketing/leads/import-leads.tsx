@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/marketing/ui/button'
 import { Upload, X, Loader2, Check, FileText, ClipboardPaste, AlertCircle, TriangleAlert, Info } from 'lucide-react'
-import { parseDelimitedLine, parseSheetDate, classifyLeadSource, defaultStatusFromSource, normalizeStatus, CATEGORY_STYLES, HOURS_PER_SEAT } from '@/lib/leads'
+import { parseSheetDate, classifyLeadSource, defaultStatusFromSource, normalizeStatus, CATEGORY_STYLES, HOURS_PER_SEAT } from '@/lib/leads'
 
 const CLOSED_WON = 'Closed Won'
 
@@ -61,32 +61,56 @@ const parseNum = (s: string): number | null => {
 
 interface SkippedRow { sr: string; rowNum: number; preview: string }
 
+// Parse the entire CSV/TSV text in one pass, respecting quoted multi-line cells.
+// This prevents embedded newlines inside quotes from being treated as row breaks.
+function parseAllRows(text: string): string[][] {
+  // Detect delimiter from the first line
+  const firstLine = text.slice(0, text.indexOf('\n') + 1 || text.length)
+  const delim = (firstLine.match(/\t/g) || []).length > (firstLine.match(/,/g) || []).length ? '\t' : ','
+
+  const allRows: string[][] = []
+  let cells: string[] = []
+  let cur = ''
+  let inQuotes = false
+
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i]
+    if (inQuotes) {
+      if (ch === '"' && text[i + 1] === '"') { cur += '"'; i++ }      // escaped quote
+      else if (ch === '"') { inQuotes = false }                         // close quote
+      else { cur += ch }                                                // content (including \n)
+    } else if (ch === '"') {
+      inQuotes = true
+    } else if (ch === delim) {
+      cells.push(cur.trim()); cur = ''
+    } else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && text[i + 1] === '\n') i++                     // \r\n → single break
+      cells.push(cur.trim()); cur = ''
+      if (cells.some(c => c)) allRows.push(cells)                      // skip fully-blank rows
+      cells = []
+    } else {
+      cur += ch
+    }
+  }
+  cells.push(cur.trim())
+  if (cells.some(c => c)) allRows.push(cells)
+  return allRows
+}
+
 function buildLeads(text: string, hasHeader: boolean): { rows: ParsedLead[]; skipped: SkippedRow[]; inBatchDup: number } {
   const today = new Date().toISOString().split('T')[0]
-  const lines = text.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n').filter(l => l.trim() !== '')
-  // Detect delimiter from the FIRST line only — a stray tab inside a later
-  // quoted cell must not flip a comma-separated file to tab-separated.
-  const head = lines[0] || ''
-  const tabCount = (head.match(/\t/g) || []).length
-  const commaCount = (head.match(/,/g) || []).length
-  const delim = tabCount > commaCount ? '\t' : ','
-  let dataLines = lines
-  if (hasHeader && lines.length) dataLines = lines.slice(1)
+  const allRows = parseAllRows(text)
+  const dataRows = hasHeader ? allRows.slice(1) : allRows
 
   const rows: ParsedLead[] = []
-  const idxByEmail = new Map<string, number>() // emailKey → index in rows (for within-batch dedup)
+  const idxByEmail = new Map<string, number>()
   const skipped: SkippedRow[] = []
   let inBatchDup = 0
-  for (let i = 0; i < dataLines.length; i++) {
-    const line = dataLines[i]
-    const cells = parseDelimitedLine(line, delim)
+  for (let i = 0; i < dataRows.length; i++) {
+    const cells = dataRows[i]
     const c = (idx: number) => (cells[idx] ?? '').trim()
-    // Silently drop rows where every cell is blank (e.g. empty rows
-    // included in an Excel copy selection — arrive as a row of tabs/commas)
-    if (cells.every(cell => !cell.trim())) continue
     const name = c(2)
     if (!name) {
-      // Collect enough info for the user to find the row in their sheet
       const sr = c(0) || `row ${i + (hasHeader ? 2 : 1)}`
       const nonEmpty = cells.filter(v => v.trim()).slice(0, 3).join(' · ')
       skipped.push({ sr, rowNum: i + (hasHeader ? 2 : 1), preview: nonEmpty || '(all empty)' })
