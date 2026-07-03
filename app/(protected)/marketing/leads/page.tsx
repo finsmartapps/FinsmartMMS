@@ -116,10 +116,13 @@ export default async function LeadsPage() {
 
       {/* ── Funnel charts with shared date filter ── */}
       <LeadsFunnelSection leads={leads.map(l => ({
-        lead_date:   l.lead_date,
-        lead_status: l.lead_status,
-        lead_source: l.lead_source,
-        data_source: l.data_source,
+        lead_date:        l.lead_date,
+        lead_status:      l.lead_status,
+        lead_source:      l.lead_source,
+        data_source:      l.data_source,
+        lead_stage:       l.lead_stage,
+        mrr_value:        l.mrr_value,
+        one_time_revenue: l.one_time_revenue,
       }))} />
 
       {/* ── Closed Won by Lead Source (month-wise) ── */}

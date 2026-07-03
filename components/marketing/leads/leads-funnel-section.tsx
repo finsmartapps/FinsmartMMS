@@ -5,6 +5,7 @@ import { ChevronDown } from 'lucide-react'
 import WeeklyFunnelChart from './weekly-funnel-chart'
 import EventFunnelChart from './event-funnel-chart'
 import OtherSourcesFunnelChart from './other-sources-funnel-chart'
+import SourceFunnelChart from './source-funnel-chart'
 
 type FilterMode = 'week' | 'month' | 'last-month' | 'pick-month' | 'custom'
 
@@ -17,10 +18,13 @@ const OPTIONS: { mode: FilterMode; label: string }[] = [
 ]
 
 interface LeadLite {
-  lead_date: string | null
-  lead_status: string | null
-  lead_source: string | null
-  data_source: string | null
+  lead_date:        string | null
+  lead_status:      string | null
+  lead_source:      string | null
+  data_source:      string | null
+  lead_stage:       string | null
+  mrr_value:        number | null
+  one_time_revenue: number | null
 }
 
 function isoDate(d: Date) {
@@ -145,6 +149,15 @@ export default function LeadsFunnelSection({ leads }: { leads: LeadLite[] }) {
       />
       <OtherSourcesFunnelChart
         leads={filtered.map(l => ({ lead_source: l.lead_source, lead_status: l.lead_status }))}
+      />
+      <SourceFunnelChart
+        leads={filtered.map(l => ({
+          lead_source:      l.lead_source,
+          lead_status:      l.lead_status,
+          lead_stage:       l.lead_stage,
+          mrr_value:        l.mrr_value,
+          one_time_revenue: l.one_time_revenue,
+        }))}
       />
     </div>
   )
