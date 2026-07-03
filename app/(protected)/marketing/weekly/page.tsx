@@ -4,7 +4,6 @@ import type { Settings, Segment, Channel, WeeklyActual, Lead } from '@/types'
 import WeeklyReviewForm from '@/components/marketing/weekly/weekly-review-form'
 import WeeklyTrend, { type WeekPoint } from '@/components/marketing/weekly/weekly-trend'
 import { PageHero } from '@/components/marketing/ui/panel'
-import { classifyLeadSource } from '@/lib/leads'
 import { ClipboardList } from 'lucide-react'
 
 const TREND_WEEKS = 10

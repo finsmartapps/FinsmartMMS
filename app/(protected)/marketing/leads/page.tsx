@@ -8,6 +8,7 @@ import LeadsTable from '@/components/marketing/leads/leads-table'
 import CustomerCard from '@/components/marketing/leads/customer-card'
 import SeatsSection from '@/components/marketing/leads/seats-section'
 import WeeklyFunnelChart from '@/components/marketing/leads/weekly-funnel-chart'
+import ClosedWonBySource from '@/components/marketing/leads/closed-won-by-source'
 import {
   classifyLeadSource, CATEGORY_STYLES,
   DIGITAL_MQL_SOURCES, EVENT_SQL_SOURCES, DIRECT_SQL_SOURCES, LEAD_STAGES,
@@ -115,6 +116,9 @@ export default async function LeadsPage() {
 
       {/* ── Weekly MQL + SQL trend ── */}
       <WeeklyFunnelChart leads={leads.map(l => ({ lead_date: l.lead_date, lead_status: l.lead_status }))} />
+
+      {/* ── Closed Won by Lead Source (month-wise) ── */}
+      <ClosedWonBySource won={won} />
 
       {/* ── Seats Closed performance (Closed Won only) ── */}
       <div className="flex items-center gap-2 pt-1">
