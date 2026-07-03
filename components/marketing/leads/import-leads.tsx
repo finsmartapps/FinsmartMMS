@@ -10,62 +10,40 @@ import { parseDelimitedLine, parseSheetDate, classifyLeadSource, defaultStatusFr
 
 const CLOSED_WON = 'Closed Won'
 
-function nameList(rows: ParsedLead[]) {
-  const names = rows.map(r => r.name as string).filter(Boolean)
-  if (names.length <= 3) return names.join(', ')
-  return `${names.slice(0, 3).join(', ')} +${names.length - 3} more`
-}
-
-interface Suggestion { level: 'warn' | 'info'; text: string; names: string }
+interface Suggestion { level: 'warn' | 'info'; name: string; text: string }
 
 function getSuggestions(rows: ParsedLead[]): Suggestion[] {
   const out: Suggestion[] = []
-
-  // Seat/MRR data but stage is not Closed Won → won't count
-  const seatsButNotWon = rows.filter(r =>
-    (Number(r.closed_hours) > 0 || Number(r.mrr_value) > 0 || Number(r.one_time_revenue) > 0) &&
-    r.lead_stage !== CLOSED_WON
-  )
-  if (seatsButNotWon.length)
-    out.push({ level: 'warn', text: `has seat/MRR data but Lead Stage is not "Closed Won" — won't count toward closed metrics`, names: nameList(seatsButNotWon) })
-
-  // Closed Won but no closed date → invisible in date filters
-  const wonNoDate = rows.filter(r => r.lead_stage === CLOSED_WON && !r.closed_date)
-  if (wonNoDate.length)
-    out.push({ level: 'warn', text: `is "Closed Won" but has no Closed Date — won't appear in any date filter`, names: nameList(wonNoDate) })
-
-  // Closed Won but no revenue at all → deal adds nothing to metrics
-  const wonNoRevenue = rows.filter(r =>
-    r.lead_stage === CLOSED_WON &&
-    !Number(r.closed_hours) && !Number(r.mrr_value) && !Number(r.one_time_revenue)
-  )
-  if (wonNoRevenue.length)
-    out.push({ level: 'warn', text: `is "Closed Won" but has no Seats, MRR, or One-time value — deal won't contribute to any metrics`, names: nameList(wonNoRevenue) })
-
-  // Has a closed date but stage is not Closed Won → date will be ignored
-  const dateButNotWon = rows.filter(r =>
-    r.closed_date && r.lead_stage !== CLOSED_WON
-  )
-  if (dateButNotWon.length)
-    out.push({ level: 'warn', text: `has a Closed Date but Lead Stage is not "Closed Won" — date will be ignored`, names: nameList(dateButNotWon) })
-
-  // Closed date is in the future (possible data entry error)
   const today = new Date().toISOString().split('T')[0]
-  const futureClosed = rows.filter(r => r.closed_date && (r.closed_date as string) > today)
-  if (futureClosed.length)
-    out.push({ level: 'info', text: `has a Closed Date in the future — double-check if this is correct`, names: nameList(futureClosed) })
 
-  // Lead date is in the future
-  const futureLeadDate = rows.filter(r => r.lead_date && (r.lead_date as string) > today)
-  if (futureLeadDate.length)
-    out.push({ level: 'info', text: `has a Lead Date in the future — double-check if this is correct`, names: nameList(futureLeadDate) })
+  for (const r of rows) {
+    const name = (r.name as string) || '(no name)'
+    const isWon   = r.lead_stage === CLOSED_WON
+    const hasSeats = Number(r.closed_hours) > 0
+    const hasMRR   = Number(r.mrr_value) > 0
+    const hasOT    = Number(r.one_time_revenue) > 0
 
-  // Closed date is before lead date (logically impossible)
-  const closedBeforeLead = rows.filter(r =>
-    r.closed_date && r.lead_date && (r.closed_date as string) < (r.lead_date as string)
-  )
-  if (closedBeforeLead.length)
-    out.push({ level: 'warn', text: `has a Closed Date earlier than its Lead Date — likely a data entry error`, names: nameList(closedBeforeLead) })
+    if ((hasSeats || hasMRR || hasOT) && !isWon)
+      out.push({ level: 'warn', name, text: `Lead Stage is not "Closed Won" but has seat/MRR data — won't count toward closed metrics` })
+
+    if (isWon && !r.closed_date)
+      out.push({ level: 'warn', name, text: `is "Closed Won" but has no Closed Date — won't appear in any date filter` })
+
+    if (isWon && !hasSeats && !hasMRR && !hasOT)
+      out.push({ level: 'warn', name, text: `is "Closed Won" but has no Seats, MRR, or One-time value — won't contribute to any metric` })
+
+    if (r.closed_date && !isWon)
+      out.push({ level: 'warn', name, text: `has a Closed Date but Lead Stage is not "Closed Won" — date will be ignored` })
+
+    if (r.closed_date && (r.closed_date as string) > today)
+      out.push({ level: 'info', name, text: `has a Closed Date in the future (${r.closed_date}) — double-check if correct` })
+
+    if (r.lead_date && (r.lead_date as string) > today)
+      out.push({ level: 'info', name, text: `has a Lead Date in the future (${r.lead_date}) — double-check if correct` })
+
+    if (r.closed_date && r.lead_date && (r.closed_date as string) < (r.lead_date as string))
+      out.push({ level: 'warn', name, text: `Closed Date (${r.closed_date}) is earlier than Lead Date (${r.lead_date}) — likely a data entry error` })
+  }
 
   return out
 }
@@ -333,22 +311,25 @@ export default function ImportLeads({ existingEmails = [] }: { existingEmails?: 
               )}
 
               {suggestions.length > 0 && (
-                <div className="space-y-2">
-                  {suggestions.map((s, i) => (
-                    <div key={i} className={`flex items-start gap-2.5 rounded-lg px-3 py-2.5 text-xs ring-1 ${
-                      s.level === 'warn'
-                        ? 'bg-amber-50 text-amber-800 ring-amber-200'
-                        : 'bg-blue-50 text-blue-800 ring-blue-200'
-                    }`}>
-                      {s.level === 'warn'
-                        ? <TriangleAlert className="h-3.5 w-3.5 shrink-0 mt-0.5 text-amber-500" />
-                        : <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-blue-500" />}
-                      <div>
-                        <span className="font-bold">{s.names}</span>
-                        <span className="ml-1">{s.text}</span>
+                <div className="rounded-xl ring-1 ring-amber-200 bg-amber-50 overflow-hidden">
+                  <div className="px-3 py-2 border-b border-amber-100 flex items-center gap-1.5">
+                    <TriangleAlert className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                    <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">
+                      {suggestions.length} data issue{suggestions.length === 1 ? '' : 's'} found — review before importing
+                    </span>
+                  </div>
+                  <div className="divide-y divide-amber-100">
+                    {suggestions.map((s, i) => (
+                      <div key={i} className={`flex items-start gap-2.5 px-3 py-2 text-xs ${
+                        s.level === 'warn' ? 'text-amber-800' : 'text-blue-800'
+                      }`}>
+                        {s.level === 'warn'
+                          ? <TriangleAlert className="h-3.5 w-3.5 shrink-0 mt-0.5 text-amber-500" />
+                          : <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-blue-500" />}
+                        <span><span className="font-bold">{s.name}</span> — {s.text}</span>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               )}
 
