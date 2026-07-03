@@ -10,16 +10,9 @@ import {
   classifyLeadSource, formatUSD, annualContractValue, hoursToSeats, formatSeats,
   CATEGORY_STYLES,
 } from '@/lib/leads'
-import type { LeadCategory } from '@/lib/leads'
+import { PALETTE } from '@/components/marketing/charts/dashboard-charts'
 import type { Lead } from '@/types'
 
-const CATS: LeadCategory[] = ['Digital MQL', 'Direct SQL', 'Event SQL', 'Unclassified']
-const CAT_COLORS: Record<LeadCategory, string> = {
-  'Digital MQL':  '#6366f1',
-  'Direct SQL':   '#10b981',
-  'Event SQL':    '#d946ef',
-  'Unclassified': '#94a3b8',
-}
 const MONTHS = 12
 
 function fmtDate(iso: string | null) {
@@ -146,6 +139,19 @@ export default function ClosedWonBySource({ won }: { won: Lead[] }) {
   const [offset, setOffset] = useState(0)
   const [activeMonth, setActiveMonth] = useState<MonthMeta | null>(null)
 
+  // Stable source list + color map derived from the full dataset (not offset-dependent)
+  const { sources, sourceColors } = useMemo(() => {
+    const counts = won.reduce<Record<string, number>>((acc, l) => {
+      const s = l.lead_source || 'Unspecified'
+      acc[s] = (acc[s] ?? 0) + 1
+      return acc
+    }, {})
+    const sources = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([s]) => s)
+    const sourceColors: Record<string, string> = {}
+    sources.forEach((s, i) => { sourceColors[s] = PALETTE[i % PALETTE.length] })
+    return { sources, sourceColors }
+  }, [won])
+
   const { data, months } = useMemo(() => {
     const today = new Date()
     const anchor = new Date(today.getFullYear(), today.getMonth() - offset * MONTHS, 1)
@@ -165,14 +171,14 @@ export default function ClosedWonBySource({ won }: { won: Lead[] }) {
     const data = months.map(m => {
       const monthLeads = won.filter(l => (l.closed_date ?? '') >= m.from && (l.closed_date ?? '') <= m.to)
       const point: Record<string, string | number> = { name: m.label }
-      for (const cat of CATS) {
-        point[cat] = monthLeads.filter(l => classifyLeadSource(l.lead_source) === cat).length
+      for (const s of sources) {
+        point[s] = monthLeads.filter(l => (l.lead_source || 'Unspecified') === s).length
       }
       return point
     })
 
     return { data, months }
-  }, [won, offset])
+  }, [won, offset, sources])
 
   const visibleTotal = useMemo(
     () => won.filter(l => months.some(m => (l.closed_date ?? '') >= m.from && (l.closed_date ?? '') <= m.to)).length,
@@ -236,13 +242,13 @@ export default function ClosedWonBySource({ won }: { won: Lead[] }) {
                   fontSize: 12, padding: '8px 12px',
                 }}
               />
-              {CATS.map((cat, i) => (
+              {sources.map((s, i) => (
                 <Bar
-                  key={cat}
-                  dataKey={cat}
+                  key={s}
+                  dataKey={s}
                   stackId="a"
-                  fill={CAT_COLORS[cat]}
-                  radius={i === CATS.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
+                  fill={sourceColors[s]}
+                  radius={i === sources.length - 1 ? [4, 4, 0, 0] : [0, 0, 0, 0]}
                   maxBarSize={40}
                 />
               ))}
@@ -253,13 +259,10 @@ export default function ClosedWonBySource({ won }: { won: Lead[] }) {
         {/* Legend + navigation */}
         <div className="flex items-center justify-between mt-2 px-1">
           <div className="flex flex-wrap items-center gap-3">
-            {CATS.map(cat => (
-              <span key={cat} className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
-                <span
-                  className="w-2.5 h-2.5 rounded-sm inline-block"
-                  style={{ backgroundColor: CAT_COLORS[cat] }}
-                />
-                {cat}
+            {sources.map(s => (
+              <span key={s} className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500">
+                <span className="w-2.5 h-2.5 rounded-sm inline-block" style={{ backgroundColor: sourceColors[s] }} />
+                {s}
               </span>
             ))}
           </div>
