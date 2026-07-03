@@ -60,7 +60,7 @@ export default function WeeklyTrend({ series, reqMql, reqSql }: Props) {
 
       {/* table */}
       <Panel icon={TrendingUp} title="Required vs Achieved — per week" accent="violet" noPad
-        caption={`Achieved auto-counted from Leads · MQL = lead_status MQL by lead date · SQL = lead_status SQL by became_sql_date or lead date`}>
+        caption={`Achieved auto-counted from Leads · MQL = lead_status MQL by lead date · SQL = lead_status SQL by lead date`}>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>

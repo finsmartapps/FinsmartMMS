@@ -11,7 +11,7 @@ import type { DerivedTargets, Settings, WeeklyActual, Lead } from '@/types'
 import { classifyLeadSource } from '@/lib/leads'
 import { HBarChart, DonutChart } from '@/components/marketing/charts/dashboard-charts'
 
-type LeadLite = Pick<Lead, 'lead_date' | 'became_sql_date' | 'lead_source' | 'lead_status' | 'assigned_to'>
+type LeadLite = Pick<Lead, 'lead_date' | 'lead_source' | 'lead_status' | 'assigned_to'>
 
 interface Props {
   targets: DerivedTargets

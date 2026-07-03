@@ -36,7 +36,7 @@ export default async function WeeklyReviewPage() {
     supabase.from('segments').select('*').order('sort_order'),
     supabase.from('channels').select('*').order('sort_order'),
     supabase.from('weekly_actuals').select('*').order('week_start', { ascending: false }).limit(8),
-    supabase.from('leads').select('lead_date, became_sql_date, lead_source, lead_status, assigned_to'),
+    supabase.from('leads').select('lead_date, lead_source, lead_status, assigned_to'),
   ])
 
   const settings = settingsRows?.[0] as Settings | undefined
@@ -46,7 +46,7 @@ export default async function WeeklyReviewPage() {
   const segs = (segments ?? []) as Segment[]
   const chs = (channels ?? []) as Channel[]
   const weeks = (weeklyRows ?? []) as WeeklyActual[]
-  const leads = (leadRows ?? []) as Pick<Lead, 'lead_date' | 'became_sql_date' | 'lead_source' | 'lead_status' | 'assigned_to'>[]
+  const leads = (leadRows ?? []) as Pick<Lead, 'lead_date' | 'lead_source' | 'lead_status' | 'assigned_to'>[]
 
   // ── Build last N Mon–Sun weeks and bucket achieved MQL/SQL from the leads ──
   const thisMonday = mondayOf(new Date())
@@ -57,7 +57,7 @@ export default async function WeeklyReviewPage() {
     const s = isoLocal(start), e = isoLocal(end)
     const inWeek = (d: string | null | undefined) => !!d && d >= s && d <= e
     const mql = leads.filter(l => l.lead_status === 'MQL' && inWeek(l.lead_date)).length
-    const sql = leads.filter(l => l.lead_status === 'SQL' && inWeek(l.became_sql_date ?? l.lead_date)).length
+    const sql = leads.filter(l => l.lead_status === 'SQL' && inWeek(l.lead_date)).length
     return { start: s, end: e, label: shortLabel(s), range: `${shortLabel(s)}–${shortLabel(e)}`, mql, sql }
   })
 
