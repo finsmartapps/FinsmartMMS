@@ -1,6 +1,5 @@
 ﻿import { createClient } from '@/lib/supabase/server'
 import { deriveTargets } from '@/lib/calculations'
-import { classifyLeadSource } from '@/lib/leads'
 import type { Settings, Segment, Channel, WeeklyActual, Lead } from '@/types'
 import WeeklyReviewForm from '@/components/marketing/weekly/weekly-review-form'
 import WeeklyTrend, { type WeekPoint } from '@/components/marketing/weekly/weekly-trend'
@@ -57,14 +56,8 @@ export default async function WeeklyReviewPage() {
     const end = new Date(start); end.setDate(start.getDate() + 6)
     const s = isoLocal(start), e = isoLocal(end)
     const inWeek = (d: string | null | undefined) => !!d && d >= s && d <= e
-    // SQL "event" date: when it became SQL, else arrival date for Direct/Event SQL
-    const sqlDate = (l: typeof leads[number]) => {
-      if (l.became_sql_date) return l.became_sql_date
-      const cat = classifyLeadSource(l.lead_source)
-      return cat === 'Direct SQL' || cat === 'Event SQL' ? l.lead_date : null
-    }
-    const mql = leads.filter(l => classifyLeadSource(l.lead_source) === 'Digital MQL' && inWeek(l.lead_date)).length
-    const sql = leads.filter(l => inWeek(sqlDate(l))).length
+    const mql = leads.filter(l => l.lead_status === 'MQL' && inWeek(l.lead_date)).length
+    const sql = leads.filter(l => l.lead_status === 'SQL' && inWeek(l.became_sql_date ?? l.lead_date)).length
     return { start: s, end: e, label: shortLabel(s), range: `${shortLabel(s)}–${shortLabel(e)}`, mql, sql }
   })
 

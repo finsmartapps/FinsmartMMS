@@ -45,7 +45,7 @@ export default function WeeklyTrend({ series, reqMql, reqSql }: Props) {
       {/* charts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <Panel icon={Users} title="Weekly MQLs — achieved vs required" accent="indigo"
-          caption={`Digital MQL leads by week · dashed line = required (${reqMql}/wk) · on track ${hitMql}/${weeks} wks`}>
+          caption={`MQL status leads by week · dashed line = required (${reqMql}/wk) · on track ${hitMql}/${weeks} wks`}>
           <div className="pt-1">
             <VBarChart data={mqlChart} unit=" MQL" target={reqMql} targetLabel={`req ${reqMql}`} />
           </div>
@@ -60,7 +60,7 @@ export default function WeeklyTrend({ series, reqMql, reqSql }: Props) {
 
       {/* table */}
       <Panel icon={TrendingUp} title="Required vs Achieved — per week" accent="violet" noPad
-        caption={`Achieved auto-counted from Leads · MQL = Digital MQL by lead date · SQL = became-SQL date (or arrival for Direct/Event)`}>
+        caption={`Achieved auto-counted from Leads · MQL = lead_status MQL by lead date · SQL = lead_status SQL by became_sql_date or lead date`}>
         <div className="overflow-x-auto">
           <table className="w-full border-collapse">
             <thead>
