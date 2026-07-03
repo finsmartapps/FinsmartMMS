@@ -75,7 +75,6 @@ const marketingGroups: NavGroup[] = [
       { href: '/marketing/weekly',       label: 'Weekly Review',icon: ClipboardList   },
       { href: '/marketing/kpi-scorecard',label: 'KPI Scorecard',icon: BarChart2       },
       { href: '/marketing/lead-model',   label: 'Lead Model',   icon: TrendingUp      },
-      { href: '/marketing/settings',     label: 'Settings',     icon: Settings        },
     ],
   },
 ]
