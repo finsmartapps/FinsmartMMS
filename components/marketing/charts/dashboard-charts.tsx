@@ -223,6 +223,40 @@ export function VBarChart({
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
+   Grouped vertical bar chart (two series per week)
+   ────────────────────────────────────────────────────────────────────────── */
+export function GroupedVBarChart({
+  data,
+  series,
+}: {
+  data: Record<string, string | number>[]
+  series: { key: string; label: string; color: string }[]
+}) {
+  return (
+    <div className="w-full" style={{ height: 220 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 4 }} barCategoryGap="28%" barGap={2}>
+          <CartesianGrid vertical={false} stroke="#eef0f5" />
+          <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} width={28} />
+          <Tooltip
+            cursor={{ fill: '#f8fafc' }}
+            contentStyle={{ borderRadius: 12, border: 'none', boxShadow: '0 8px 24px rgba(0,0,0,0.12)', fontSize: 12, padding: '8px 12px' }}
+            formatter={(value, key) => {
+              const s = series.find(s => s.key === key)
+              return [value, s?.label ?? String(key)]
+            }}
+          />
+          {series.map(s => (
+            <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} radius={[4, 4, 0, 0]} maxBarSize={18} />
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
+/* ──────────────────────────────────────────────────────────────────────────
    Radial progress gauge
    ────────────────────────────────────────────────────────────────────────── */
 export function RadialGauge({

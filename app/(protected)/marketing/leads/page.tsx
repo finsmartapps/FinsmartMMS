@@ -7,6 +7,7 @@ import ImportLeads from '@/components/marketing/leads/import-leads'
 import LeadsTable from '@/components/marketing/leads/leads-table'
 import CustomerCard from '@/components/marketing/leads/customer-card'
 import SeatsSection from '@/components/marketing/leads/seats-section'
+import WeeklyFunnelChart from '@/components/marketing/leads/weekly-funnel-chart'
 import {
   classifyLeadSource, CATEGORY_STYLES,
   DIGITAL_MQL_SOURCES, EVENT_SQL_SOURCES, DIRECT_SQL_SOURCES, LEAD_STAGES,
@@ -111,6 +112,9 @@ export default async function LeadsPage() {
           gradient="from-emerald-500 via-teal-600 to-cyan-700" glow="glow-emerald" />
         <CustomerCard customers={customers} opportunityCount={opportunityCount} />
       </div>
+
+      {/* ── Weekly MQL + SQL trend ── */}
+      <WeeklyFunnelChart leads={leads.map(l => ({ lead_date: l.lead_date, lead_status: l.lead_status }))} />
 
       {/* ── Seats Closed performance (Closed Won only) ── */}
       <div className="flex items-center gap-2 pt-1">
