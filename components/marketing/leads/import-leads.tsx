@@ -10,15 +10,6 @@ import { parseDelimitedLine, parseSheetDate, classifyLeadSource, defaultStatusFr
 
 const CLOSED_WON = 'Closed Won'
 
-function currentFY() {
-  const now = new Date()
-  const year = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1
-  return {
-    start: `${year}-04-01`,
-    label: `FY ${year}-${String((year + 1) % 100).padStart(2, '0')}`,
-  }
-}
-
 function nameList(rows: ParsedLead[]) {
   const names = rows.map(r => r.name as string).filter(Boolean)
   if (names.length <= 3) return names.join(', ')
@@ -28,7 +19,6 @@ function nameList(rows: ParsedLead[]) {
 interface Suggestion { level: 'warn' | 'info'; text: string; names: string }
 
 function getSuggestions(rows: ParsedLead[]): Suggestion[] {
-  const fy = currentFY()
   const out: Suggestion[] = []
 
   const seatsButNotWon = rows.filter(r =>
@@ -39,13 +29,7 @@ function getSuggestions(rows: ParsedLead[]): Suggestion[] {
 
   const wonNoDate = rows.filter(r => r.lead_stage === CLOSED_WON && !r.closed_date)
   if (wonNoDate.length)
-    out.push({ level: 'warn', text: `is "Closed Won" but has no Closed Date — won't appear in any fiscal year`, names: nameList(wonNoDate) })
-
-  const wonPrevFY = rows.filter(r =>
-    r.lead_stage === CLOSED_WON && r.closed_date && (r.closed_date as string) < fy.start
-  )
-  if (wonPrevFY.length)
-    out.push({ level: 'info', text: `closed before Apr 1, ${fy.label.slice(3, 7)} (${fy.label}) — counted in the previous fiscal year, not current`, names: nameList(wonPrevFY) })
+    out.push({ level: 'warn', text: `is "Closed Won" but has no Closed Date — won't appear in date filters`, names: nameList(wonNoDate) })
 
   return out
 }
