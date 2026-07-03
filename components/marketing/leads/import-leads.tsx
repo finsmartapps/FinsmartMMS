@@ -5,8 +5,50 @@ import { createPortal } from 'react-dom'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/marketing/ui/button'
-import { Upload, X, Loader2, Check, FileText, ClipboardPaste, AlertCircle } from 'lucide-react'
+import { Upload, X, Loader2, Check, FileText, ClipboardPaste, AlertCircle, TriangleAlert, Info } from 'lucide-react'
 import { parseDelimitedLine, parseSheetDate, classifyLeadSource, defaultStatusFromSource, normalizeStatus, CATEGORY_STYLES, HOURS_PER_SEAT } from '@/lib/leads'
+
+const CLOSED_WON = 'Closed Won'
+
+function currentFY() {
+  const now = new Date()
+  const year = now.getMonth() >= 3 ? now.getFullYear() : now.getFullYear() - 1
+  return {
+    start: `${year}-04-01`,
+    label: `FY ${year}-${String((year + 1) % 100).padStart(2, '0')}`,
+  }
+}
+
+function nameList(rows: ParsedLead[]) {
+  const names = rows.map(r => r.name as string).filter(Boolean)
+  if (names.length <= 3) return names.join(', ')
+  return `${names.slice(0, 3).join(', ')} +${names.length - 3} more`
+}
+
+interface Suggestion { level: 'warn' | 'info'; text: string; names: string }
+
+function getSuggestions(rows: ParsedLead[]): Suggestion[] {
+  const fy = currentFY()
+  const out: Suggestion[] = []
+
+  const seatsButNotWon = rows.filter(r =>
+    (Number(r.closed_hours) > 0 || Number(r.mrr_value) > 0) && r.lead_stage !== CLOSED_WON
+  )
+  if (seatsButNotWon.length)
+    out.push({ level: 'warn', text: `has seat/MRR data but Lead Stage is not "Closed Won" — won't count toward seats`, names: nameList(seatsButNotWon) })
+
+  const wonNoDate = rows.filter(r => r.lead_stage === CLOSED_WON && !r.closed_date)
+  if (wonNoDate.length)
+    out.push({ level: 'warn', text: `is "Closed Won" but has no Closed Date — won't appear in any fiscal year`, names: nameList(wonNoDate) })
+
+  const wonPrevFY = rows.filter(r =>
+    r.lead_stage === CLOSED_WON && r.closed_date && (r.closed_date as string) < fy.start
+  )
+  if (wonPrevFY.length)
+    out.push({ level: 'info', text: `closed before ${fy.label} — will count in a previous fiscal year, not current`, names: nameList(wonPrevFY) })
+
+  return out
+}
 
 type ParsedLead = Record<string, string | number | null>
 
@@ -97,6 +139,8 @@ export default function ImportLeads({ existingEmails = [] }: { existingEmails?: 
   const existingRows = preview.rows.filter(r => { const k = emailKey(r); return k && emailSet.has(k) })
   const newCount = newRows.length
   const existingCount = existingRows.length
+
+  const suggestions = text.trim() ? getSuggestions(preview.rows) : []
 
   const catCounts = preview.rows.reduce<Record<string, number>>((a, r) => {
     const k = (r.category as string) || 'Unclassified'; a[k] = (a[k] ?? 0) + 1; return a
@@ -265,6 +309,26 @@ export default function ImportLeads({ existingEmails = [] }: { existingEmails?: 
                       {preview.rows[0].lead_date ? ` · ${preview.rows[0].lead_date}` : ''}
                     </p>
                   )}
+                </div>
+              )}
+
+              {suggestions.length > 0 && (
+                <div className="space-y-2">
+                  {suggestions.map((s, i) => (
+                    <div key={i} className={`flex items-start gap-2.5 rounded-lg px-3 py-2.5 text-xs ring-1 ${
+                      s.level === 'warn'
+                        ? 'bg-amber-50 text-amber-800 ring-amber-200'
+                        : 'bg-blue-50 text-blue-800 ring-blue-200'
+                    }`}>
+                      {s.level === 'warn'
+                        ? <TriangleAlert className="h-3.5 w-3.5 shrink-0 mt-0.5 text-amber-500" />
+                        : <Info className="h-3.5 w-3.5 shrink-0 mt-0.5 text-blue-500" />}
+                      <div>
+                        <span className="font-bold">{s.names}</span>
+                        <span className="ml-1">{s.text}</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               )}
 
