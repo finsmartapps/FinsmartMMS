@@ -45,7 +45,7 @@ function getSuggestions(rows: ParsedLead[]): Suggestion[] {
     r.lead_stage === CLOSED_WON && r.closed_date && (r.closed_date as string) < fy.start
   )
   if (wonPrevFY.length)
-    out.push({ level: 'info', text: `closed before ${fy.label} — will count in a previous fiscal year, not current`, names: nameList(wonPrevFY) })
+    out.push({ level: 'info', text: `closed before Apr 1, ${fy.label.slice(3, 7)} (${fy.label}) — counted in the previous fiscal year, not current`, names: nameList(wonPrevFY) })
 
   return out
 }
