@@ -81,6 +81,23 @@ export default function SeatsSection({ won, seatsTarget }: Props) {
   const avg      = count ? seats / count : 0
   const monthly  = seatsTarget / 12
 
+  // Proportional target for the active filter window
+  const effectiveTarget = useMemo(() => {
+    if (mode === 'week') return seatsTarget / 52
+    if (mode === 'month' || mode === 'pick-month') return seatsTarget / 12
+    if (mode === 'custom' && customFrom && customTo) {
+      const days = Math.max(1,
+        (new Date(customTo).getTime() - new Date(customFrom).getTime()) / 86400000 + 1)
+      return (seatsTarget / 365) * days
+    }
+    return seatsTarget
+  }, [mode, customFrom, customTo, seatsTarget])
+
+  const targetLabel = mode === 'week'       ? 'Weekly Target'
+    : (mode === 'month' || mode === 'pick-month') ? 'Monthly Target'
+    : mode === 'custom' ? 'Period Target'
+    : 'Annual Target'
+
   const monthBars = useMemo(() => {
     const seen = new Set<string>()
     filtered.forEach(l => { if (l.closed_date) seen.add((l.closed_date as string).slice(0, 7)) })
@@ -186,12 +203,14 @@ export default function SeatsSection({ won, seatsTarget }: Props) {
 
       {/* ── Gauge + bar chart ── */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <Panel icon={Target} title={`Seats vs Annual Target — ${rangeLabel}`} accent="emerald"
-          caption={`Goal ${seatsTarget} seats/yr · ${monthly.toFixed(1)}/mo pace`}>
+        <Panel icon={Target} title={`Seats vs ${targetLabel} — ${rangeLabel}`} accent="emerald"
+          caption={mode === 'alltime'
+            ? `Goal ${seatsTarget} seats/yr · ${monthly.toFixed(1)}/mo pace`
+            : `Goal ${formatSeats(effectiveTarget)} seats · annual ${seatsTarget}/yr`}>
           <div className="flex flex-col items-center pt-1">
-            <RadialGauge value={seats} max={seatsTarget} label="of target" color="#10b981" />
+            <RadialGauge value={seats} max={effectiveTarget} label="of target" color="#10b981" />
             <p className="text-center text-2xl font-extrabold text-slate-800 tabular-nums mt-2">
-              {formatSeats(seats)}<span className="text-base text-slate-400 font-bold"> / {seatsTarget}</span>
+              {formatSeats(seats)}<span className="text-base text-slate-400 font-bold"> / {formatSeats(effectiveTarget)}</span>
             </p>
             <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">seats closed</p>
           </div>
