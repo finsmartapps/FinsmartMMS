@@ -29,7 +29,13 @@ export default async function LeadsPage() {
   const targets = settings ? deriveTargets(settings) : null
   const leads = (leadRows ?? []) as Lead[]
 
-  // ── classification rollup ──
+  // ── status-based rollup (matches Excel pivot) ──
+  const mqlCount        = leads.filter(l => l.lead_status === 'MQL').length
+  const sqlCount        = leads.filter(l => l.lead_status === 'SQL').length
+  const opportunityCount = leads.filter(l => l.lead_status === 'Opportunity').length
+  const customerCount   = leads.filter(l => l.lead_status === 'Customer' || l.lead_status === 'Existing Customer').length
+
+  // ── source-based classification (for charts / legend) ──
   const withCat = leads.map(l => ({ ...l, cat: classifyLeadSource(l.lead_source) }))
   const digitalMql = withCat.filter(l => l.cat === 'Digital MQL').length
   const directSql  = withCat.filter(l => l.cat === 'Direct SQL').length
@@ -146,16 +152,16 @@ export default async function LeadsPage() {
 
       {/* ── Rollup cards ── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <RollupCard icon={Inbox}  label="Total Leads"  value={leads.length}  foot="all-time"
+        <RollupCard icon={Inbox}  label="Total Leads"   value={leads.length}      foot="all-time"
           gradient="from-slate-600 to-slate-800" glow="" />
-        <RollupCard icon={Users}  label="Digital MQLs" value={digitalMql}
-          foot={targets ? `target ${targets.monthly_mqls.toFixed(0)}/mo` : 'Email · Social · Paid · Chatbot · Webinar'}
+        <RollupCard icon={Users}  label="MQLs"          value={mqlCount}
+          foot={targets ? `target ${targets.monthly_mqls.toFixed(0)}/mo` : 'Marketing Qualified Leads'}
           gradient="from-indigo-500 via-indigo-600 to-violet-700" glow="glow-indigo" />
-        <RollupCard icon={Zap}    label="Direct SQLs"  value={directSql}
-          foot="Direct · Organic · Referral · Calling · Partner · Self-Gen"
+        <RollupCard icon={Zap}    label="SQLs"          value={sqlCount}
+          foot={targets ? `target ${targets.monthly_sqls.toFixed(0)}/mo` : 'Sales Qualified Leads'}
           gradient="from-emerald-500 via-teal-600 to-cyan-700" glow="glow-emerald" />
-        <RollupCard icon={Trophy} label="Event SQLs"   value={eventSql}
-          foot={targets ? `target ${(targets.event_sqls / 12).toFixed(0)}/mo` : 'Event'}
+        <RollupCard icon={Trophy} label="Customers"     value={customerCount}
+          foot={opportunityCount > 0 ? `+ ${opportunityCount} opportunities` : 'Customer + Existing Customer'}
           gradient="from-fuchsia-500 via-purple-600 to-pink-700" glow="glow-violet" />
       </div>
 
