@@ -7,12 +7,13 @@ import EventFunnelChart from './event-funnel-chart'
 import OtherSourcesFunnelChart from './other-sources-funnel-chart'
 import SourceFunnelChart from './source-funnel-chart'
 
-type FilterMode = 'week' | 'month' | 'last-month' | 'pick-month' | 'custom'
+type FilterMode = 'week' | 'month' | 'last-month' | 'year' | 'pick-month' | 'custom'
 
 const OPTIONS: { mode: FilterMode; label: string }[] = [
   { mode: 'week',       label: 'This Week'    },
   { mode: 'month',      label: 'This Month'   },
   { mode: 'last-month', label: 'Last Month'   },
+  { mode: 'year',       label: 'This Year'    },
   { mode: 'pick-month', label: 'Select Month' },
   { mode: 'custom',     label: 'Date Range'   },
 ]
@@ -54,6 +55,10 @@ function getRange(mode: FilterMode, pickMonth: string, from: string, to: string)
       to:   `${y}-${String(m + 1).padStart(2, '0')}-${String(new Date(y, m + 1, 0).getDate()).padStart(2, '0')}`,
     }
   }
+  if (mode === 'year') {
+    const y = today.getFullYear()
+    return { from: `${y}-01-01`, to: `${y}-12-31` }
+  }
   if (mode === 'pick-month' && pickMonth) {
     const [y, m] = pickMonth.split('-').map(Number)
     return { from: `${pickMonth}-01`, to: `${pickMonth}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}` }
@@ -68,7 +73,7 @@ function defaultPickMonth() {
 }
 
 export default function LeadsFunnelSection({ leads }: { leads: LeadLite[] }) {
-  const [mode, setMode] = useState<FilterMode>('month')
+  const [mode, setMode] = useState<FilterMode>('year')
   const [pickMonth, setPickMonth] = useState(defaultPickMonth)
   const [customFrom, setCustomFrom] = useState('')
   const [customTo, setCustomTo] = useState('')
