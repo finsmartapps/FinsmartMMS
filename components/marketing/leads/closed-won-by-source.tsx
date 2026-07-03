@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LabelList,
 } from 'recharts'
 import { Panel } from '@/components/marketing/ui/panel'
 import { Trophy, X, ChevronLeft, ChevronRight } from 'lucide-react'
@@ -14,6 +14,12 @@ import { PALETTE } from '@/components/marketing/charts/dashboard-charts'
 import type { Lead } from '@/types'
 
 const MONTHS = 12
+
+function fmtMRR(v: number) {
+  if (!v) return ''
+  if (v >= 1000) return `$${(v / 1000).toFixed(1).replace(/\.0$/, '')}k`
+  return `$${v}`
+}
 
 function fmtDate(iso: string | null) {
   if (!iso) return '—'
@@ -174,6 +180,9 @@ export default function ClosedWonBySource({ won }: { won: Lead[] }) {
       for (const s of sources) {
         point[s] = monthLeads.filter(l => (l.lead_source || 'Unspecified') === s).length
       }
+      // _mrr = total MRR for label; _zero = 0-height bar that anchors the label at top of stack
+      point['_mrr']  = monthLeads.reduce((s, l) => s + (l.mrr_value ?? 0), 0)
+      point['_zero'] = 0
       return point
     })
 
@@ -211,11 +220,11 @@ export default function ClosedWonBySource({ won }: { won: Lead[] }) {
         accent="emerald"
         caption={`${rangeLabel} · ${visibleTotal} deals · click any bar for details`}
       >
-        <div style={{ height: 230 }} className="w-full">
+        <div style={{ height: 250 }} className="w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={data}
-              margin={{ top: 8, right: 8, left: -16, bottom: 4 }}
+              margin={{ top: 24, right: 8, left: -16, bottom: 4 }}
               barCategoryGap="30%"
               onClick={handleBarClick}
               style={{ cursor: 'pointer' }}
@@ -236,10 +245,30 @@ export default function ClosedWonBySource({ won }: { won: Lead[] }) {
               />
               <Tooltip
                 cursor={{ fill: 'rgba(16, 185, 129, 0.06)' }}
-                contentStyle={{
-                  borderRadius: 12, border: 'none',
-                  boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-                  fontSize: 12, padding: '8px 12px',
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                content={({ active, payload, label }: any) => {
+                  if (!active || !payload?.length) return null
+                  const items = (payload as any[]).filter(p => !String(p.dataKey).startsWith('_') && (p.value as number) > 0)
+                  const mrr = (payload[0]?.payload?._mrr as number) ?? 0
+                  if (!items.length) return null
+                  return (
+                    <div className="bg-white rounded-xl shadow-lg border border-slate-100 p-3 text-xs min-w-[130px]">
+                      <p className="font-bold text-slate-700 mb-1.5">{label}</p>
+                      {items.map((p: any) => (
+                        <div key={p.dataKey} className="flex items-center gap-2 mb-0.5">
+                          <span className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: p.fill }} />
+                          <span className="text-slate-600 flex-1">{p.name}</span>
+                          <strong className="text-slate-800">{p.value}</strong>
+                        </div>
+                      ))}
+                      {mrr > 0 && (
+                        <div className="mt-1.5 pt-1.5 border-t border-slate-100 flex justify-between">
+                          <span className="text-slate-500">MRR</span>
+                          <strong className="text-emerald-700">{formatUSD(mrr)}</strong>
+                        </div>
+                      )}
+                    </div>
+                  )
                 }}
               />
               {sources.map((s, i) => (
@@ -252,6 +281,25 @@ export default function ClosedWonBySource({ won }: { won: Lead[] }) {
                   maxBarSize={40}
                 />
               ))}
+              {/* Zero-height bar anchored at top of stack — carries the MRR label */}
+              <Bar dataKey="_zero" stackId="a" fill="none" stroke="none" maxBarSize={40} isAnimationActive={false} legendType="none">
+                <LabelList
+                  dataKey="_mrr"
+                  position="top"
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  content={(props: any) => {
+                    const mrr = props.value as number
+                    if (!mrr) return null
+                    const cx = (props.x ?? 0) + (props.width ?? 0) / 2
+                    const cy = (props.y ?? 0) - 5
+                    return (
+                      <text x={cx} y={cy} textAnchor="middle" fontSize={9} fill="#059669" fontWeight={700}>
+                        {fmtMRR(mrr)}
+                      </text>
+                    )
+                  }}
+                />
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
