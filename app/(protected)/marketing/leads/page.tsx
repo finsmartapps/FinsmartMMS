@@ -6,6 +6,7 @@ import AddLeadForm from '@/components/marketing/leads/add-lead-form'
 import ImportLeads from '@/components/marketing/leads/import-leads'
 import LeadsTable from '@/components/marketing/leads/leads-table'
 import CustomerCard from '@/components/marketing/leads/customer-card'
+import SqlCard from '@/components/marketing/leads/sql-card'
 import SeatsSection from '@/components/marketing/leads/seats-section'
 import LeadsFunnelSection from '@/components/marketing/leads/leads-funnel-section'
 import ClosedWonBySource from '@/components/marketing/leads/closed-won-by-source'
@@ -109,9 +110,8 @@ export default async function LeadsPage() {
         <RollupCard icon={Users}  label="MQLs"          value={mqlCount}
           foot={targets ? `target ${targets.monthly_mqls.toFixed(0)}/mo` : 'Marketing Qualified Leads'}
           gradient="from-indigo-500 via-indigo-600 to-violet-700" glow="glow-indigo" />
-        <RollupCard icon={Zap}    label="SQLs"          value={sqlCount}
-          foot={targets ? `target ${targets.monthly_sqls.toFixed(0)}/mo` : 'Sales Qualified Leads'}
-          gradient="from-emerald-500 via-teal-600 to-cyan-700" glow="glow-emerald" />
+        <SqlCard sqls={leads.filter(l => l.lead_status === 'SQL')}
+          targetLabel={targets ? `target ${targets.monthly_sqls.toFixed(0)}/mo` : undefined} />
         <CustomerCard customers={customers} opportunityCount={opportunityCount} />
       </div>
 
