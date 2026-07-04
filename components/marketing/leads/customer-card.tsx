@@ -9,9 +9,9 @@ interface Props {
   opportunityCount: number
 }
 
-const STATUS_COLOR: Record<string, string> = {
-  'Customer':          'bg-fuchsia-50 text-fuchsia-700 ring-fuchsia-200',
-  'Existing Customer': 'bg-amber-50 text-amber-700 ring-amber-200',
+const TYPE_COLOR: Record<string, string> = {
+  'NBEC': 'bg-amber-50 text-amber-700 ring-amber-200',
+  'NBNC': 'bg-fuchsia-50 text-fuchsia-700 ring-fuchsia-200',
 }
 
 export default function CustomerCard({ customers, opportunityCount }: Props) {
@@ -69,7 +69,7 @@ export default function CustomerCard({ customers, opportunityCount }: Props) {
                 <table className="w-full text-sm">
                   <thead className="sticky top-0 bg-slate-50 z-10">
                     <tr>
-                      {['Name', 'Company', 'Contact', 'Source', 'Service', 'Assigned To', 'Status'].map(h => (
+                      {['Name', 'Company', 'Contact', 'Source', 'Service', 'Assigned To', 'Type'].map(h => (
                         <th key={h} className="text-left text-[11px] font-bold text-slate-400 uppercase tracking-widest px-4 py-3 whitespace-nowrap">
                           {h}
                         </th>
@@ -119,8 +119,8 @@ export default function CustomerCard({ customers, opportunityCount }: Props) {
                         <td className="px-4 py-3 text-slate-600 whitespace-nowrap text-xs">{c.service_required || '—'}</td>
                         <td className="px-4 py-3 text-slate-600 whitespace-nowrap text-xs">{c.assigned_to || '—'}</td>
                         <td className="px-4 py-3 whitespace-nowrap">
-                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ring-1 ${STATUS_COLOR[c.lead_status] ?? 'bg-slate-100 text-slate-600 ring-slate-200'}`}>
-                            {c.lead_status}
+                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full ring-1 ${TYPE_COLOR[c.customer_type?.trim().toUpperCase() ?? ''] ?? 'bg-slate-100 text-slate-600 ring-slate-200'}`}>
+                            {c.customer_type || 'Unknown'}
                           </span>
                         </td>
                       </tr>

@@ -12,7 +12,7 @@ import ClosedWonBySource from '@/components/marketing/leads/closed-won-by-source
 import {
   classifyLeadSource, CATEGORY_STYLES,
   DIGITAL_MQL_SOURCES, EVENT_SQL_SOURCES, DIRECT_SQL_SOURCES, LEAD_STAGES,
-  ASSIGNEE_SUGGESTIONS, CLOSED_WON_STAGE,
+  ASSIGNEE_SUGGESTIONS,
 } from '@/lib/leads'
 import type { Settings, Lead } from '@/types'
 import {
@@ -35,7 +35,8 @@ export default async function LeadsPage() {
   const mqlCount        = leads.filter(l => l.lead_status === 'MQL').length
   const sqlCount        = leads.filter(l => l.lead_status === 'SQL').length
   const opportunityCount = leads.filter(l => l.lead_status === 'Opportunity').length
-  const customers       = leads.filter(l => l.lead_stage === 'Closed Won' && ((l.mrr_value ?? 0) > 0 || (l.one_time_revenue ?? 0) > 0))
+  const isClosedBiz     = (l: Lead) => l.lead_status === 'SQL' && ((l.mrr_value ?? 0) > 0 || (l.one_time_revenue ?? 0) > 0)
+  const customers       = leads.filter(isClosedBiz)
 
   // ── source-based classification (for charts / legend) ──
   const withCat = leads.map(l => ({ ...l, cat: classifyLeadSource(l.lead_source) }))
@@ -71,7 +72,7 @@ export default async function LeadsPage() {
     : byDataSourceAll
 
   const seatsTarget = settings?.annual_seats_target ?? 100
-  const won = leads.filter(l => l.lead_stage === CLOSED_WON_STAGE)
+  const won = leads.filter(isClosedBiz)
 
   // ── autocomplete suggestions ──
   const distinct = (key: keyof Lead) => Array.from(new Set(leads.map(l => (l[key] as string)).filter(Boolean))).sort()
@@ -121,6 +122,7 @@ export default async function LeadsPage() {
         lead_source:      l.lead_source,
         data_source:      l.data_source,
         lead_stage:       l.lead_stage,
+        customer_type:    l.customer_type,
         mrr_value:        l.mrr_value,
         one_time_revenue: l.one_time_revenue,
       }))} />
