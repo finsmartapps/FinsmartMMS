@@ -5,8 +5,7 @@ import { DonutChart, HBarChart } from '@/components/marketing/charts/dashboard-c
 import AddLeadForm from '@/components/marketing/leads/add-lead-form'
 import ImportLeads from '@/components/marketing/leads/import-leads'
 import LeadsTable from '@/components/marketing/leads/leads-table'
-import CustomerCard from '@/components/marketing/leads/customer-card'
-import SqlCard from '@/components/marketing/leads/sql-card'
+import DraggableLeadCards from '@/components/marketing/leads/draggable-lead-cards'
 import SeatsSection from '@/components/marketing/leads/seats-section'
 import LeadsFunnelSection from '@/components/marketing/leads/leads-funnel-section'
 import ClosedWonBySource from '@/components/marketing/leads/closed-won-by-source'
@@ -17,7 +16,7 @@ import {
 } from '@/lib/leads'
 import type { Settings, Lead } from '@/types'
 import {
-  Users, Zap, Layers, BookOpen, Inbox, ArrowUpRight,
+  Zap, Layers, BookOpen, Inbox, ArrowUpRight,
   Armchair, Database,
 } from 'lucide-react'
 
@@ -103,17 +102,16 @@ export default async function LeadsPage() {
         }
       />
 
-      {/* ── Rollup cards ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <RollupCard icon={Inbox}  label="Total Leads"   value={leads.length}      foot="all-time"
-          gradient="from-slate-600 to-slate-800" glow="" />
-        <RollupCard icon={Users}  label="MQLs"          value={mqlCount}
-          foot={targets ? `target ${targets.monthly_mqls.toFixed(0)}/mo` : 'Marketing Qualified Leads'}
-          gradient="from-indigo-500 via-indigo-600 to-violet-700" glow="glow-indigo" />
-        <SqlCard sqls={leads.filter(l => l.lead_status === 'SQL')}
-          targetLabel={targets ? `target ${targets.monthly_sqls.toFixed(0)}/mo` : undefined} />
-        <CustomerCard customers={customers} opportunityCount={opportunityCount} />
-      </div>
+      {/* ── Rollup cards — draggable ── */}
+      <DraggableLeadCards
+        leads={leads}
+        mqlCount={mqlCount}
+        sqlLeads={leads.filter(l => l.lead_status === 'SQL')}
+        customers={customers}
+        opportunityCount={opportunityCount}
+        mqlTargetLabel={targets ? `target ${targets.monthly_mqls.toFixed(0)}/mo` : 'Marketing Qualified Leads'}
+        sqlTargetLabel={targets ? `target ${targets.monthly_sqls.toFixed(0)}/mo` : undefined}
+      />
 
       {/* ── Funnel charts with shared date filter ── */}
       <LeadsFunnelSection leads={leads.map(l => ({
@@ -187,27 +185,6 @@ export default async function LeadsPage() {
   )
 }
 
-/* ── local components ── */
-
-function RollupCard({ icon: Icon, label, value, foot, gradient, glow }: {
-  icon: React.ElementType; label: string; value: number | string; foot: string; gradient: string; glow: string
-}) {
-  return (
-    <div className={`relative overflow-hidden rounded-2xl bg-gradient-to-br ${gradient} p-5 hover-lift ${glow}`}>
-      <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full blur-2xl" aria-hidden />
-      <div className="relative">
-        <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center ring-1 ring-white/25 mb-3">
-          <Icon className="text-white" style={{ width: 18, height: 18 }} strokeWidth={2.5} />
-        </div>
-        <p className="text-3xl font-extrabold text-white leading-none tabular-nums">{value}</p>
-        <p className="text-[11px] font-bold text-white/75 uppercase tracking-widest mt-2">{label}</p>
-        <p className="text-[10px] text-white/60 mt-1 flex items-center gap-1 leading-tight">
-          <ArrowUpRight className="h-3 w-3 shrink-0" /> {foot}
-        </p>
-      </div>
-    </div>
-  )
-}
 
 function LegendBlock({ title, cat, sources, note }: {
   title: string; cat: 'Digital MQL' | 'Direct SQL' | 'Event SQL'; sources: string[]; note: string
