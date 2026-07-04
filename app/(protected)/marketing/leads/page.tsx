@@ -6,6 +6,7 @@ import AddLeadForm from '@/components/marketing/leads/add-lead-form'
 import ImportLeads from '@/components/marketing/leads/import-leads'
 import LeadsTable from '@/components/marketing/leads/leads-table'
 import DraggableLeadCards from '@/components/marketing/leads/draggable-lead-cards'
+import PageSortableLayout from '@/components/marketing/leads/page-sortable-layout'
 import SeatsSection from '@/components/marketing/leads/seats-section'
 import LeadsFunnelSection from '@/components/marketing/leads/leads-funnel-section'
 import ClosedWonBySource from '@/components/marketing/leads/closed-won-by-source'
@@ -102,85 +103,113 @@ export default async function LeadsPage() {
         }
       />
 
-      {/* ── Rollup cards — draggable ── */}
-      <DraggableLeadCards
-        leads={leads}
-        mqlCount={mqlCount}
-        sqlLeads={leads.filter(l => l.lead_status === 'SQL')}
-        customers={customers}
-        opportunityCount={opportunityCount}
-        mqlTargetLabel={targets ? `target ${targets.monthly_mqls.toFixed(0)}/mo` : 'Marketing Qualified Leads'}
-        sqlTargetLabel={targets ? `target ${targets.monthly_sqls.toFixed(0)}/mo` : undefined}
-      />
-
-      {/* ── Funnel charts with shared date filter ── */}
-      <LeadsFunnelSection leads={leads.map(l => ({
-        lead_date:        l.lead_date,
-        lead_status:      l.lead_status,
-        lead_source:      l.lead_source,
-        data_source:      l.data_source,
-        lead_stage:       l.lead_stage,
-        customer_type:    l.customer_type,
-        mrr_value:        l.mrr_value,
-        one_time_revenue: l.one_time_revenue,
-        name:             l.name,
-        company_name:     l.company_name,
-        assigned_to:      l.assigned_to,
-      }))} />
-
-      {/* ── Closed Won by Lead Source (month-wise) ── */}
-      <ClosedWonBySource won={won} />
-
-      {/* ── Seats Closed performance (Closed Won only) ── */}
-      <div className="flex items-center gap-2 pt-1">
-        <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
-          <Armchair className="h-4 w-4" strokeWidth={2.5} />
-        </div>
-        <h2 className="text-base font-extrabold text-slate-800">Seats Closed</h2>
-        <span className="text-xs text-slate-400 font-medium">Closed Won deals only · 160 hrs = 1 seat</span>
-      </div>
-
-      <SeatsSection won={won} seatsTarget={seatsTarget} />
-
-      {/* ── Classification legend ── */}
-      <Panel icon={BookOpen} title="How leads map to the funnel" accent="amber"
-        caption="Reference — every Lead Source is auto-classified by these rules">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
-          <LegendBlock title="Digital MQL" cat="Digital MQL" sources={DIGITAL_MQL_SOURCES}
-            note="Top-of-funnel — must convert to an SQL" />
-          <LegendBlock title="Direct SQL" cat="Direct SQL" sources={DIRECT_SQL_SOURCES}
-            note="Sales-qualified on arrival — skips the MQL stage" />
-          <LegendBlock title="Event SQL" cat="Event SQL" sources={EVENT_SQL_SOURCES}
-            note="Conference / exhibition sourced — tracked separately" />
-        </div>
-      </Panel>
-
-      {/* ── Charts ── */}
-      {leads.length > 0 ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <Panel icon={Layers} title="Leads by Source" accent="violet">
-            <div className="pt-2">
-              <DonutChart data={bySource} centerValue={leads.length.toString()} centerLabel="Leads" />
+      <PageSortableLayout storageKey="leads-page-layout-v1" sections={[
+        {
+          id: 'kpi',
+          label: 'KPI Cards',
+          content: (
+            <DraggableLeadCards
+              leads={leads}
+              mqlCount={mqlCount}
+              sqlLeads={leads.filter(l => l.lead_status === 'SQL')}
+              customers={customers}
+              opportunityCount={opportunityCount}
+              mqlTargetLabel={targets ? `target ${targets.monthly_mqls.toFixed(0)}/mo` : 'Marketing Qualified Leads'}
+              sqlTargetLabel={targets ? `target ${targets.monthly_sqls.toFixed(0)}/mo` : undefined}
+            />
+          ),
+        },
+        {
+          id: 'funnel',
+          label: 'MQL + SQL Funnel',
+          content: (
+            <LeadsFunnelSection leads={leads.map(l => ({
+              lead_date:        l.lead_date,
+              lead_status:      l.lead_status,
+              lead_source:      l.lead_source,
+              data_source:      l.data_source,
+              lead_stage:       l.lead_stage,
+              customer_type:    l.customer_type,
+              mrr_value:        l.mrr_value,
+              one_time_revenue: l.one_time_revenue,
+              name:             l.name,
+              company_name:     l.company_name,
+              assigned_to:      l.assigned_to,
+            }))} />
+          ),
+        },
+        {
+          id: 'closed-won',
+          label: 'Closed Won by Source',
+          content: <ClosedWonBySource won={won} />,
+        },
+        {
+          id: 'seats',
+          label: 'Seats Closed',
+          content: (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <Armchair className="h-4 w-4" strokeWidth={2.5} />
+                </div>
+                <h2 className="text-base font-extrabold text-slate-800">Seats Closed</h2>
+                <span className="text-xs text-slate-400 font-medium">Closed Won deals only · 160 hrs = 1 seat</span>
+              </div>
+              <SeatsSection won={won} seatsTarget={seatsTarget} />
             </div>
-          </Panel>
-          <Panel icon={Zap} title="Leads by Stage" accent="indigo">
-            <div className="pt-2"><HBarChart data={byStage} /></div>
-          </Panel>
-          <Panel icon={Database} title="Leads by Data Source" accent="emerald" className="lg:col-span-2"
-            caption={byDataSourceAll.length > DS_TOP ? `Top ${DS_TOP} of ${byDataSourceAll.length} sources` : undefined}>
-            <div className="pt-2"><HBarChart data={byDataSource} /></div>
-          </Panel>
-        </div>
-      ) : null}
-
-      {/* ── Leads table (interactive: column toggles, inline source, edit) ── */}
-      <LeadsTable
-        leads={leads}
-        dataSourceSuggestions={dataSourceSuggestions}
-        industrySuggestions={industrySuggestions}
-        serviceSuggestions={serviceSuggestions}
-        assigneeSuggestions={assigneeSuggestions}
-      />
+          ),
+        },
+        {
+          id: 'legend',
+          label: 'Lead Classification',
+          content: (
+            <Panel icon={BookOpen} title="How leads map to the funnel" accent="amber"
+              caption="Reference — every Lead Source is auto-classified by these rules">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+                <LegendBlock title="Digital MQL" cat="Digital MQL" sources={DIGITAL_MQL_SOURCES}
+                  note="Top-of-funnel — must convert to an SQL" />
+                <LegendBlock title="Direct SQL" cat="Direct SQL" sources={DIRECT_SQL_SOURCES}
+                  note="Sales-qualified on arrival — skips the MQL stage" />
+                <LegendBlock title="Event SQL" cat="Event SQL" sources={EVENT_SQL_SOURCES}
+                  note="Conference / exhibition sourced — tracked separately" />
+              </div>
+            </Panel>
+          ),
+        },
+        {
+          id: 'charts',
+          label: 'Lead Analytics',
+          content: leads.length > 0 ? (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <Panel icon={Layers} title="Leads by Source" accent="violet">
+                <div className="pt-2">
+                  <DonutChart data={bySource} centerValue={leads.length.toString()} centerLabel="Leads" />
+                </div>
+              </Panel>
+              <Panel icon={Zap} title="Leads by Stage" accent="indigo">
+                <div className="pt-2"><HBarChart data={byStage} /></div>
+              </Panel>
+              <Panel icon={Database} title="Leads by Data Source" accent="emerald" className="lg:col-span-2"
+                caption={byDataSourceAll.length > DS_TOP ? `Top ${DS_TOP} of ${byDataSourceAll.length} sources` : undefined}>
+                <div className="pt-2"><HBarChart data={byDataSource} /></div>
+              </Panel>
+            </div>
+          ) : null,
+        },
+        {
+          id: 'table',
+          label: 'All Leads',
+          content: (
+            <LeadsTable
+              leads={leads}
+              dataSourceSuggestions={dataSourceSuggestions}
+              industrySuggestions={industrySuggestions}
+              serviceSuggestions={serviceSuggestions}
+              assigneeSuggestions={assigneeSuggestions}
+            />
+          ),
+        },
+      ]} />
     </div>
   )
 }
