@@ -125,6 +125,9 @@ export default async function LeadsPage() {
         customer_type:    l.customer_type,
         mrr_value:        l.mrr_value,
         one_time_revenue: l.one_time_revenue,
+        name:             l.name,
+        company_name:     l.company_name,
+        assigned_to:      l.assigned_to,
       }))} />
 
       {/* ── Closed Won by Lead Source (month-wise) ── */}

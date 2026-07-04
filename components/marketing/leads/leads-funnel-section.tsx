@@ -27,6 +27,9 @@ interface LeadLite {
   customer_type:    string | null
   mrr_value:        number | null
   one_time_revenue: number | null
+  name:             string | null
+  company_name:     string | null
+  assigned_to:      string | null
 }
 
 function isoDate(d: Date) {
@@ -163,6 +166,9 @@ export default function LeadsFunnelSection({ leads }: { leads: LeadLite[] }) {
           customer_type:    l.customer_type,
           mrr_value:        l.mrr_value,
           one_time_revenue: l.one_time_revenue,
+          name:             l.name,
+          company_name:     l.company_name,
+          assigned_to:      l.assigned_to,
         }))}
       />
     </div>

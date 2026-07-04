@@ -187,9 +187,10 @@ export default function ClosedWonBySource({ won }: { won: Lead[] }) {
       for (const s of sources) {
         point[s] = monthLeads.filter(l => (l.lead_source || 'Unspecified') === s).length
       }
-      // _mrr = total MRR for label; _zero = 0-height bar that anchors the label at top of stack
-      point['_mrr']  = monthLeads.reduce((s, l) => s + (l.mrr_value ?? 0), 0)
-      point['_zero'] = 0
+      // _mrr / _oneTime = totals for tooltip; _zero = 0-height bar anchoring the MRR label
+      point['_mrr']     = monthLeads.reduce((s, l) => s + (l.mrr_value ?? 0), 0)
+      point['_oneTime'] = monthLeads.reduce((s, l) => s + (l.one_time_revenue ?? 0), 0)
+      point['_zero']    = 0
       return point
     })
 
@@ -256,7 +257,8 @@ export default function ClosedWonBySource({ won }: { won: Lead[] }) {
                 content={({ active, payload, label }: any) => {
                   if (!active || !payload?.length) return null
                   const items = (payload as any[]).filter(p => !String(p.dataKey).startsWith('_') && (p.value as number) > 0)
-                  const mrr = (payload[0]?.payload?._mrr as number) ?? 0
+                  const mrr     = (payload[0]?.payload?._mrr     as number) ?? 0
+                  const oneTime = (payload[0]?.payload?._oneTime as number) ?? 0
                   if (!items.length) return null
                   return (
                     <div className="bg-white rounded-xl shadow-lg border border-slate-100 p-3 text-xs min-w-[130px]">
@@ -268,10 +270,20 @@ export default function ClosedWonBySource({ won }: { won: Lead[] }) {
                           <strong className="text-slate-800">{p.value}</strong>
                         </div>
                       ))}
-                      {mrr > 0 && (
-                        <div className="mt-1.5 pt-1.5 border-t border-slate-100 flex justify-between">
-                          <span className="text-slate-500">MRR</span>
-                          <strong className="text-emerald-700">{formatUSD(mrr)}</strong>
+                      {(mrr > 0 || oneTime > 0) && (
+                        <div className="mt-1.5 pt-1.5 border-t border-slate-100 space-y-0.5">
+                          {mrr > 0 && (
+                            <div className="flex justify-between gap-4">
+                              <span className="text-slate-500">MRR</span>
+                              <strong className="text-emerald-700">{formatUSD(mrr)}</strong>
+                            </div>
+                          )}
+                          {oneTime > 0 && (
+                            <div className="flex justify-between gap-4">
+                              <span className="text-slate-500">One-time</span>
+                              <strong className="text-violet-700">{formatUSD(oneTime)}</strong>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
