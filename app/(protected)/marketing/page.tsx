@@ -1,10 +1,12 @@
-﻿import type { ElementType } from 'react'
+import type { ElementType } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { deriveTargets, formatCurrency, formatNumber, getStatus } from '@/lib/calculations'
 import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/marketing/ui/table'
-import type { Settings, Segment, Channel, PlanEvent, MonthlyActual } from '@/types'
+import type { Settings, Segment, Channel, PlanEvent } from '@/types'
+import type { Lead } from '@/types'
 import { ConversionFunnel, DonutChart, HBarChart, RadialGauge } from '@/components/marketing/charts/dashboard-charts'
 import { Panel, Th, ConvBadge, QuarterPill } from '@/components/marketing/ui/panel'
+import { hoursToSeats, formatSeats } from '@/lib/leads'
 import {
   TrendingUp, Users, Zap, Trophy, Activity,
   ArrowUpRight, Layers, Radio,
@@ -18,13 +20,13 @@ export default async function DashboardPage() {
     { data: segments },
     { data: channels },
     { data: events },
-    { data: monthlyRows },
+    { data: leadRows },
   ] = await Promise.all([
     supabase.from('marketing_settings').select('*').limit(1),
     supabase.from('segments').select('*').order('sort_order'),
     supabase.from('channels').select('*').order('sort_order'),
     supabase.from('plan_events').select('*').order('sort_order'),
-    supabase.from('monthly_actuals').select('*').order('month', { ascending: false }).limit(3),
+    supabase.from('leads').select('*'),
   ])
 
   const settings = settingsRows?.[0] as Settings | undefined
@@ -33,21 +35,56 @@ export default async function DashboardPage() {
   }
 
   const targets = deriveTargets(settings)
-  const segs = (segments ?? []) as Segment[]
-  const chs = (channels ?? []) as Channel[]
-  const evts = (events ?? []) as PlanEvent[]
-  const months = (monthlyRows ?? []) as MonthlyActual[]
+  const segs    = (segments ?? []) as Segment[]
+  const chs     = (channels  ?? []) as Channel[]
+  const evts    = (events    ?? []) as PlanEvent[]
+  const leads   = (leadRows  ?? []) as Lead[]
 
-  const ytdSeats = months.reduce((s, m) => s + (m.seats_closed ?? 0), 0)
-  const ytdTarget = Math.round(targets.monthly_seats * 3)
-  const seatsStatus = getStatus(ytdSeats, ytdTarget)
+  // ── Actuals from leads ───────────────────────────────────────────────────
+  const YEAR     = new Date().getFullYear().toString()
+  const ytdLeads = leads.filter(l => (l.lead_date ?? '').startsWith(YEAR))
+
+  const isClosedBiz = (l: Lead) =>
+    l.lead_stage === 'Closed Won' ||
+    (l.lead_status === 'SQL' && ((l.mrr_value ?? 0) > 0 || (l.one_time_revenue ?? 0) > 0))
+
+  const actualMqls      = ytdLeads.filter(l => l.lead_status === 'MQL').length
+  const actualSqls      = ytdLeads.filter(l => l.lead_status === 'SQL').length
+  const closedLeads     = leads.filter(isClosedBiz)
+  const actualSeats     = closedLeads.reduce((s, l) => s + hoursToSeats(l.closed_hours ?? 0), 0)
+  const actualMrr       = closedLeads.reduce((s, l) => s + (l.mrr_value ?? 0), 0)
+  const actualCustomers = closedLeads.length
+
+  const seatsStatus = getStatus(actualSeats, targets.monthly_seats * 3)
+  const mqlStatus   = getStatus(actualMqls,  Math.round(targets.monthly_mqls  * (new Date().getMonth() + 1)))
+  const sqlStatus   = getStatus(actualSqls,  Math.round(targets.monthly_sqls  * (new Date().getMonth() + 1)))
 
   // ── Chart data ──────────────────────────────────────────────────────────
   const funnelStages = [
-    { label: 'Digital MQLs', value: targets.digital_mqls,        gradient: 'from-indigo-500 to-indigo-600',  sub: `${targets.monthly_mqls.toFixed(0)}/mo` },
-    { label: 'Total SQLs',   value: targets.annual_sqls,          gradient: 'from-violet-500 to-purple-600',   sub: `${targets.monthly_sqls.toFixed(0)}/mo` },
-    { label: 'Meetings',     value: targets.digital_meetings,     gradient: 'from-fuchsia-500 to-pink-600',    sub: `${targets.monthly_meetings.toFixed(0)}/mo` },
-    { label: 'Seats Closed', value: settings.annual_seats_target, gradient: 'from-emerald-500 to-teal-600',    sub: `${targets.monthly_seats.toFixed(1)}/mo` },
+    {
+      label: 'Digital MQLs',
+      value: targets.digital_mqls,
+      gradient: 'from-indigo-500 to-indigo-600',
+      sub: `${actualMqls} actual YTD · target ${targets.monthly_mqls.toFixed(0)}/mo`,
+    },
+    {
+      label: 'Total SQLs',
+      value: targets.annual_sqls,
+      gradient: 'from-violet-500 to-purple-600',
+      sub: `${actualSqls} actual YTD · target ${targets.monthly_sqls.toFixed(0)}/mo`,
+    },
+    {
+      label: 'Meetings',
+      value: targets.digital_meetings,
+      gradient: 'from-fuchsia-500 to-pink-600',
+      sub: `${targets.monthly_meetings.toFixed(0)}/mo target`,
+    },
+    {
+      label: 'Seats Closed',
+      value: settings.annual_seats_target,
+      gradient: 'from-emerald-500 to-teal-600',
+      sub: `${formatSeats(actualSeats)} actual · target ${targets.monthly_seats.toFixed(1)}/mo`,
+    },
   ]
 
   const channelMix = chs
@@ -69,7 +106,6 @@ export default async function DashboardPage() {
 
       {/* ══ Hero banner ══════════════════════════════════════════════════ */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-600 p-6 md:p-8 animate-rise">
-        {/* mesh blobs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none" aria-hidden>
           <div className="absolute -top-20 -right-10 w-72 h-72 bg-white/20 rounded-full blur-3xl animate-mesh" />
           <div className="absolute -bottom-24 left-1/3 w-72 h-72 bg-fuchsia-300/30 rounded-full blur-3xl animate-mesh" style={{ animationDelay: '3s' }} />
@@ -81,56 +117,76 @@ export default async function DashboardPage() {
             </div>
             <h1 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">Marketing Command Center</h1>
             <p className="text-sm text-white/70 mt-1.5 max-w-xl">
-              Founder view of the 100-seat North Star — funnel health, channel mix, and segment performance at a glance.
+              Founder view of the {settings.annual_seats_target}-seat North Star — funnel health, channel mix, and segment performance at a glance.
             </p>
           </div>
-          <div className="flex items-center gap-3">
-            <RadialGauge value={ytdSeats} max={settings.annual_seats_target} label="Annual" color="#ffffff" />
+          {/* Gauge: actual seats vs annual target */}
+          <div className="flex flex-col items-center gap-1">
+            <RadialGauge value={actualSeats} max={settings.annual_seats_target} label="Annual" color="#ffffff" />
+            <p className="text-[11px] text-white/60 font-semibold">{formatSeats(actualSeats)} of {settings.annual_seats_target} seats</p>
           </div>
         </div>
       </div>
 
-      {/* ══ KPI gradient cards ═══════════════════════════════════════════ */}
+      {/* ══ KPI cards — actuals vs targets ═══════════════════════════════ */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
           icon={Trophy}
-          label="Seats Closed YTD"
-          value={ytdSeats.toString()}
-          foot={`of ${settings.annual_seats_target} · target ${ytdTarget} this qtr`}
+          label="Seats Closed"
+          value={formatSeats(actualSeats)}
+          foot={`${actualCustomers} deals · of ${settings.annual_seats_target} annual target`}
           badge={seatsStatus}
           gradient="from-indigo-500 via-indigo-600 to-violet-700"
           glow="glow-indigo"
         />
         <KpiCard
           icon={TrendingUp}
-          label="Annual ARR Target"
-          value={formatCurrency(targets.annual_arr)}
-          foot={`${formatCurrency(targets.monthly_arr)} every month`}
+          label="MRR Closed"
+          value={formatCurrency(actualMrr)}
+          foot={`monthly recurring · ${actualCustomers} customers`}
           gradient="from-violet-500 via-purple-600 to-fuchsia-700"
           glow="glow-violet"
         />
         <KpiCard
           icon={Zap}
-          label="Monthly SQL Target"
-          value={formatNumber(targets.monthly_sqls, 0)}
-          foot={`${targets.weekly_sqls}/week · ${targets.annual_sqls}/year`}
+          label="SQLs — YTD"
+          value={formatNumber(actualSqls, 0)}
+          foot={`target ${Math.round(targets.monthly_sqls * (new Date().getMonth() + 1))} YTD · ${targets.monthly_sqls.toFixed(0)}/mo`}
+          badge={sqlStatus}
           gradient="from-emerald-500 via-teal-600 to-cyan-700"
           glow="glow-emerald"
         />
         <KpiCard
           icon={Users}
-          label="Digital MQL Target"
-          value={formatNumber(targets.monthly_mqls, 0)}
-          foot={`${targets.weekly_mqls}/week · ${targets.digital_mqls}/year`}
+          label="MQLs — YTD"
+          value={formatNumber(actualMqls, 0)}
+          foot={`target ${Math.round(targets.monthly_mqls * (new Date().getMonth() + 1))} YTD · ${targets.monthly_mqls.toFixed(0)}/mo`}
+          badge={mqlStatus}
           gradient="from-amber-500 via-orange-500 to-rose-600"
           glow="glow-amber"
         />
       </div>
 
+      {/* ══ Actual snapshot strip ════════════════════════════════════════ */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          { label: 'Total Leads',   value: leads.length,     sub: 'all-time in system' },
+          { label: 'Customers',     value: actualCustomers,  sub: 'closed with revenue' },
+          { label: 'Annual ARR',    value: formatCurrency(targets.annual_arr),  sub: 'target' },
+          { label: 'ACV Pipeline',  value: formatCurrency(actualMrr * 12),  sub: 'MRR × 12 (closed)' },
+        ].map(s => (
+          <div key={s.label} className="rounded-2xl bg-white ring-1 ring-slate-100 px-5 py-4">
+            <p className="text-2xl font-extrabold text-slate-800 tabular-nums">{s.value}</p>
+            <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mt-1">{s.label}</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">{s.sub}</p>
+          </div>
+        ))}
+      </div>
+
       {/* ══ Charts: Funnel + Channel mix ═════════════════════════════════ */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         <Panel className="lg:col-span-3" icon={Activity} title="Annual Lead Funnel" accent="indigo"
-          caption="Volume cascade from MQLs to closed seats">
+          caption="Target volume cascade — actual YTD shown in sub-labels">
           <div className="pt-2 pr-16">
             <ConversionFunnel stages={funnelStages} />
           </div>
