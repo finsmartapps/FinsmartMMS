@@ -36,7 +36,7 @@ export default async function LeadsPage() {
   const mqlCount        = leads.filter(l => l.lead_status === 'MQL').length
   const sqlCount        = leads.filter(l => l.lead_status === 'SQL').length
   const opportunityCount = leads.filter(l => l.lead_status === 'Opportunity').length
-  const isClosedBiz     = (l: Lead) => l.lead_status === 'SQL' && ((l.mrr_value ?? 0) > 0 || (l.one_time_revenue ?? 0) > 0)
+  const isClosedBiz     = (l: Lead) => l.lead_stage === 'Closed Won' || (l.lead_status === 'SQL' && ((l.mrr_value ?? 0) > 0 || (l.one_time_revenue ?? 0) > 0))
   const customers       = leads.filter(isClosedBiz)
 
   // ── source-based classification (for charts / legend) ──

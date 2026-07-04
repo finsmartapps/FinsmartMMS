@@ -8,6 +8,7 @@ import { classifyLeadSource, CATEGORY_STYLES, formatUSD, annualContractValue } f
 interface LeadLite {
   lead_source:      string | null
   lead_status:      string | null
+  lead_stage:       string | null
   customer_type:    string | null
   mrr_value:        number | null
   one_time_revenue: number | null
@@ -17,7 +18,7 @@ interface LeadLite {
 }
 
 function isClosed(l: LeadLite) {
-  return l.lead_status === 'SQL' && ((l.mrr_value ?? 0) > 0 || (l.one_time_revenue ?? 0) > 0)
+  return l.lead_stage === 'Closed Won' || (l.lead_status === 'SQL' && ((l.mrr_value ?? 0) > 0 || (l.one_time_revenue ?? 0) > 0))
 }
 
 const TYPE_COLOR: Record<string, string> = {

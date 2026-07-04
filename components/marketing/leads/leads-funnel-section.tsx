@@ -163,6 +163,7 @@ export default function LeadsFunnelSection({ leads }: { leads: LeadLite[] }) {
         leads={filtered.map(l => ({
           lead_source:      l.lead_source,
           lead_status:      l.lead_status,
+          lead_stage:       l.lead_stage,
           customer_type:    l.customer_type,
           mrr_value:        l.mrr_value,
           one_time_revenue: l.one_time_revenue,
