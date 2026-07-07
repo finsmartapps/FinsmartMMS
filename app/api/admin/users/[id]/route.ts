@@ -29,15 +29,19 @@ export async function PATCH(
   const body = await req.json()
   const updates: Record<string, unknown> = {}
 
+  const VALID_ROLES = ['admin', 'manager', 'telecaller', 'finance_manager']
+
   if ('role' in body) {
-    if (!['admin', 'manager', 'telecaller'].includes(body.role)) {
+    if (!VALID_ROLES.includes(body.role)) {
       return NextResponse.json({ error: 'Invalid role.' }, { status: 400 })
     }
     updates.role = body.role
   }
 
-  if ('is_active' in body) {
-    updates.is_active = Boolean(body.is_active)
+  if ('is_active' in body) updates.is_active = Boolean(body.is_active)
+
+  for (const col of ['has_sales','has_marketing','has_expenses','has_warehouse','has_advocacy']) {
+    if (col in body) updates[col] = Boolean(body[col])
   }
 
   if (Object.keys(updates).length === 0) {

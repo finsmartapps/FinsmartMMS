@@ -27,7 +27,7 @@ interface NavGroup {
 
 interface Props {
   userName: string
-  salesRole: 'manager' | 'telecaller' | null
+  salesRole: 'admin' | 'manager' | 'telecaller' | 'finance_manager' | null
   hasSales: boolean
   hasMarketing: boolean
   hasExpenses: boolean
@@ -95,6 +95,15 @@ const adminGroups: NavGroup[] = [
   {
     label: null,
     links: [
+      { href: '/admin/users', label: 'Users & Access', icon: Users },
+    ],
+  },
+]
+
+const managerAdminGroups: NavGroup[] = [
+  {
+    label: null,
+    links: [
       { href: '/settings', label: 'Users & Access', icon: Users },
     ],
   },
@@ -127,7 +136,7 @@ function filterByModules(groups: NavGroup[], allowedModules: string[]): NavGroup
 
 const exactRoots = [
   '/sales/manager', '/sales/telecaller', '/marketing', '/expenses', '/warehouse',
-  '/sales/manager/settings', '/settings', '/advocacy',
+  '/sales/manager/settings', '/settings', '/advocacy', '/admin/users',
 ]
 
 function ModuleSection({
@@ -210,6 +219,7 @@ interface NavContentProps {
   hasWarehouse: boolean
   hasAdvocacy: boolean
   isManager: boolean
+  isAdmin: boolean
   salesGroups: NavGroup[]
   pathname: string
   onNav?: () => void
@@ -227,7 +237,7 @@ function getAdvocacyGroups(isAdmin: boolean): NavGroup[] {
 }
 
 function NavContent({
-  hasSales, hasMarketing, hasExpenses, hasWarehouse, hasAdvocacy, isManager,
+  hasSales, hasMarketing, hasExpenses, hasWarehouse, hasAdvocacy, isManager, isAdmin,
   salesGroups, pathname, onNav,
 }: NavContentProps) {
   return (
@@ -277,11 +287,11 @@ function NavContent({
           onNav={onNav}
         />
       )}
-      {isManager && (
+      {(isAdmin || isManager) && (
         <ModuleSection
           label="Admin"
           color="bg-[#6E6E73]"
-          groups={adminGroups}
+          groups={isAdmin ? adminGroups : managerAdminGroups}
           pathname={pathname}
           onNav={onNav}
         />
@@ -294,7 +304,7 @@ function NavContent({
 
 interface FooterProps {
   userName: string
-  salesRole: 'manager' | 'telecaller' | null
+  salesRole: 'admin' | 'manager' | 'telecaller' | 'finance_manager' | null
   hasMarketing: boolean
   loggingOut: boolean
   onLogout: () => void
@@ -345,7 +355,9 @@ export function Sidebar({
 
   const salesGroups = salesRole === 'manager'
     ? filterByModules(managerGroups, allowedSalesModules)
-    : telecallerGroups
+    : salesRole === 'telecaller'
+      ? telecallerGroups
+      : []
 
   const homeHref = hasSales
     ? (salesRole === 'manager' ? '/sales/manager' : '/sales/telecaller')
@@ -364,6 +376,7 @@ export function Sidebar({
   const navProps: NavContentProps = {
     hasSales, hasMarketing, hasExpenses, hasWarehouse, hasAdvocacy, salesGroups, pathname,
     isManager: salesRole === 'manager',
+    isAdmin: salesRole === 'admin',
   }
   const footerProps: FooterProps = {
     userName, salesRole, hasMarketing, loggingOut, onLogout: handleLogout,
