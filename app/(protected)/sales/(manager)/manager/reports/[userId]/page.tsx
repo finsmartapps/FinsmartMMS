@@ -395,7 +395,7 @@ export default function UserReportPage() {
         {/* Header */}
         <div>
           <button
-            onClick={() => router.push(`/manager/reports?from=${sel.from}&to=${sel.to}`)}
+            onClick={() => router.push(`/sales/manager/reports?from=${sel.from}&to=${sel.to}`)}
             className="flex items-center gap-1.5 text-[13px] text-[#6E6E73] hover:text-[#DC2626] transition mb-3 font-medium"
           >
             <ArrowLeft size={14} /> Back to Team Report

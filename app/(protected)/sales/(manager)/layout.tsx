@@ -12,7 +12,7 @@ export default async function SalesManagerLayout({ children }: { children: React
     .eq('id', user.id)
     .single()
 
-  if (!profile?.has_sales || profile.role !== 'manager') redirect('/login')
+  if (!profile?.has_sales || (profile.role !== 'manager' && profile.role !== 'admin')) redirect('/login')
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 py-7">
