@@ -1,6 +1,6 @@
 ﻿'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { Plus, Pencil, Trash2, Loader2, CalendarCheck, ChevronUp, ChevronDown, Search, CheckCircle2, XCircle, RotateCcw, TrendingUp, Clock, ThumbsDown } from 'lucide-react'
 import { Modal } from '@/components/sales/ui/Modal'
 import { formatShortDate } from '@/lib/utils'
@@ -50,68 +50,59 @@ function OutcomeDropdown({ meeting, onUpdate }: { meeting: Meeting; onUpdate: (u
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
+  const btnRef = useRef<HTMLButtonElement>(null)
 
-  // Only show for past meetings
   if (meeting.meeting_date >= today) return <OutcomeBadge outcome={meeting.outcome} />
 
+  function handleOpen() {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      setMenuPos({ top: r.bottom + 4, left: r.left })
+    }
+    setErr(''); setOpen(o => !o)
+  }
+
   async function setOutcome(value: MeetingOutcome | null) {
-    setSaving(true); setErr('')
-    setOpen(false)
+    setSaving(true); setErr(''); setOpen(false)
     const res = await fetch('/api/telecaller/meetings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: meeting.id, outcome: value }),
     })
     const d = await res.json()
-    if (res.ok) {
-      onUpdate(d.meeting as Meeting)
-    } else {
-      setErr(d.error ?? 'Failed to save.')
-    }
+    if (res.ok) { onUpdate(d.meeting as Meeting) } else { setErr(d.error ?? 'Failed to save.') }
     setSaving(false)
   }
 
   return (
-    <div className="relative">
-      <button
-        onClick={() => { setOpen(o => !o); setErr('') }}
-        disabled={saving}
-        className="flex items-center gap-1.5 text-[12px] font-medium hover:opacity-80 transition"
-      >
-        {saving
-          ? <Loader2 size={12} className="animate-spin text-[#AEAEB2]" />
-          : <OutcomeBadge outcome={meeting.outcome} />}
+    <div>
+      <button ref={btnRef} onClick={handleOpen} disabled={saving}
+        className="flex items-center gap-1.5 text-[12px] font-medium hover:opacity-80 transition">
+        {saving ? <Loader2 size={12} className="animate-spin text-[#AEAEB2]" /> : <OutcomeBadge outcome={meeting.outcome} />}
         {!saving && !meeting.outcome && (
-          <span className="text-[11px] text-[#DC2626] border border-[#DC2626]/30 rounded-full px-2 py-0.5 hover:bg-red-50 transition">
-            Set outcome
-          </span>
+          <span className="text-[11px] text-[#DC2626] border border-[#DC2626]/30 rounded-full px-2 py-0.5 hover:bg-red-50 transition">Set outcome</span>
         )}
       </button>
       {err && <p className="text-[10px] text-red-500 mt-0.5 max-w-[140px] leading-tight">{err}</p>}
 
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full mt-1 z-20 bg-white rounded-xl border border-[#E5E5EA] shadow-lg py-1 min-w-[160px]"
-            style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.12)' }}>
+          <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={() => setOpen(false)} />
+          <div className="bg-white rounded-xl border border-[#E5E5EA] py-1 min-w-[160px]"
+            style={{ position: 'fixed', top: menuPos.top, left: menuPos.left, zIndex: 9999, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
             {OUTCOME_OPTIONS.map(opt => {
               const Icon = opt.icon
               return (
-                <button
-                  key={opt.value}
-                  onClick={() => setOutcome(opt.value)}
-                  className={`w-full flex items-center gap-2 px-3 py-2 text-[13px] hover:bg-[#F5F5F7] transition text-left ${meeting.outcome === opt.value ? 'font-semibold' : ''}`}
-                >
-                  <Icon size={13} className={opt.color.split(' ')[0]} />
-                  {opt.label}
+                <button key={opt.value} onClick={() => setOutcome(opt.value)}
+                  className={`w-full flex items-center gap-2 px-3 py-2 text-[13px] hover:bg-[#F5F5F7] transition text-left ${meeting.outcome === opt.value ? 'font-semibold' : ''}`}>
+                  <Icon size={13} className={opt.color.split(' ')[0]} /> {opt.label}
                 </button>
               )
             })}
             {meeting.outcome && (
-              <button
-                onClick={() => setOutcome(null)}
-                className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-[#AEAEB2] hover:bg-[#F5F5F7] transition border-t border-[#F2F2F7] mt-1 text-left"
-              >
+              <button onClick={() => setOutcome(null)}
+                className="w-full flex items-center gap-2 px-3 py-2 text-[13px] text-[#AEAEB2] hover:bg-[#F5F5F7] transition border-t border-[#F2F2F7] mt-1 text-left">
                 Clear outcome
               </button>
             )}
@@ -144,34 +135,36 @@ function ResultDropdown({ meeting, onUpdate }: { meeting: Meeting; onUpdate: (up
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
+  const [menuPos, setMenuPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 })
+  const btnRef = useRef<HTMLButtonElement>(null)
 
-  // Only available for past meetings
   if (meeting.meeting_date >= today) {
     return <span className="text-[#AEAEB2] text-[12px]">—</span>
   }
 
+  function handleOpen() {
+    if (btnRef.current) {
+      const r = btnRef.current.getBoundingClientRect()
+      setMenuPos({ top: r.bottom + 4, left: r.left })
+    }
+    setErr(''); setOpen(o => !o)
+  }
+
   async function setResult(value: MeetingResult | null) {
-    setSaving(true); setErr('')
-    setOpen(false)
+    setSaving(true); setErr(''); setOpen(false)
     const res = await fetch('/api/telecaller/meetings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: meeting.id, result: value }),
     })
     const d = await res.json()
-    if (res.ok) {
-      onUpdate(d.meeting as Meeting)
-    } else {
-      setErr(d.error ?? 'Failed to save.')
-    }
+    if (res.ok) { onUpdate(d.meeting as Meeting) } else { setErr(d.error ?? 'Failed to save.') }
     setSaving(false)
   }
 
   return (
-    <div className="relative">
-      <button
-        onClick={() => { setOpen(o => !o); setErr('') }}
-        disabled={saving}
+    <div>
+      <button ref={btnRef} onClick={handleOpen} disabled={saving}
         className="flex items-center gap-1.5 text-[12px] font-medium hover:opacity-80 transition"
       >
         {saving
@@ -188,28 +181,22 @@ function ResultDropdown({ meeting, onUpdate }: { meeting: Meeting; onUpdate: (up
 
       {open && (
         <>
-          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full mt-1 z-20 bg-white rounded-xl border border-[#E5E5EA] shadow-lg py-1 min-w-[210px]"
-            style={{ boxShadow: '0 4px 20px rgba(0,0,0,0.12)' }}>
+          <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={() => setOpen(false)} />
+          <div className="bg-white rounded-xl border border-[#E5E5EA] py-1 min-w-[210px]"
+            style={{ position: 'fixed', top: menuPos.top, left: menuPos.left, zIndex: 9999, boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
             <p className="px-3 py-1.5 text-[10px] font-semibold text-[#AEAEB2] uppercase tracking-wider">Meeting result</p>
             {RESULT_OPTIONS.map(opt => {
               const Icon = opt.icon
               return (
-                <button
-                  key={opt.value}
-                  onClick={() => setResult(opt.value)}
-                  className={`w-full flex items-center gap-2 px-3 py-2.5 text-[13px] hover:bg-[#F5F5F7] transition text-left ${meeting.result === opt.value ? 'font-semibold' : ''}`}
-                >
-                  <Icon size={14} className={opt.color.split(' ')[0]} />
-                  {opt.label}
+                <button key={opt.value} onClick={() => setResult(opt.value)}
+                  className={`w-full flex items-center gap-2 px-3 py-2.5 text-[13px] hover:bg-[#F5F5F7] transition text-left ${meeting.result === opt.value ? 'font-semibold' : ''}`}>
+                  <Icon size={14} className={opt.color.split(' ')[0]} /> {opt.label}
                 </button>
               )
             })}
             {meeting.result && (
-              <button
-                onClick={() => setResult(null)}
-                className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[#AEAEB2] hover:bg-[#F5F5F7] transition border-t border-[#F2F2F7] mt-1 text-left"
-              >
+              <button onClick={() => setResult(null)}
+                className="w-full flex items-center gap-2 px-3 py-2 text-[12px] text-[#AEAEB2] hover:bg-[#F5F5F7] transition border-t border-[#F2F2F7] mt-1 text-left">
                 Clear result
               </button>
             )}
