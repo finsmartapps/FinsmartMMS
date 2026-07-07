@@ -250,7 +250,7 @@ export default function ReportsPage() {
                       <tr
                         key={tc.id}
                         className="hover:bg-[#FAFAFA] transition cursor-pointer group"
-                        onClick={() => router.push(`/manager/reports/${tc.id}?from=${data.period.from}&to=${data.period.to}`)}
+                        onClick={() => router.push(`/sales/manager/reports/${tc.id}?from=${data.period.from}&to=${data.period.to}`)}
                       >
                         <td className="px-4 py-3.5">
                           <div className="flex items-center gap-2.5">
