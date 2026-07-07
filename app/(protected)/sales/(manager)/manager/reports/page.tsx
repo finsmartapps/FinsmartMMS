@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { Phone, CalendarCheck, TrendingUp, CheckSquare, ChevronRight, Loader2, BarChart2, Download, MessageSquare } from 'lucide-react'
 import { PeriodSelector, getPeriodDates } from '@/components/sales/manager/PeriodSelector'
-import { TeamTrendChart, MultiUserTrendChart } from '@/components/sales/manager/ReportCharts'
+import { TeamTrendChart, MultiUserTrendChart, MeetingsTrendChart } from '@/components/sales/manager/ReportCharts'
 import type { Period, DateRange } from '@/components/sales/manager/PeriodSelector'
 import { formatShortDate } from '@/lib/utils'
 
@@ -34,6 +34,7 @@ interface TeamData {
   telecallers: TelecallerStat[]
   trend: { label: string; calls: number }[]
   trendByUser: Record<string, { label: string; calls: number }[]>
+  meetingTrend: { label: string; booked: number; completed: number }[]
   deficitReasons: DeficitReason[]
 }
 
@@ -227,6 +228,17 @@ export default function ReportsPage() {
               )}
             </div>
           )}
+
+          {/* Meetings trend chart */}
+          <div className="bg-white rounded-2xl border border-[#E5E5EA] p-5" style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.03)' }}>
+            <div className="flex items-center gap-2 mb-4">
+              <CalendarCheck size={15} className="text-[#AEAEB2]" />
+              <h2 className="text-[14px] font-semibold text-[#1D1D1F]">
+                {data.period.useMonthly ? 'Monthly Meeting Trend' : 'Daily Meeting Trend'}
+              </h2>
+            </div>
+            <MeetingsTrendChart data={data.meetingTrend ?? []} />
+          </div>
 
           {/* Telecaller table */}
           <div className="bg-white rounded-2xl border border-[#E5E5EA] overflow-hidden" style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.03)' }}>

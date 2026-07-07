@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     supabase.from('profiles').select('id, name').eq('role', 'telecaller').eq('is_active', true).order('name'),
     supabase.from('activities').select('id, name').eq('is_active', true),
     supabase.from('daily_logs').select('id, user_id, log_date, is_submitted').gte('log_date', from).lte('log_date', to),
-    supabase.from('meetings').select('user_id, meeting_date').gte('meeting_date', from).lte('meeting_date', to),
+    supabase.from('meetings').select('user_id, meeting_date, outcome').gte('meeting_date', from).lte('meeting_date', to),
     supabase.from('holidays').select('holiday_date').gte('holiday_date', from).lte('holiday_date', to),
     supabase.from('targets').select('user_id, activity_id, min_value, effective_from').lte('effective_from', to).order('effective_from', { ascending: false }),
   ])
@@ -164,6 +164,22 @@ export async function GET(req: NextRequest) {
     trendByUser[tc.id] = trend.map(t => ({ label: t.label, calls: userDateCallMap[t.label] ?? 0 }))
   }
 
+  // Meeting trend — booked and completed per day/month bucket
+  const meetingBookedMap: Record<string, number> = {}
+  const meetingCompletedMap: Record<string, number> = {}
+  for (const m of meetings) {
+    const key = useMonthly ? m.meeting_date.slice(0, 7) : m.meeting_date
+    meetingBookedMap[key] = (meetingBookedMap[key] ?? 0) + 1
+    if (m.outcome === 'completed') {
+      meetingCompletedMap[key] = (meetingCompletedMap[key] ?? 0) + 1
+    }
+  }
+  const meetingTrend = trend.map(t => ({
+    label: t.label,
+    booked: meetingBookedMap[t.label] ?? 0,
+    completed: meetingCompletedMap[t.label] ?? 0,
+  }))
+
   // Deficit reasons — collect all non-empty deficit reasons for "Total Calls" activity across all submitted logs
   const deficitReasons: { telecallerId: string; telecallerName: string; date: string; reason: string }[] = []
   if (totalCallsAct) {
@@ -203,6 +219,7 @@ export async function GET(req: NextRequest) {
     telecallers: telecallerStats,
     trend,
     trendByUser,
+    meetingTrend,
     deficitReasons,
   })
 }

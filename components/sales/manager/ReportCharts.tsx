@@ -6,6 +6,8 @@ import {
   ResponsiveContainer, ReferenceLine, Cell, Legend,
 } from 'recharts'
 
+interface MeetingPoint { label: string; booked: number; completed: number }
+
 function shortDate(val: unknown): string {
   const str = String(val)
   // YYYY-MM-DD → "14 May" | YYYY-MM → "May 24"
@@ -118,6 +120,39 @@ export function MultiUserTrendChart({ trendByUser, telecallers }: MultiUserChart
           />
         ))}
       </LineChart>
+    </ResponsiveContainer>
+  )
+}
+
+export function MeetingsTrendChart({ data }: { data: MeetingPoint[] }) {
+  const hasData = data.some(d => d.booked > 0 || d.completed > 0)
+  if (!hasData) return (
+    <div className="flex items-center justify-center h-40 text-[#AEAEB2] text-sm">No meetings for this period</div>
+  )
+  return (
+    <ResponsiveContainer width="100%" height={200}>
+      <BarChart data={data} margin={{ top: 4, right: 8, left: -16, bottom: 0 }} barCategoryGap="30%" barGap={2}>
+        <CartesianGrid strokeDasharray="3 3" stroke="#F2F2F7" vertical={false} />
+        <XAxis
+          dataKey="label"
+          tickFormatter={shortDate}
+          tick={{ fontSize: 11, fill: '#AEAEB2' }}
+          axisLine={false}
+          tickLine={false}
+          interval="preserveStartEnd"
+        />
+        <YAxis tick={{ fontSize: 11, fill: '#AEAEB2' }} axisLine={false} tickLine={false} allowDecimals={false} />
+        <Tooltip
+          contentStyle={{ borderRadius: 10, border: '1px solid #E5E5EA', fontSize: 12, boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}
+          labelFormatter={(v) => shortDate(v)}
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          formatter={((v: unknown, name: unknown) => [Number(v), name]) as any}
+          cursor={{ fill: '#F5F5F7' }}
+        />
+        <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+        <Bar dataKey="booked" name="Booked" fill="#3B82F6" radius={[4, 4, 0, 0]} maxBarSize={28} />
+        <Bar dataKey="completed" name="Completed" fill="#34C759" radius={[4, 4, 0, 0]} maxBarSize={28} />
+      </BarChart>
     </ResponsiveContainer>
   )
 }
