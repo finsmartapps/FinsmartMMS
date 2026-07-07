@@ -12,7 +12,7 @@ export interface DateRange {
 
 interface Props {
   value: { period: Period; from: string; to: string }
-  onChange: (range: DateRange) => void
+  onChange: (range: DateRange, period: Period) => void
 }
 
 function getToday(): string {
@@ -67,17 +67,16 @@ export function PeriodSelector({ value, onChange }: Props) {
 
   function selectPreset(p: Period) {
     if (p === 'custom') {
-      // just switch UI, don't call onChange yet
-      onChange({ from: value.from, to: value.to }) // keep current range
+      onChange({ from: value.from, to: value.to }, 'custom')
       return
     }
     const range = getPeriodDates(p)
-    onChange(range)
+    onChange(range, p)
   }
 
   function applyCustom() {
     if (customFrom && customTo && customFrom <= customTo) {
-      onChange({ from: customFrom, to: customTo })
+      onChange({ from: customFrom, to: customTo }, 'custom')
     }
   }
 

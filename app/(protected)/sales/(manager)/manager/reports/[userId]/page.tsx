@@ -300,14 +300,8 @@ export default function UserReportPage() {
     fetchData(sel.from, sel.to)
   }, [sel.from, sel.to, fetchData])
 
-  function handlePeriodChange(range: DateRange) {
-    const presets: Period[] = ['today', 'week', 'month', 'year']
-    let matched: Period = 'custom'
-    for (const p of presets) {
-      const r = getPeriodDates(p)
-      if (r.from === range.from && r.to === range.to) { matched = p; break }
-    }
-    setSel({ period: matched, ...range })
+  function handlePeriodChange(range: DateRange, period: Period) {
+    setSel({ period, ...range })
     fetchData(range.from, range.to)
   }
 

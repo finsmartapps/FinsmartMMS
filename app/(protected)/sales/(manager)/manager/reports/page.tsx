@@ -125,27 +125,9 @@ export default function ReportsPage() {
     fetchData(sel.from, sel.to)
   }, [sel.from, sel.to, fetchData])
 
-  function handlePeriodChange(range: DateRange) {
-    // Determine which preset matches (if any)
-    const presets: Period[] = ['today', 'week', 'month', 'year']
-    let matchedPeriod: Period = 'custom'
-    for (const p of presets) {
-      const r = getPeriodDates(p)
-      if (r.from === range.from && r.to === range.to) { matchedPeriod = p; break }
-    }
+  function handlePeriodChange(range: DateRange, period: Period) {
     setSelectedUserId(null)
-    setSel({ period: sel.period === 'custom' && matchedPeriod === 'custom' ? 'custom' : matchedPeriod, ...range })
-  }
-
-  function handlePresetClick(range: DateRange) {
-    const presets: Period[] = ['today', 'week', 'month', 'year']
-    let matchedPeriod: Period = 'custom'
-    for (const p of presets) {
-      const r = getPeriodDates(p)
-      if (r.from === range.from && r.to === range.to) { matchedPeriod = p; break }
-    }
-    setSelectedUserId(null)
-    setSel(prev => ({ period: matchedPeriod === 'custom' ? prev.period : matchedPeriod, ...range }))
+    setSel({ period, ...range })
   }
 
   const s = data?.summary
@@ -170,8 +152,8 @@ export default function ReportsPage() {
           )}
           <PeriodSelector
             value={sel}
-            onChange={(range) => {
-              handlePresetClick(range)
+            onChange={(range, period) => {
+              handlePeriodChange(range, period)
               fetchData(range.from, range.to)
             }}
           />
