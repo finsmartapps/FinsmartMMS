@@ -30,7 +30,7 @@ interface DeficitReason {
 
 interface TeamData {
   period: { from: string; to: string; workingDays: number; useMonthly: boolean }
-  summary: { teamTotalCalls: number; teamMeetings: number; avgAchievement: number | null; teamSubmissionRate: number }
+  summary: { teamTotalCalls: number; teamMeetings: number; teamMeetingsCompleted: number; avgAchievement: number | null; teamSubmissionRate: number }
   telecallers: TelecallerStat[]
   trend: { label: string; calls: number }[]
   trendByUser: Record<string, { label: string; calls: number }[]>
@@ -67,8 +67,9 @@ function exportTeamCSV(data: TeamData) {
   URL.revokeObjectURL(url)
 }
 
-function KpiCard({ icon: Icon, label, value, sub, color }: {
+function KpiCard({ icon: Icon, label, value, sub, color, extra }: {
   icon: React.ElementType; label: string; value: string; sub?: string; color: string
+  extra?: React.ReactNode
 }) {
   return (
     <div className="bg-white rounded-2xl border border-[#E5E5EA] px-5 py-4" style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.03)' }}>
@@ -80,6 +81,7 @@ function KpiCard({ icon: Icon, label, value, sub, color }: {
       </div>
       <p className="text-[28px] font-bold text-[#1D1D1F] leading-none">{value}</p>
       {sub && <p className="text-[12px] text-[#AEAEB2] mt-1">{sub}</p>}
+      {extra && <div className="mt-2">{extra}</div>}
     </div>
   )
 }
@@ -185,7 +187,30 @@ export default function ReportsPage() {
           {/* KPI summary */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <KpiCard icon={Phone} label="Total Calls" value={s!.teamTotalCalls.toLocaleString()} sub={`across ${data.period.workingDays} working days`} color="bg-[#DC2626]" />
-            <KpiCard icon={CalendarCheck} label="Meetings Booked" value={String(s!.teamMeetings)} color="bg-blue-500" />
+            <KpiCard
+              icon={CalendarCheck}
+              label="Meetings Booked"
+              value={String(s!.teamMeetings)}
+              color="bg-blue-500"
+              extra={
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-1.5 bg-[#F2F2F7] rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-[#34C759] transition-all"
+                      style={{ width: s!.teamMeetings > 0 ? `${Math.round((s!.teamMeetingsCompleted / s!.teamMeetings) * 100)}%` : '0%' }}
+                    />
+                  </div>
+                  <span className="text-[12px] text-[#6E6E73] whitespace-nowrap">
+                    {s!.teamMeetingsCompleted} completed
+                    {s!.teamMeetings > 0 && (
+                      <span className="ml-1 font-semibold text-[#34C759]">
+                        ({Math.round((s!.teamMeetingsCompleted / s!.teamMeetings) * 100)}%)
+                      </span>
+                    )}
+                  </span>
+                </div>
+              }
+            />
             <KpiCard icon={TrendingUp} label="Avg Achievement" value={s!.avgAchievement !== null ? `${s!.avgAchievement}%` : '—'} sub="vs daily target" color="bg-[#34C759]" />
             <KpiCard icon={CheckSquare} label="Submission Rate" value={`${s!.teamSubmissionRate}%`} sub="days submitted" color="bg-[#FF9500]" />
           </div>

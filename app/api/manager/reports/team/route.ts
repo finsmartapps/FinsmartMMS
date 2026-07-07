@@ -205,6 +205,7 @@ export async function GET(req: NextRequest) {
   // Summary
   const teamTotalCalls = telecallerStats.reduce((s: number, t: { totalCalls: number }) => s + t.totalCalls, 0)
   const teamMeetings = meetings.length
+  const teamMeetingsCompleted = meetings.filter((m: { outcome: string | null }) => m.outcome === 'completed').length
   const validPcts = telecallerStats.filter((t: { achievementPct: number | null }) => t.achievementPct !== null)
   const avgAchievement = validPcts.length > 0
     ? Math.round(validPcts.reduce((s: number, t: { achievementPct: number | null }) => s + (t.achievementPct ?? 0), 0) / validPcts.length)
@@ -215,7 +216,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     period: { from, to, workingDays: totalWorkingDays, useMonthly },
-    summary: { teamTotalCalls, teamMeetings, avgAchievement, teamSubmissionRate },
+    summary: { teamTotalCalls, teamMeetings, teamMeetingsCompleted, avgAchievement, teamSubmissionRate },
     telecallers: telecallerStats,
     trend,
     trendByUser,
