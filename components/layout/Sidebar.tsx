@@ -27,7 +27,7 @@ interface NavGroup {
 
 interface Props {
   userName: string
-  salesRole: 'admin' | 'manager' | 'telecaller' | 'finance_manager' | null
+  salesRole: 'admin' | 'manager' | 'telecaller' | 'finance_manager' | 'finsmart_user' | null
   hasSales: boolean
   hasMarketing: boolean
   hasExpenses: boolean
@@ -302,9 +302,17 @@ function NavContent({
 
 // ── Footer (must be outside Sidebar to avoid remounting on re-renders) ────────
 
+const ROLE_LABELS: Record<string, string> = {
+  admin: 'Admin',
+  manager: 'Manager',
+  telecaller: 'Telecaller',
+  finance_manager: 'Finance Manager',
+  finsmart_user: 'Finsmart User',
+}
+
 interface FooterProps {
   userName: string
-  salesRole: 'admin' | 'manager' | 'telecaller' | 'finance_manager' | null
+  salesRole: 'admin' | 'manager' | 'telecaller' | 'finance_manager' | 'finsmart_user' | null
   hasMarketing: boolean
   loggingOut: boolean
   onLogout: () => void
@@ -319,8 +327,8 @@ function Footer({ userName, salesRole, hasMarketing, loggingOut, onLogout }: Foo
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-[13px] font-semibold text-[#1D1D1F] truncate leading-tight">{userName}</p>
-          <p className="text-[11px] text-[#AEAEB2] capitalize leading-tight">
-            {salesRole ?? (hasMarketing ? 'marketing' : 'staff')}
+          <p className="text-[11px] text-[#AEAEB2] leading-tight">
+            {salesRole ? (ROLE_LABELS[salesRole] ?? salesRole) : (hasMarketing ? 'Marketing' : 'Staff')}
           </p>
         </div>
       </div>
@@ -359,10 +367,11 @@ export function Sidebar({
       ? telecallerGroups
       : []
 
-  const homeHref = hasSales
+  const homeHref = hasSales && (salesRole === 'manager' || salesRole === 'telecaller')
     ? (salesRole === 'manager' ? '/sales/manager' : '/sales/telecaller')
     : hasMarketing ? '/marketing'
     : hasExpenses ? '/expenses'
+    : hasAdvocacy ? '/advocacy'
     : '/warehouse'
 
   async function handleLogout() {
