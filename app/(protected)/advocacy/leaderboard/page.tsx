@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { LeaderboardClient } from '@/components/advocacy/LeaderboardClient'
 
 export const revalidate = 0
@@ -17,11 +17,13 @@ export default async function LeaderboardPage() {
 
   if (!profile?.has_advocacy) redirect('/')
 
+  const db = await createAdminClient()
+
   const [completionsRes, profilesRes] = await Promise.all([
     supabase
       .from('advocacy_completions')
       .select('user_id, completed_at, advocacy_missions(points)'),
-    supabase
+    db
       .from('profiles')
       .select('id, name')
       .eq('has_advocacy', true)
