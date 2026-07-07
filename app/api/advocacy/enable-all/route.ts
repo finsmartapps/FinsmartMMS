@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export async function POST() {
   const supabase = await createClient()
@@ -8,15 +8,16 @@ export async function POST() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, has_marketing')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'manager') {
+  if (profile?.role !== 'manager' && profile?.role !== 'admin' && !profile?.has_marketing) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const { error } = await supabase
+  const db = await createAdminClient()
+  const { error } = await db
     .from('profiles')
     .update({ has_advocacy: true })
     .eq('is_active', true)

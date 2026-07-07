@@ -91,9 +91,11 @@ function MissionRow({
 export function AdminClient({
   missions: initialMissions,
   completionCounts,
+  allEnabled: initialAllEnabled = false,
 }: {
   missions: AdvocacyMission[]
   completionCounts: Record<string, number>
+  allEnabled?: boolean
 }) {
   const [missions, setMissions]     = useState(initialMissions)
   const [showCreate, setShowCreate] = useState(false)
@@ -102,7 +104,8 @@ export function AdminClient({
   const [formError, setFormError]   = useState('')
   const [ending, setEnding]         = useState<string | null>(null)
   const [enabling, setEnabling]     = useState(false)
-  const [enabledAll, setEnabledAll] = useState(false)
+  const [enabledAll, setEnabledAll] = useState(initialAllEnabled)
+  const [enableError, setEnableError] = useState('')
 
   function setField(k: keyof typeof BLANK, v: string | number) {
     setForm(f => ({ ...f, [k]: v }))
@@ -149,9 +152,15 @@ export function AdminClient({
 
   async function handleEnableAll() {
     setEnabling(true)
-    await fetch('/api/advocacy/enable-all', { method: 'POST' })
+    setEnableError('')
+    const res = await fetch('/api/advocacy/enable-all', { method: 'POST' })
     setEnabling(false)
-    setEnabledAll(true)
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}))
+      setEnableError(d.error ?? 'Failed to enable advocacy for all.')
+    } else {
+      setEnabledAll(true)
+    }
   }
 
   const active = missions.filter(m => m.status === 'active')
@@ -204,6 +213,11 @@ export function AdminClient({
         {enabledAll && (
           <div className="bg-green-50 border border-green-200 rounded-2xl px-5 py-3 text-[13px] font-semibold text-[#34C759]">
             ✓ Advocacy enabled for all active employees
+          </div>
+        )}
+        {enableError && (
+          <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-3 text-[13px] font-semibold text-[#DC2626]">
+            {enableError}
           </div>
         )}
 

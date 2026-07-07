@@ -20,7 +20,7 @@ export default async function AdvocacyAdminPage() {
     redirect('/advocacy')
   }
 
-  const [missionsRes, completionsRes] = await Promise.all([
+  const [missionsRes, completionsRes, nonAdvocacyRes] = await Promise.all([
     supabase
       .from('advocacy_missions')
       .select('*')
@@ -28,6 +28,11 @@ export default async function AdvocacyAdminPage() {
     supabase
       .from('advocacy_completions')
       .select('mission_id'),
+    supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true })
+      .eq('is_active', true)
+      .eq('has_advocacy', false),
   ])
 
   const completionCounts: Record<string, number> = {}
@@ -35,10 +40,13 @@ export default async function AdvocacyAdminPage() {
     completionCounts[c.mission_id] = (completionCounts[c.mission_id] ?? 0) + 1
   }
 
+  const allEnabled = (nonAdvocacyRes.count ?? 1) === 0
+
   return (
     <AdminClient
       missions={(missionsRes.data ?? []) as AdvocacyMission[]}
       completionCounts={completionCounts}
+      allEnabled={allEnabled}
     />
   )
 }
