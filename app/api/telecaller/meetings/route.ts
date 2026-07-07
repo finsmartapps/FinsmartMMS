@@ -160,9 +160,10 @@ export async function PATCH(req: NextRequest) {
     .eq('id', id)
     .eq('user_id', user.id)
     .select('*')
-    .single()
+    .maybeSingle()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (!data) return NextResponse.json({ error: 'Meeting not found or access denied.' }, { status: 404 })
   return NextResponse.json({ meeting: data })
 }
 

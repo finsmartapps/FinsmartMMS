@@ -49,21 +49,24 @@ function OutcomeBadge({ outcome }: { outcome: MeetingOutcome | null }) {
 function OutcomeDropdown({ meeting, onUpdate }: { meeting: Meeting; onUpdate: (updated: Meeting) => void }) {
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
 
   // Only show for past meetings
   if (meeting.meeting_date >= today) return <OutcomeBadge outcome={meeting.outcome} />
 
   async function setOutcome(value: MeetingOutcome | null) {
-    setSaving(true)
+    setSaving(true); setErr('')
     setOpen(false)
     const res = await fetch('/api/telecaller/meetings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: meeting.id, outcome: value }),
     })
+    const d = await res.json()
     if (res.ok) {
-      const d = await res.json()
       onUpdate(d.meeting as Meeting)
+    } else {
+      setErr(d.error ?? 'Failed to save.')
     }
     setSaving(false)
   }
@@ -71,7 +74,7 @@ function OutcomeDropdown({ meeting, onUpdate }: { meeting: Meeting; onUpdate: (u
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen(o => !o)}
+        onClick={() => { setOpen(o => !o); setErr('') }}
         disabled={saving}
         className="flex items-center gap-1.5 text-[12px] font-medium hover:opacity-80 transition"
       >
@@ -84,6 +87,7 @@ function OutcomeDropdown({ meeting, onUpdate }: { meeting: Meeting; onUpdate: (u
           </span>
         )}
       </button>
+      {err && <p className="text-[10px] text-red-500 mt-0.5 max-w-[140px] leading-tight">{err}</p>}
 
       {open && (
         <>
@@ -139,6 +143,7 @@ function ResultBadge({ result }: { result: MeetingResult | null }) {
 function ResultDropdown({ meeting, onUpdate }: { meeting: Meeting; onUpdate: (updated: Meeting) => void }) {
   const [open, setOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
 
   // Only available for past meetings
   if (meeting.meeting_date >= today) {
@@ -146,16 +151,18 @@ function ResultDropdown({ meeting, onUpdate }: { meeting: Meeting; onUpdate: (up
   }
 
   async function setResult(value: MeetingResult | null) {
-    setSaving(true)
+    setSaving(true); setErr('')
     setOpen(false)
     const res = await fetch('/api/telecaller/meetings', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id: meeting.id, result: value }),
     })
+    const d = await res.json()
     if (res.ok) {
-      const d = await res.json()
       onUpdate(d.meeting as Meeting)
+    } else {
+      setErr(d.error ?? 'Failed to save.')
     }
     setSaving(false)
   }
@@ -163,7 +170,7 @@ function ResultDropdown({ meeting, onUpdate }: { meeting: Meeting; onUpdate: (up
   return (
     <div className="relative">
       <button
-        onClick={() => setOpen(o => !o)}
+        onClick={() => { setOpen(o => !o); setErr('') }}
         disabled={saving}
         className="flex items-center gap-1.5 text-[12px] font-medium hover:opacity-80 transition"
       >
@@ -176,6 +183,8 @@ function ResultDropdown({ meeting, onUpdate }: { meeting: Meeting; onUpdate: (up
             </span>
         }
       </button>
+
+      {err && <p className="text-[10px] text-red-500 mt-0.5 max-w-[180px] leading-tight">{err}</p>}
 
       {open && (
         <>
