@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { CalendarDays } from 'lucide-react'
 
-export type Period = 'today' | 'week' | 'month' | 'year' | 'custom'
+export type Period = 'today' | 'week' | 'month' | 'last_month' | 'year' | 'custom'
 
 export interface DateRange {
   from: string
@@ -38,6 +38,12 @@ export function getPeriodDates(period: Period): DateRange {
     return { from, to: todayStr }
   }
 
+  if (period === 'last_month') {
+    const from = new Date(today.getFullYear(), today.getMonth() - 1, 1).toISOString().split('T')[0]
+    const to = new Date(today.getFullYear(), today.getMonth(), 0).toISOString().split('T')[0]
+    return { from, to }
+  }
+
   if (period === 'year') {
     const from = new Date(today.getFullYear(), 0, 1).toISOString().split('T')[0]
     return { from, to: todayStr }
@@ -49,8 +55,9 @@ export function getPeriodDates(period: Period): DateRange {
 const PRESETS: { key: Period; label: string }[] = [
   { key: 'today', label: 'Today' },
   { key: 'week',  label: 'This Week' },
-  { key: 'month', label: 'This Month' },
-  { key: 'year',  label: 'This Year' },
+  { key: 'month',      label: 'This Month' },
+  { key: 'last_month', label: 'Last Month' },
+  { key: 'year',       label: 'This Year' },
   { key: 'custom', label: 'Custom' },
 ]
 
