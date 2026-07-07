@@ -37,14 +37,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Password must be at least 6 characters.' }, { status: 400 })
   if (!has_sales && !has_marketing && !has_expenses && !has_warehouse && !has_advocacy)
     return NextResponse.json({ error: 'Select at least one module.' }, { status: 400 })
-  if (has_sales && !['manager', 'telecaller'].includes(role))
-    return NextResponse.json({ error: 'Select a valid role for Sales access.' }, { status: 400 })
+  if (!['manager', 'telecaller', 'finsmart_user'].includes(role))
+    return NextResponse.json({ error: 'Invalid role.' }, { status: 400 })
 
   const { data: authData, error: authError } = await authAdmin.auth.admin.createUser({
     email: email.trim(),
     password,
     email_confirm: true,
-    user_metadata: { name: name.trim(), role: has_sales ? role : null },
+    user_metadata: { name: name.trim(), role },
   })
   if (authError) return NextResponse.json({ error: authError.message }, { status: 400 })
 
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     id: authData.user.id,
     name: name.trim(),
     email: email.trim(),
-    role: has_sales ? role : null,
+    role,
     has_sales: Boolean(has_sales),
     has_marketing: Boolean(has_marketing),
     has_expenses: Boolean(has_expenses),
@@ -81,7 +81,7 @@ export async function PATCH(req: NextRequest) {
   if ('is_active' in fields) updates.is_active = Boolean(fields.is_active)
 
   if ('role' in fields) {
-    if (fields.role !== null && !['manager', 'telecaller'].includes(fields.role))
+    if (fields.role !== null && !['manager', 'telecaller', 'finsmart_user'].includes(fields.role))
       return NextResponse.json({ error: 'Invalid role.' }, { status: 400 })
     updates.role = fields.role ?? null
   }

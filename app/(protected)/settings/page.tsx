@@ -1,10 +1,17 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Loader2, Pencil, Trash2, ShieldCheck } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Plus, Loader2, Pencil, Trash2, ShieldCheck, Shield, Star } from 'lucide-react'
 
 // ── Types ─────────────────────────────────────────────────────────
-type Role = 'manager' | 'telecaller'
+type Role = 'manager' | 'telecaller' | 'finsmart_user'
+
+const ROLES: { value: Role; label: string; icon: React.ElementType }[] = [
+  { value: 'manager',       label: 'Manager',       icon: ShieldCheck },
+  { value: 'telecaller',    label: 'Telecaller',    icon: Shield      },
+  { value: 'finsmart_user', label: 'Finsmart User', icon: Star        },
+]
 
 interface UserRow {
   id: string; name: string; email: string; role: Role | null
@@ -69,6 +76,7 @@ function ModuleCheckbox({
 
 // ── Main page ─────────────────────────────────────────────────────
 export default function SettingsPage() {
+  const router = useRouter()
   const [users, setUsers]               = useState<UserRow[]>([])
   const [loading, setLoading]           = useState(true)
   const [toast, setToast]               = useState<{ msg: string; type: 'success' | 'error' } | null>(null)
@@ -98,9 +106,10 @@ export default function SettingsPage() {
   const fetchUsers = useCallback(async () => {
     setLoading(true)
     const res = await fetch('/api/manager/users')
+    if (res.status === 403) { router.replace('/admin/users'); return }
     if (res.ok) { const d = await res.json(); setUsers(d.users ?? []) }
     setLoading(false)
-  }, [])
+  }, [router])
 
   useEffect(() => { fetchUsers() }, [fetchUsers])
 
@@ -166,14 +175,13 @@ export default function SettingsPage() {
         has_sales: editAccess.has_sales, has_marketing: editAccess.has_marketing,
         has_expenses: editAccess.has_expenses, has_warehouse: editAccess.has_warehouse,
         has_advocacy: editAccess.has_advocacy,
-        role: editAccess.has_sales ? editAccess.role : null,
+        role: editAccess.role,
       }),
     })
     const data = await res.json()
     setSavingAccess(false)
     if (!res.ok) { setAccessError(data.error ?? 'Failed to save.'); return }
-    setUsers(prev => prev.map(u => u.id === editUser.id
-      ? { ...u, ...editAccess, role: editAccess.has_sales ? editAccess.role : null } : u))
+    setUsers(prev => prev.map(u => u.id === editUser.id ? { ...u, ...editAccess } : u))
     setEditUser(null); showToast('Access updated.')
   }
 
@@ -288,11 +296,12 @@ export default function SettingsPage() {
                     </div>
                   </td>
                   <td className="px-5 py-4">
-                    {u.role
-                      ? <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold capitalize ${u.role === 'manager' ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'}`}>
-                          {u.role === 'manager' && <ShieldCheck size={10} />}{u.role}
-                        </span>
-                      : <span className="text-[11px] text-[#AEAEB2]">—</span>}
+                    {u.role ? (() => {
+                      const r = ROLES.find(x => x.value === u.role)
+                      const Icon = r?.icon ?? ShieldCheck
+                      const cls = u.role === 'manager' ? 'bg-blue-50 text-blue-700' : u.role === 'finsmart_user' ? 'bg-sky-50 text-sky-700' : 'bg-green-50 text-green-700'
+                      return <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold ${cls}`}><Icon size={10} />{r?.label ?? u.role}</span>
+                    })() : <span className="text-[11px] text-[#AEAEB2]">—</span>}
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -391,23 +400,24 @@ export default function SettingsPage() {
                     ))}
                   </div>
                 </div>
-                {form.has_sales && (
-                  <div>
-                    <label className="block text-[11px] font-semibold text-[#6E6E73] uppercase tracking-wider mb-2">Sales Role</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {(['manager', 'telecaller'] as Role[]).map(r => (
-                        <label key={r} className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition select-none capitalize ${
-                          form.role === r ? 'border-[#DC2626] bg-red-50 text-[#DC2626]' : 'border-[#E5E5EA] text-[#6E6E73] hover:bg-[#F5F5F7]'
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#6E6E73] uppercase tracking-wider mb-2">Role</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {ROLES.map(r => {
+                      const Icon = r.icon
+                      return (
+                        <label key={r.value} className={`flex items-center gap-2 p-3 rounded-xl border cursor-pointer transition select-none ${
+                          form.role === r.value ? 'border-[#DC2626] bg-red-50 text-[#DC2626]' : 'border-[#E5E5EA] text-[#6E6E73] hover:bg-[#F5F5F7]'
                         }`}>
-                          <input type="radio" className="accent-[#DC2626]" checked={form.role === r}
-                            onChange={() => setForm(f => ({ ...f, role: r }))} />
-                          {r === 'manager' && <ShieldCheck size={14} />}
-                          <span className="text-[13px] font-medium">{r}</span>
+                          <input type="radio" className="accent-[#DC2626]" checked={form.role === r.value}
+                            onChange={() => setForm(f => ({ ...f, role: r.value }))} />
+                          <Icon size={13} />
+                          <span className="text-[12px] font-medium">{r.label}</span>
                         </label>
-                      ))}
-                    </div>
+                      )
+                    })}
                   </div>
-                )}
+                </div>
                 {formError && <p className="text-[12px] text-[#DC2626] bg-red-50 px-3 py-2 rounded-lg">{formError}</p>}
               </div>
               <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#F2F2F7]">
@@ -447,23 +457,24 @@ export default function SettingsPage() {
                     ))}
                   </div>
                 </div>
-                {editAccess.has_sales && (
-                  <div>
-                    <label className="block text-[11px] font-semibold text-[#6E6E73] uppercase tracking-wider mb-2">Sales Role</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {(['manager', 'telecaller'] as Role[]).map(r => (
-                        <label key={r} className={`flex items-center gap-2.5 p-3 rounded-xl border cursor-pointer transition select-none capitalize ${
-                          editAccess.role === r ? 'border-[#DC2626] bg-red-50 text-[#DC2626]' : 'border-[#E5E5EA] text-[#6E6E73] hover:bg-[#F5F5F7]'
+                <div>
+                  <label className="block text-[11px] font-semibold text-[#6E6E73] uppercase tracking-wider mb-2">Role</label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {ROLES.map(r => {
+                      const Icon = r.icon
+                      return (
+                        <label key={r.value} className={`flex items-center gap-2 p-3 rounded-xl border cursor-pointer transition select-none ${
+                          editAccess.role === r.value ? 'border-[#DC2626] bg-red-50 text-[#DC2626]' : 'border-[#E5E5EA] text-[#6E6E73] hover:bg-[#F5F5F7]'
                         }`}>
-                          <input type="radio" className="accent-[#DC2626]" checked={editAccess.role === r}
-                            onChange={() => setEditAccess(a => ({ ...a, role: r }))} />
-                          {r === 'manager' && <ShieldCheck size={14} />}
-                          <span className="text-[13px] font-medium">{r}</span>
+                          <input type="radio" className="accent-[#DC2626]" checked={editAccess.role === r.value}
+                            onChange={() => setEditAccess(a => ({ ...a, role: r.value }))} />
+                          <Icon size={13} />
+                          <span className="text-[12px] font-medium">{r.label}</span>
                         </label>
-                      ))}
-                    </div>
+                      )
+                    })}
                   </div>
-                )}
+                </div>
                 {accessError && <p className="text-[12px] text-[#DC2626] bg-red-50 px-3 py-2 rounded-lg">{accessError}</p>}
               </div>
               <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#F2F2F7]">
