@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { CheckCircle2, XCircle, RotateCcw, TrendingUp, Clock, ThumbsDown, X, CalendarDays, Clock3, MapPin, Building2, Users, Tag, StickyNote } from 'lucide-react'
+import { CheckCircle2, XCircle, RotateCcw, TrendingUp, Clock, ThumbsDown, X, CalendarDays, Clock3, MapPin, Building2, Users, Tag, StickyNote, Trophy } from 'lucide-react'
 import { formatShortDate } from '@/lib/utils'
 import type { Meeting, Profile, MeetingOutcome, MeetingResult } from '@/lib/types'
 
@@ -11,6 +11,7 @@ function OutcomeBadge({ outcome }: { outcome: MeetingOutcome | null }) {
   if (!outcome) return <span className="text-[#AEAEB2]">—</span>
   const map = {
     completed:   { icon: CheckCircle2, cls: 'text-[#34C759] bg-green-50 border-green-200' },
+    closed_won:  { icon: Trophy,       cls: 'text-[#7C3AED] bg-purple-50 border-purple-200' },
     cancelled:   { icon: XCircle,      cls: 'text-[#DC2626] bg-red-50 border-red-200' },
     rescheduled: { icon: RotateCcw,    cls: 'text-[#FF9500] bg-orange-50 border-orange-200' },
   }

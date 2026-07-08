@@ -1031,7 +1031,7 @@ export default function ManagerContactDetailPage({ params }: { params: Promise<{
                     }
                     if (item.type === 'meeting') {
                       const m = item.data as Meeting
-                      const outcomeColor = m.outcome === 'completed' ? 'text-[#34C759]' : m.outcome === 'cancelled' ? 'text-[#FF3B30]' : m.outcome === 'rescheduled' ? 'text-[#FF9500]' : 'text-[#AEAEB2]'
+                      const outcomeColor = m.outcome === 'completed' ? 'text-[#34C759]' : m.outcome === 'closed_won' ? 'text-[#7C3AED]' : m.outcome === 'cancelled' ? 'text-[#FF3B30]' : m.outcome === 'rescheduled' ? 'text-[#FF9500]' : 'text-[#AEAEB2]'
                       return (
                         <div key={`mt-${m.id}`} className="bg-white rounded-xl border border-[#E5E5EA] px-5 py-4 flex gap-3">
                           <div className="w-8 h-8 rounded-full bg-purple-50 flex items-center justify-center flex-shrink-0">
@@ -1043,7 +1043,7 @@ export default function ManagerContactDetailPage({ params }: { params: Promise<{
                               <span className="text-[11px] text-[#AEAEB2] flex-shrink-0">{fmtDate(m.meeting_date)} {m.meeting_time}</span>
                             </div>
                             {m.company_name && <p className="text-[12px] text-[#6E6E73] mt-0.5">{m.company_name}</p>}
-                            {m.outcome && <p className={`text-[11px] font-medium mt-1 capitalize ${outcomeColor}`}>{m.outcome}</p>}
+                            {m.outcome && <p className={`text-[11px] font-medium mt-1 ${outcomeColor}`}>{m.outcome === 'closed_won' ? 'Closed Won' : m.outcome.charAt(0).toUpperCase() + m.outcome.slice(1)}</p>}
                             {m.notes && <p className="text-[12px] text-[#6E6E73] mt-1.5">{m.notes}</p>}
                           </div>
                         </div>
@@ -1279,6 +1279,7 @@ export default function ManagerContactDetailPage({ params }: { params: Promise<{
                   <div className="flex items-center justify-between">
                     <span className="text-[12px] font-medium text-[#1D1D1F]">{fmtDate(m.meeting_date)}</span>
                     {m.outcome === 'completed' ? <CheckCircle2 size={12} className="text-[#34C759]" />
+                      : m.outcome === 'closed_won' ? <CheckCircle2 size={12} className="text-[#7C3AED]" />
                       : m.outcome === 'cancelled' ? <X size={12} className="text-[#FF3B30]" />
                       : <Calendar size={12} className="text-purple-500" />}
                   </div>

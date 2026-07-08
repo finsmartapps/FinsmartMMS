@@ -108,7 +108,7 @@ export const COMPANY_SIZES = [
   '1000+',
 ]
 
-export type MeetingOutcome = 'completed' | 'cancelled' | 'rescheduled'
+export type MeetingOutcome = 'completed' | 'cancelled' | 'rescheduled' | 'closed_won'
 export type MeetingResult = 'converted_opportunity' | 'future_followup' | 'lost'
 
 export interface Meeting {

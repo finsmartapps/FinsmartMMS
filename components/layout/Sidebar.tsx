@@ -60,6 +60,7 @@ const telecallerGroups: NavGroup[] = [
       { href: '/sales/telecaller/contacts',  label: 'Contacts',  icon: BookUser,     module: 'contacts'  },
       { href: '/sales/telecaller/meetings',  label: 'Meetings',  icon: CalendarCheck,module: 'meetings'  },
       { href: '/sales/telecaller/followups', label: 'Callbacks', icon: ListTodo,     module: 'callbacks' },
+      { href: '/sales/telecaller/reports',   label: 'Reports',   icon: BarChart2,    module: 'reports'   },
     ],
   },
 ]

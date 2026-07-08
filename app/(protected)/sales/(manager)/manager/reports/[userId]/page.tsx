@@ -422,7 +422,7 @@ export default function UserReportPage() {
         ) : !data ? null : (
           <>
             {/* KPI cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <KpiCard icon={Phone} label="Total Calls" value={s!.totalCalls.toLocaleString()} sub={`target ${s!.callTarget}/day`} color="bg-[#DC2626]" />
               <KpiCard
                 icon={TrendingUp}
@@ -431,7 +431,6 @@ export default function UserReportPage() {
                 sub="vs daily target"
                 color={s!.achievementPct !== null && s!.achievementPct >= 100 ? 'bg-[#34C759]' : s!.achievementPct !== null && s!.achievementPct >= 80 ? 'bg-[#FF9500]' : 'bg-[#DC2626]'}
               />
-              <KpiCard icon={CheckSquare} label="Days Hit Target" value={`${s!.daysHitTarget} / ${s!.daysSubmitted}`} sub={`submitted ${s!.submissionRate}% of days`} color="bg-[#34C759]" />
               <KpiCard icon={CalendarCheck} label="Meetings Booked" value={String(s!.meetings)} color="bg-blue-500" />
               <KpiCard icon={ListTodo} label="Follow-ups Done" value={`${s!.followupsDone} / ${s!.followupsTotal}`} color="bg-purple-500" />
             </div>

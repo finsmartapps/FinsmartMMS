@@ -118,7 +118,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Required fields missing.' }, { status: 400 })
   }
 
-  const VALID_OUTCOMES = ['completed', 'cancelled', 'rescheduled', null]
+  const VALID_OUTCOMES = ['completed', 'cancelled', 'rescheduled', 'closed_won', null]
   if (outcome !== undefined && !VALID_OUTCOMES.includes(outcome)) {
     return NextResponse.json({ error: 'Invalid outcome value.' }, { status: 400 })
   }

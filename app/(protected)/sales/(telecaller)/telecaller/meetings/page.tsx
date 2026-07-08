@@ -1,7 +1,7 @@
 ﻿'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { Plus, Pencil, Trash2, Loader2, CalendarCheck, ChevronUp, ChevronDown, Search, CheckCircle2, XCircle, RotateCcw, TrendingUp, Clock, ThumbsDown } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, CalendarCheck, ChevronUp, ChevronDown, Search, CheckCircle2, XCircle, RotateCcw, TrendingUp, Clock, ThumbsDown, Trophy } from 'lucide-react'
 import { Modal } from '@/components/sales/ui/Modal'
 import { formatShortDate } from '@/lib/utils'
 import { TIMEZONES, COMPANY_SIZES } from '@/lib/types'
@@ -29,8 +29,9 @@ const COLS = [
 ]
 
 const OUTCOME_OPTIONS: { value: MeetingOutcome; label: string; color: string; icon: React.ElementType }[] = [
-  { value: 'completed',   label: 'Completed',   color: 'text-[#34C759] bg-green-50 border-green-200',  icon: CheckCircle2 },
-  { value: 'cancelled',   label: 'Cancelled',   color: 'text-[#DC2626] bg-red-50 border-red-200',      icon: XCircle },
+  { value: 'completed',   label: 'Completed',   color: 'text-[#34C759] bg-green-50 border-green-200',   icon: CheckCircle2 },
+  { value: 'closed_won',  label: 'Closed Won',  color: 'text-[#7C3AED] bg-purple-50 border-purple-200', icon: Trophy },
+  { value: 'cancelled',   label: 'Cancelled',   color: 'text-[#DC2626] bg-red-50 border-red-200',       icon: XCircle },
   { value: 'rescheduled', label: 'Rescheduled', color: 'text-[#FF9500] bg-orange-50 border-orange-200', icon: RotateCcw },
 ]
 
