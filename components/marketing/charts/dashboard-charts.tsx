@@ -234,7 +234,7 @@ export function VBarChart({
               dataKey="value"
               position="top"
               style={{ fontSize: 11, fontWeight: 700, fill: '#64748b' }}
-              formatter={(v: number) => (v > 0 ? String(v) : '')}
+              formatter={(v) => (Number(v) > 0 ? String(v) : '')}
             />
           </Bar>
         </BarChart>
@@ -256,7 +256,7 @@ export function GroupedVBarChart({
   return (
     <div className="w-full" style={{ height: 220 }}>
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 8, right: 8, left: -16, bottom: 4 }} barCategoryGap="28%" barGap={2}>
+        <BarChart data={data} margin={{ top: 20, right: 8, left: -16, bottom: 4 }} barCategoryGap="28%" barGap={2}>
           <CartesianGrid vertical={false} stroke="#eef0f5" />
           <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b', fontWeight: 600 }} axisLine={false} tickLine={false} />
           <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} allowDecimals={false} width={28} />
@@ -269,7 +269,9 @@ export function GroupedVBarChart({
             }}
           />
           {series.map(s => (
-            <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} radius={[4, 4, 0, 0]} maxBarSize={18} />
+            <Bar key={s.key} dataKey={s.key} name={s.label} fill={s.color} radius={[4, 4, 0, 0]} maxBarSize={18}>
+              <LabelList dataKey={s.key} position="top" style={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }} formatter={(v) => (Number(v) > 0 ? String(v) : '')} />
+            </Bar>
           ))}
         </BarChart>
       </ResponsiveContainer>
