@@ -2,7 +2,7 @@
 
 import {
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, ReferenceLine, LabelList,
   RadialBarChart, RadialBar, PolarAngleAxis,
 } from 'recharts'
 
@@ -202,7 +202,7 @@ export function VBarChart({
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
-          margin={{ top: 18, right: 16, left: -12, bottom: 4 }}
+          margin={{ top: 24, right: 16, left: -12, bottom: 4 }}
           barCategoryGap={8}
           onClick={onBarClick ? (state) => { if (state?.activeLabel) onBarClick(state.activeLabel as string) } : undefined}
           style={onBarClick ? { cursor: 'pointer' } : undefined}
@@ -229,7 +229,14 @@ export function VBarChart({
               label={{ value: targetLabel ?? `target ${target}`, position: 'insideTopRight', fontSize: 10, fill: '#f43f5e', fontWeight: 700 }}
             />
           )}
-          <Bar dataKey="value" fill="url(#vbarGrad)" radius={[8, 8, 0, 0]} maxBarSize={44} />
+          <Bar dataKey="value" fill="url(#vbarGrad)" radius={[8, 8, 0, 0]} maxBarSize={44}>
+            <LabelList
+              dataKey="value"
+              position="top"
+              style={{ fontSize: 11, fontWeight: 700, fill: '#64748b' }}
+              formatter={(v: number) => (v > 0 ? String(v) : '')}
+            />
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
     </div>
