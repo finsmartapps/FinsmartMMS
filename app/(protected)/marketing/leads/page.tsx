@@ -18,8 +18,8 @@ import {
 } from '@/lib/leads'
 import type { Settings, Lead } from '@/types'
 import {
-  Zap, Layers, BookOpen, Inbox, ArrowUpRight,
-  Armchair, Database, CalendarCheck, Trophy,
+  Zap, BookOpen, Inbox, ArrowUpRight,
+  Armchair, Database,
 } from 'lucide-react'
 
 export default async function LeadsPage() {
@@ -220,29 +220,14 @@ export default async function LeadsPage() {
           label: 'Lead Analytics',
           content: leads.length > 0 ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <Panel icon={Layers} title="Leads by Source" accent="violet">
-                <div className="pt-2">
-                  <DonutChart data={bySource} centerValue={leads.length.toString()} centerLabel="Leads" />
-                </div>
-              </Panel>
-              <Panel icon={CalendarCheck} title="Successful Meetings by Lead Source" accent="amber">
-                <div className="pt-2">
-                  <DonutChart data={bySourceSuccessful} centerValue={successfulMeetingLeads.length.toString()} centerLabel="Meetings" />
-                </div>
-              </Panel>
-              <Panel icon={Trophy} title="Closed Won by Lead Source" accent="fuchsia">
-                <div className="pt-2">
-                  <DonutChart data={bySourceClosedWon} centerValue={closedWonLeads.length.toString()} centerLabel="Won" />
-                </div>
-              </Panel>
-              <Panel icon={Zap} title="Leads by Stage" accent="indigo">
-                <div className="pt-2"><HBarChart data={byStage} /></div>
-              </Panel>
               <Panel icon={Database} title="Leads by Data Source" accent="emerald"
                 caption={byDataSourceAll.length > DS_TOP ? `Top ${DS_TOP} of ${byDataSourceAll.length} sources` : undefined}>
                 <div className="pt-2">
                   <DonutChart data={byDataSource} centerValue={leads.length.toString()} centerLabel="Leads" />
                 </div>
+              </Panel>
+              <Panel icon={Zap} title="Leads by Stage" accent="indigo">
+                <div className="pt-2"><HBarChart data={byStage} /></div>
               </Panel>
             </div>
           ) : null,
