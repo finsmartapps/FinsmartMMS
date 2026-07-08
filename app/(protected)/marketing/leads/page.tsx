@@ -238,9 +238,11 @@ export default async function LeadsPage() {
               <Panel icon={Zap} title="Leads by Stage" accent="indigo">
                 <div className="pt-2"><HBarChart data={byStage} /></div>
               </Panel>
-              <Panel icon={Database} title="Leads by Data Source" accent="emerald" className="lg:col-span-2"
+              <Panel icon={Database} title="Leads by Data Source" accent="emerald"
                 caption={byDataSourceAll.length > DS_TOP ? `Top ${DS_TOP} of ${byDataSourceAll.length} sources` : undefined}>
-                <div className="pt-2"><HBarChart data={byDataSource} /></div>
+                <div className="pt-2">
+                  <DonutChart data={byDataSource} centerValue={leads.length.toString()} centerLabel="Leads" />
+                </div>
               </Panel>
             </div>
           ) : null,
