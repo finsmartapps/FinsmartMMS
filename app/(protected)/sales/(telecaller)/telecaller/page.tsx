@@ -61,12 +61,11 @@ export default async function TelecallerPage({
       .eq('status', 'pending')
       .lte('follow_up_date', today)
       .order('follow_up_date', { ascending: true }),
-    // Monthly meetings count — based on when the meeting was LOGGED (created_at), not the scheduled date
-    // Use date-only strings with lt(nextMonthStart) — PostgREST casts dates to timestamptz midnight UTC reliably
+    // Monthly meetings count — meetings SCHEDULED this month (meeting_date in current month)
     supabase.from('meetings').select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
-      .gte('created_at', monthStart)
-      .lt('created_at', nextMonthStart),
+      .gte('meeting_date', monthStart)
+      .lte('meeting_date', monthEnd),
     // Meeting monthly target from settings
     supabase.from('settings').select('value').eq('key', 'meeting_monthly_target').single(),
   ])
@@ -238,6 +237,7 @@ export default async function TelecallerPage({
 
       {/* Log form — always shown for any date */}
       <DailyLogForm
+        key={activeDate}
         activities={activityList}
         targetMap={targetMap}
         existingLog={log}
