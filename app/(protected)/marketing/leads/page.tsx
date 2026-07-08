@@ -56,6 +56,13 @@ export default async function LeadsPage() {
       return acc
     }, {})
   ).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
+  const byLeadFromSuccessful = Object.entries(
+    successfulMeetingLeads.reduce<Record<string, number>>((acc, l) => {
+      const k = l.lead_from || 'Unspecified'
+      acc[k] = (acc[k] ?? 0) + 1
+      return acc
+    }, {})
+  ).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
 
   const bySource = Object.entries(
     leads.reduce<Record<string, number>>((acc, l) => {
@@ -200,6 +207,11 @@ export default async function LeadsPage() {
               <Panel icon={CalendarCheck} title="Successful Meetings by Source" accent="amber">
                 <div className="pt-2">
                   <DonutChart data={bySourceSuccessful} centerValue={successfulMeetingLeads.length.toString()} centerLabel="Meetings" />
+                </div>
+              </Panel>
+              <Panel icon={CalendarCheck} title="Successful Meetings by Lead From" accent="amber">
+                <div className="pt-2">
+                  <DonutChart data={byLeadFromSuccessful} centerValue={successfulMeetingLeads.length.toString()} centerLabel="Meetings" />
                 </div>
               </Panel>
               <Panel icon={Zap} title="Leads by Stage" accent="indigo">
