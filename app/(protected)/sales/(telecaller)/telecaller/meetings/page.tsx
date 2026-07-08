@@ -360,13 +360,13 @@ export default function MeetingsPage() {
               <span className="text-[12px] text-[#AEAEB2] italic block max-w-[180px] truncate">{m.notes || '—'}</span>
             </td>
             <td className="px-4 py-3">
-              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-0.5">
                 <button onClick={() => openEdit(m)} title="Edit"
-                  className="p-1.5 rounded-lg text-[#AEAEB2] hover:text-[#1D1D1F] hover:bg-[#F2F2F7] transition">
+                  className="p-1.5 rounded-lg text-[#AEAEB2] hover:text-[#1D1D1F] hover:bg-[#F2F2F7] transition cursor-pointer">
                   <Pencil size={13} />
                 </button>
                 <button onClick={() => handleDelete(m.id)} title="Delete"
-                  className="p-1.5 rounded-lg text-[#AEAEB2] hover:text-[#FF3B30] hover:bg-red-50 transition">
+                  className="p-1.5 rounded-lg text-[#AEAEB2] hover:text-[#FF3B30] hover:bg-red-50 transition cursor-pointer">
                   <Trash2 size={13} />
                 </button>
               </div>

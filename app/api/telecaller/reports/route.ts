@@ -97,12 +97,14 @@ export async function GET(req: NextRequest) {
   const achievementPct = totalTarget > 0 ? Math.round((totalCalls / totalTarget) * 100) : null
   const submissionRate = workingDays.length > 0 ? Math.round((daysSubmitted / workingDays.length) * 100) : 0
   const followupsDone = followups.filter((f: { status: string }) => f.status === 'done').length
+  // Exclude rescheduled meetings from booked count (they get a new entry at the new date)
+  const meetingsBooked = meetings.filter((m: { outcome: string | null }) => m.outcome !== 'rescheduled').length
   const meetingsCompleted = meetings.filter((m: { outcome: string | null }) => m.outcome === 'completed' || m.outcome === 'closed_won').length
 
   return NextResponse.json({
     profile: { id: userId, name: selfProfile.name, email: selfProfile.email },
     period: { from, to, workingDays: workingDays.length },
-    summary: { totalCalls, callTarget, totalTarget, achievementPct, daysSubmitted, submissionRate, meetings: meetings.length, meetingsCompleted, followupsDone, followupsTotal: followups.length },
+    summary: { totalCalls, callTarget, totalTarget, achievementPct, daysSubmitted, submissionRate, meetings: meetingsBooked, meetingsCompleted, followupsDone, followupsTotal: followups.length },
     dailyChart,
     submittedLogs,
     meetings,

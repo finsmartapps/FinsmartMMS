@@ -61,11 +61,12 @@ export default async function TelecallerPage({
       .eq('status', 'pending')
       .lte('follow_up_date', today)
       .order('follow_up_date', { ascending: true }),
-    // Monthly meetings count — meetings SCHEDULED this month (meeting_date in current month)
+    // Monthly meetings count — meetings SCHEDULED this month, excluding rescheduled (those get a new entry)
     supabase.from('meetings').select('id', { count: 'exact', head: true })
       .eq('user_id', user.id)
       .gte('meeting_date', monthStart)
-      .lte('meeting_date', monthEnd),
+      .lte('meeting_date', monthEnd)
+      .or('outcome.is.null,outcome.neq.rescheduled'),
     // Meeting monthly target from settings
     supabase.from('settings').select('value').eq('key', 'meeting_monthly_target').single(),
   ])

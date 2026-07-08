@@ -107,7 +107,7 @@ export async function GET(req: NextRequest) {
       callTarget,
       achievementPct,
       daysHitTarget,
-      meetings: meetings.filter((m: { user_id: string }) => m.user_id === tc.id).length,
+      meetings: meetings.filter((m: { user_id: string; outcome: string | null }) => m.user_id === tc.id && m.outcome !== 'rescheduled').length,
     }
   })
 
@@ -164,13 +164,14 @@ export async function GET(req: NextRequest) {
     trendByUser[tc.id] = trend.map(t => ({ label: t.label, calls: userDateCallMap[t.label] ?? 0 }))
   }
 
-  // Meeting trend — booked and completed per day/month bucket
+  // Meeting trend — booked and completed per day/month bucket (exclude rescheduled from booked count)
   const meetingBookedMap: Record<string, number> = {}
   const meetingCompletedMap: Record<string, number> = {}
   for (const m of meetings) {
+    if (m.outcome === 'rescheduled') continue
     const key = useMonthly ? m.meeting_date.slice(0, 7) : m.meeting_date
     meetingBookedMap[key] = (meetingBookedMap[key] ?? 0) + 1
-    if (m.outcome === 'completed') {
+    if (m.outcome === 'completed' || m.outcome === 'closed_won') {
       meetingCompletedMap[key] = (meetingCompletedMap[key] ?? 0) + 1
     }
   }
@@ -204,8 +205,8 @@ export async function GET(req: NextRequest) {
 
   // Summary
   const teamTotalCalls = telecallerStats.reduce((s: number, t: { totalCalls: number }) => s + t.totalCalls, 0)
-  const teamMeetings = meetings.length
-  const teamMeetingsCompleted = meetings.filter((m: { outcome: string | null }) => m.outcome === 'completed').length
+  const teamMeetings = meetings.filter((m: { outcome: string | null }) => m.outcome !== 'rescheduled').length
+  const teamMeetingsCompleted = meetings.filter((m: { outcome: string | null }) => m.outcome === 'completed' || m.outcome === 'closed_won').length
   const validPcts = telecallerStats.filter((t: { achievementPct: number | null }) => t.achievementPct !== null)
   const avgAchievement = validPcts.length > 0
     ? Math.round(validPcts.reduce((s: number, t: { achievementPct: number | null }) => s + (t.achievementPct ?? 0), 0) / validPcts.length)
