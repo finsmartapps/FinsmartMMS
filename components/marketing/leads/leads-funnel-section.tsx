@@ -61,7 +61,7 @@ function getRange(mode: FilterMode, pickMonth: string, from: string, to: string)
   }
   if (mode === 'year') {
     const y = today.getFullYear()
-    return { from: `${y}-01-01`, to: `${y}-12-31` }
+    return { from: `${y}-01-01`, to: isoDate(today) }
   }
   if (mode === 'pick-month' && pickMonth) {
     const [y, m] = pickMonth.split('-').map(Number)
