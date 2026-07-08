@@ -496,8 +496,9 @@ create table public.leads (
   category         text    default '',
   closed_hours     numeric default 0,
   mrr_value        numeric default 0,
-  one_time_revenue numeric default 0,
-  closed_date      date,
+  one_time_revenue    numeric default 0,
+  successful_meetings boolean default false,
+  closed_date         date,
   created_at       timestamptz default now(),
   updated_at       timestamptz default now()
 );

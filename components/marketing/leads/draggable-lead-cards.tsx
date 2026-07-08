@@ -11,13 +11,13 @@ import {
   rectSortingStrategy, useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Inbox, Users, ArrowUpRight } from 'lucide-react'
+import { GripVertical, Inbox, Users, ArrowUpRight, CalendarCheck } from 'lucide-react'
 import SqlCard from './sql-card'
 import CustomerCard from './customer-card'
 import type { Lead } from '@/types'
 
 const STORAGE_KEY = 'leads-card-order'
-const DEFAULT_ORDER = ['total', 'mql', 'sql', 'customers']
+const DEFAULT_ORDER = ['total', 'mql', 'sql', 'meetings', 'customers']
 
 interface Props {
   leads: Lead[]
@@ -25,6 +25,7 @@ interface Props {
   sqlLeads: Lead[]
   customers: Lead[]
   opportunityCount: number
+  successfulMeetingsCount: number
   mqlTargetLabel: string
   sqlTargetLabel?: string
 }
@@ -82,7 +83,7 @@ function SortableCard({
 }
 
 export default function DraggableLeadCards({
-  leads, mqlCount, sqlLeads, customers, opportunityCount, mqlTargetLabel, sqlTargetLabel,
+  leads, mqlCount, sqlLeads, customers, opportunityCount, successfulMeetingsCount, mqlTargetLabel, sqlTargetLabel,
 }: Props) {
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -136,6 +137,13 @@ export default function DraggableLeadCards({
       />
     ),
     sql: <SqlCard sqls={sqlLeads} targetLabel={sqlTargetLabel} />,
+    meetings: (
+      <RollupCardInner
+        icon={CalendarCheck} label="Successful Meetings" value={successfulMeetingsCount}
+        foot="marked Yes on import"
+        gradient="from-amber-500 via-orange-500 to-rose-500"
+      />
+    ),
     customers: <CustomerCard customers={customers} opportunityCount={opportunityCount} />,
   }
 
@@ -152,7 +160,7 @@ export default function DraggableLeadCards({
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={displayOrder} strategy={rectSortingStrategy}>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {displayOrder.map(id => (
             <SortableCard key={id} id={id} isDragging={activeId === id}>
               {cardMap[id]}

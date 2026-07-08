@@ -33,8 +33,9 @@ export default async function LeadsPage() {
   const leads = (leadRows ?? []) as Lead[]
 
   // ── status-based rollup (matches Excel pivot) ──
-  const mqlCount        = leads.filter(l => l.lead_status === 'MQL').length
-  const sqlCount        = leads.filter(l => l.lead_status === 'SQL').length
+  const mqlCount               = leads.filter(l => l.lead_status === 'MQL').length
+  const sqlCount               = leads.filter(l => l.lead_status === 'SQL').length
+  const successfulMeetingsCount = leads.filter(l => l.successful_meetings).length
   const opportunityCount = leads.filter(l => l.lead_status === 'Opportunity').length
   const isClosedBiz     = (l: Lead) => l.lead_stage === 'Closed Won' || (l.lead_status === 'SQL' && ((l.mrr_value ?? 0) > 0 || (l.one_time_revenue ?? 0) > 0))
   const customers       = leads.filter(isClosedBiz)
@@ -114,6 +115,7 @@ export default async function LeadsPage() {
               sqlLeads={leads.filter(l => l.lead_status === 'SQL')}
               customers={customers}
               opportunityCount={opportunityCount}
+              successfulMeetingsCount={successfulMeetingsCount}
               mqlTargetLabel={targets ? `target ${targets.monthly_mqls.toFixed(0)}/mo` : 'Marketing Qualified Leads'}
               sqlTargetLabel={targets ? `target ${targets.monthly_sqls.toFixed(0)}/mo` : undefined}
             />

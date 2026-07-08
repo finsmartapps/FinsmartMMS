@@ -181,6 +181,7 @@ export interface Lead {
   mrr_value: number | null
   one_time_revenue: number | null
   closed_date: string | null
+  successful_meetings: boolean
   created_at: string
   updated_at: string
 }
