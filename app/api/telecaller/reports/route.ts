@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   const [activitiesRes, logsRes, meetingsRes, holidaysRes, targetsRes, followupsRes] = await Promise.all([
     supabase.from('activities').select('id, name, display_order').eq('is_active', true).order('display_order'),
     supabase.from('daily_logs').select('id, log_date, is_submitted, submitted_at').eq('user_id', userId).gte('log_date', from).lte('log_date', to).order('log_date'),
-    supabase.from('meetings').select('id, first_name, last_name, company_name, meeting_date, lead_source').eq('user_id', userId).gte('meeting_date', from).lte('meeting_date', to).order('meeting_date'),
+    supabase.from('meetings').select('id, first_name, last_name, company_name, meeting_date, lead_source, outcome').eq('user_id', userId).gte('meeting_date', from).lte('meeting_date', to).order('meeting_date'),
     supabase.from('holidays').select('holiday_date').gte('holiday_date', from).lte('holiday_date', to),
     supabase.from('targets').select('activity_id, min_value, effective_from').eq('user_id', userId).lte('effective_from', to).order('effective_from', { ascending: false }),
     supabase.from('follow_ups').select('id, status, follow_up_date, first_name, last_name').eq('user_id', userId),
@@ -97,11 +97,12 @@ export async function GET(req: NextRequest) {
   const achievementPct = totalTarget > 0 ? Math.round((totalCalls / totalTarget) * 100) : null
   const submissionRate = workingDays.length > 0 ? Math.round((daysSubmitted / workingDays.length) * 100) : 0
   const followupsDone = followups.filter((f: { status: string }) => f.status === 'done').length
+  const meetingsCompleted = meetings.filter((m: { outcome: string | null }) => m.outcome === 'completed' || m.outcome === 'closed_won').length
 
   return NextResponse.json({
     profile: { id: userId, name: selfProfile.name, email: selfProfile.email },
     period: { from, to, workingDays: workingDays.length },
-    summary: { totalCalls, callTarget, totalTarget, achievementPct, daysSubmitted, submissionRate, meetings: meetings.length, followupsDone, followupsTotal: followups.length },
+    summary: { totalCalls, callTarget, totalTarget, achievementPct, daysSubmitted, submissionRate, meetings: meetings.length, meetingsCompleted, followupsDone, followupsTotal: followups.length },
     dailyChart,
     submittedLogs,
     meetings,

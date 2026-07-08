@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useSearchParams } from 'next/navigation'
 import {
   Phone, CalendarCheck, TrendingUp, ListTodo,
-  Loader2, CheckCircle2, XCircle, Download,
+  Loader2, CheckCircle2, XCircle, Download, Trophy,
 } from 'lucide-react'
 import { PeriodSelector, getPeriodDates } from '@/components/sales/manager/PeriodSelector'
 import { IndividualChart } from '@/components/sales/manager/ReportCharts'
@@ -22,7 +22,7 @@ interface UserData {
   summary: {
     totalCalls: number; callTarget: number; totalTarget: number
     achievementPct: number | null; daysSubmitted: number
-    submissionRate: number; meetings: number; followupsDone: number; followupsTotal: number
+    submissionRate: number; meetings: number; meetingsCompleted: number; followupsDone: number; followupsTotal: number
   }
   dailyChart: DailyPoint[]
   submittedLogs: LogRow[]
@@ -131,7 +131,7 @@ export default function TelecallerReportsPage() {
       ) : !data ? null : (
         <>
           {/* KPI cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
             <KpiCard icon={Phone} label="Total Calls" value={s!.totalCalls.toLocaleString()} sub={`target ${s!.callTarget}/day`} color="bg-[#DC2626]" />
             <KpiCard
               icon={TrendingUp}
@@ -141,6 +141,13 @@ export default function TelecallerReportsPage() {
               color={s!.achievementPct !== null && s!.achievementPct >= 100 ? 'bg-[#34C759]' : s!.achievementPct !== null && s!.achievementPct >= 80 ? 'bg-[#FF9500]' : 'bg-[#DC2626]'}
             />
             <KpiCard icon={CalendarCheck} label="Meetings Booked" value={String(s!.meetings)} color="bg-blue-500" />
+            <KpiCard
+              icon={CheckCircle2}
+              label="Meetings Completed"
+              value={String(s!.meetingsCompleted)}
+              sub={s!.meetings > 0 ? `${Math.round((s!.meetingsCompleted / s!.meetings) * 100)}% success rate` : 'of meetings booked'}
+              color="bg-[#34C759]"
+            />
             <KpiCard icon={ListTodo} label="Follow-ups Done" value={`${s!.followupsDone} / ${s!.followupsTotal}`} color="bg-purple-500" />
           </div>
 
