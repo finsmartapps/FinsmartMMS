@@ -145,7 +145,7 @@ function buildLeads(text: string, hasHeader: boolean): { rows: ParsedLead[]; ski
       closed_hours: c(20) ? (parseNum(c(20)) ?? 0) * HOURS_PER_SEAT : null,
       mrr_value: parseNum(c(21)),
       one_time_revenue: parseNum(c(22)),
-      // col 23 = Seat Type (informational, not stored)
+      seat_type: c(23),
       successful_meetings: c(24).toLowerCase() === 'yes',
       category: classifyLeadSource(lead_source),
       updated_at: new Date().toISOString(),

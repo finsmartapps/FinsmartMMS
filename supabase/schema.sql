@@ -497,6 +497,7 @@ create table public.leads (
   closed_hours     numeric default 0,
   mrr_value        numeric default 0,
   one_time_revenue    numeric default 0,
+  seat_type           text    default '',
   successful_meetings boolean default false,
   closed_date         date,
   created_at       timestamptz default now(),

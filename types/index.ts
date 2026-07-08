@@ -180,8 +180,9 @@ export interface Lead {
   closed_hours: number | null
   mrr_value: number | null
   one_time_revenue: number | null
-  closed_date: string | null
+  seat_type: string
   successful_meetings: boolean
+  closed_date: string | null
   created_at: string
   updated_at: string
 }
