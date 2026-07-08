@@ -26,7 +26,6 @@ const COLS = [
   { key: null,                       label: 'Outcome',     sortable: false, w: 'min-w-[140px]' },
   { key: null,                       label: 'Result',      sortable: false, w: 'min-w-[180px]' },
   { key: null,                       label: 'Notes',       sortable: false, w: 'min-w-[160px]' },
-  { key: null,                       label: '',            sortable: false, w: 'w-[72px]' },
 ]
 
 const OUTCOME_OPTIONS: { value: MeetingOutcome; label: string; color: string; icon: React.ElementType }[] = [
@@ -328,10 +327,22 @@ export default function MeetingsPage() {
         {rows.map((m) => (
           <tr
             key={m.id}
-            className={`group border-b border-[#F2F2F7] hover:bg-[#FAFAFA] transition-colors ${dimmed ? 'opacity-70' : ''}`}
+            className={`border-b border-[#F2F2F7] hover:bg-[#FAFAFA] transition-colors ${dimmed ? 'opacity-70' : ''}`}
           >
             <td className="px-4 py-3">
-              <span className="font-semibold text-[#1D1D1F] text-[13px] whitespace-nowrap">{m.first_name} {m.last_name}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-semibold text-[#1D1D1F] text-[13px] whitespace-nowrap">{m.first_name} {m.last_name}</span>
+                <div className="flex items-center gap-0.5 shrink-0">
+                  <button onClick={() => openEdit(m)} title="Edit"
+                    className="p-1 rounded-md text-[#AEAEB2] hover:text-[#1D1D1F] hover:bg-[#F2F2F7] transition cursor-pointer">
+                    <Pencil size={11} />
+                  </button>
+                  <button onClick={() => handleDelete(m.id)} title="Delete"
+                    className="p-1 rounded-md text-[#AEAEB2] hover:text-[#FF3B30] hover:bg-red-50 transition cursor-pointer">
+                    <Trash2 size={11} />
+                  </button>
+                </div>
+              </div>
             </td>
             <td className="px-4 py-3">
               <span className="text-[#6E6E73] text-[13px] block max-w-[140px] truncate">{m.company_name}</span>
@@ -358,18 +369,6 @@ export default function MeetingsPage() {
             </td>
             <td className="px-4 py-3">
               <span className="text-[12px] text-[#AEAEB2] italic block max-w-[180px] truncate">{m.notes || '—'}</span>
-            </td>
-            <td className="px-4 py-3">
-              <div className="flex items-center gap-0.5">
-                <button onClick={() => openEdit(m)} title="Edit"
-                  className="p-1.5 rounded-lg text-[#AEAEB2] hover:text-[#1D1D1F] hover:bg-[#F2F2F7] transition cursor-pointer">
-                  <Pencil size={13} />
-                </button>
-                <button onClick={() => handleDelete(m.id)} title="Delete"
-                  className="p-1.5 rounded-lg text-[#AEAEB2] hover:text-[#FF3B30] hover:bg-red-50 transition cursor-pointer">
-                  <Trash2 size={13} />
-                </button>
-              </div>
             </td>
           </tr>
         ))}
