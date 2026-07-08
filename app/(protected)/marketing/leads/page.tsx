@@ -19,7 +19,7 @@ import {
 import type { Settings, Lead } from '@/types'
 import {
   Zap, Layers, BookOpen, Inbox, ArrowUpRight,
-  Armchair, Database, CalendarCheck,
+  Armchair, Database, CalendarCheck, Trophy,
 } from 'lucide-react'
 
 export default async function LeadsPage() {
@@ -228,6 +228,11 @@ export default async function LeadsPage() {
               <Panel icon={CalendarCheck} title="Successful Meetings by Lead Source" accent="amber">
                 <div className="pt-2">
                   <DonutChart data={bySourceSuccessful} centerValue={successfulMeetingLeads.length.toString()} centerLabel="Meetings" />
+                </div>
+              </Panel>
+              <Panel icon={Trophy} title="Closed Won by Lead Source" accent="fuchsia">
+                <div className="pt-2">
+                  <DonutChart data={bySourceClosedWon} centerValue={closedWonLeads.length.toString()} centerLabel="Won" />
                 </div>
               </Panel>
               <Panel icon={Zap} title="Leads by Stage" accent="indigo">
