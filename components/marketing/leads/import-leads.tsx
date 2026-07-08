@@ -156,7 +156,10 @@ function buildLeads(text: string, hasHeader: boolean): { rows: ParsedLead[]; ski
       ? (leadStage === CLOSED_WON && closedDate ? `${emailKey}|${closedDate}` : emailKey)
       : null
     if (rowKey && idxByKey.has(rowKey)) {
-      rows[idxByKey.get(rowKey)!] = row
+      const existingIdx = idxByKey.get(rowKey)!
+      const prev = rows[existingIdx]
+      // Last row wins for all fields, but preserve successful_meetings=true from either occurrence
+      rows[existingIdx] = { ...row, successful_meetings: row.successful_meetings || prev.successful_meetings }
       inBatchDup++
     } else {
       if (rowKey) idxByKey.set(rowKey, rows.length)
