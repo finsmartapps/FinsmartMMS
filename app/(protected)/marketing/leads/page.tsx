@@ -18,7 +18,7 @@ import {
 import type { Settings, Lead } from '@/types'
 import {
   Zap, Layers, BookOpen, Inbox, ArrowUpRight,
-  Armchair, Database,
+  Armchair, Database, CalendarCheck,
 } from 'lucide-react'
 
 export default async function LeadsPage() {
@@ -48,6 +48,15 @@ export default async function LeadsPage() {
   const totalSql   = directSql + eventSql
 
   // ── chart data ──
+  const successfulMeetingLeads = leads.filter(l => l.successful_meetings)
+  const bySourceSuccessful = Object.entries(
+    successfulMeetingLeads.reduce<Record<string, number>>((acc, l) => {
+      const k = l.lead_source || 'Unspecified'
+      acc[k] = (acc[k] ?? 0) + 1
+      return acc
+    }, {})
+  ).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
+
   const bySource = Object.entries(
     leads.reduce<Record<string, number>>((acc, l) => {
       const k = l.lead_source || 'Unspecified'
@@ -186,6 +195,11 @@ export default async function LeadsPage() {
               <Panel icon={Layers} title="Leads by Source" accent="violet">
                 <div className="pt-2">
                   <DonutChart data={bySource} centerValue={leads.length.toString()} centerLabel="Leads" />
+                </div>
+              </Panel>
+              <Panel icon={CalendarCheck} title="Successful Meetings by Source" accent="amber">
+                <div className="pt-2">
+                  <DonutChart data={bySourceSuccessful} centerValue={successfulMeetingLeads.length.toString()} centerLabel="Meetings" />
                 </div>
               </Panel>
               <Panel icon={Zap} title="Leads by Stage" accent="indigo">
