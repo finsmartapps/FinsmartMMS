@@ -11,13 +11,13 @@ import {
   rectSortingStrategy, useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Inbox, Users, ArrowUpRight, CalendarCheck } from 'lucide-react'
+import { GripVertical, Inbox, Users, ArrowUpRight, CalendarCheck, Armchair, DollarSign } from 'lucide-react'
 import SqlCard from './sql-card'
 import CustomerCard from './customer-card'
 import type { Lead } from '@/types'
 
-const STORAGE_KEY = 'leads-card-order'
-const DEFAULT_ORDER = ['total', 'mql', 'sql', 'meetings', 'customers']
+const STORAGE_KEY = 'leads-card-order-v2'
+const DEFAULT_ORDER = ['total', 'mql', 'sql', 'meetings', 'customers', 'avg-seats', 'avg-revenue']
 
 interface Props {
   leads: Lead[]
@@ -28,6 +28,8 @@ interface Props {
   successfulMeetingsCount: number
   mqlTargetLabel: string
   sqlTargetLabel?: string
+  avgSeatsPerCustomer: number
+  avgRevenuePerSeat: number
 }
 
 function RollupCardInner({
@@ -84,6 +86,7 @@ function SortableCard({
 
 export default function DraggableLeadCards({
   leads, mqlCount, sqlLeads, customers, opportunityCount, successfulMeetingsCount, mqlTargetLabel, sqlTargetLabel,
+  avgSeatsPerCustomer, avgRevenuePerSeat,
 }: Props) {
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -145,6 +148,22 @@ export default function DraggableLeadCards({
       />
     ),
     customers: <CustomerCard customers={customers} opportunityCount={opportunityCount} />,
+    'avg-seats': (
+      <RollupCardInner
+        icon={Armchair} label="Avg. Seats / Customer"
+        value={avgSeatsPerCustomer > 0 ? Number(avgSeatsPerCustomer.toFixed(2)).toString() : '—'}
+        foot={`across ${customers.length} customer${customers.length === 1 ? '' : 's'}`}
+        gradient="from-teal-500 via-cyan-500 to-sky-600"
+      />
+    ),
+    'avg-revenue': (
+      <RollupCardInner
+        icon={DollarSign} label="Avg. Revenue / Seat"
+        value={avgRevenuePerSeat > 0 ? `$${Math.round(avgRevenuePerSeat).toLocaleString()}` : '—'}
+        foot="MRR ÷ seats closed"
+        gradient="from-emerald-500 via-green-500 to-teal-600"
+      />
+    ),
   }
 
   const activeCard = activeId ? cardMap[activeId] : null
@@ -160,7 +179,7 @@ export default function DraggableLeadCards({
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={displayOrder} strategy={rectSortingStrategy}>
-        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-4">
           {displayOrder.map(id => (
             <SortableCard key={id} id={id} isDragging={activeId === id}>
               {cardMap[id]}

@@ -14,7 +14,7 @@ import ClosedWonBySource from '@/components/marketing/leads/closed-won-by-source
 import {
   classifyLeadSource, CATEGORY_STYLES,
   DIGITAL_MQL_SOURCES, EVENT_SQL_SOURCES, DIRECT_SQL_SOURCES, LEAD_STAGES,
-  ASSIGNEE_SUGGESTIONS,
+  ASSIGNEE_SUGGESTIONS, hoursToSeats,
 } from '@/lib/leads'
 import type { Settings, Lead } from '@/types'
 import {
@@ -40,6 +40,10 @@ export default async function LeadsPage() {
   const opportunityCount = leads.filter(l => l.lead_status === 'Opportunity').length
   const isClosedBiz     = (l: Lead) => l.lead_stage === 'Closed Won' || (l.lead_status === 'SQL' && ((l.mrr_value ?? 0) > 0 || (l.one_time_revenue ?? 0) > 0))
   const customers       = leads.filter(isClosedBiz)
+  const totalSeats      = customers.reduce((s, l) => s + hoursToSeats(l.closed_hours ?? 0), 0)
+  const totalMRR        = customers.reduce((s, l) => s + (l.mrr_value ?? 0), 0)
+  const avgSeatsPerCustomer  = customers.length > 0 ? totalSeats / customers.length : 0
+  const avgRevenuePerSeat    = totalSeats > 0 ? totalMRR / totalSeats : 0
 
   // ── source-based classification (for charts / legend) ──
   const withCat = leads.map(l => ({ ...l, cat: classifyLeadSource(l.lead_source) }))
@@ -155,6 +159,8 @@ export default async function LeadsPage() {
               successfulMeetingsCount={successfulMeetingsCount}
               mqlTargetLabel={targets ? `target ${targets.monthly_mqls.toFixed(0)}/mo` : 'Marketing Qualified Leads'}
               sqlTargetLabel={targets ? `target ${targets.monthly_sqls.toFixed(0)}/mo` : undefined}
+              avgSeatsPerCustomer={avgSeatsPerCustomer}
+              avgRevenuePerSeat={avgRevenuePerSeat}
             />
           ),
         },
