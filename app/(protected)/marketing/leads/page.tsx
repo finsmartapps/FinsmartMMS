@@ -61,6 +61,14 @@ export default async function LeadsPage() {
   const sqlLeads = leads.filter(l => l.lead_status === 'SQL')
   const closedWonLeads = leads.filter(l => l.lead_stage === 'Closed Won')
 
+  const byLeadFromSuccessful = Object.entries(
+    successfulMeetingLeads.reduce<Record<string, number>>((acc, l) => {
+      const k = l.lead_from || 'Unspecified'
+      acc[k] = (acc[k] ?? 0) + 1
+      return acc
+    }, {})
+  ).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
+
   const bySourceSQL = Object.entries(
     sqlLeads.reduce<Record<string, number>>((acc, l) => {
       const k = l.lead_source || 'Unspecified'
@@ -243,6 +251,8 @@ export default async function LeadsPage() {
               sqlCount={sqlLeads.length}
               closedWonBySource={bySourceClosedWon}
               closedWonCount={closedWonLeads.length}
+              meetingsByLeadFrom={byLeadFromSuccessful}
+              meetingsCount={successfulMeetingsCount}
             />
           ),
         },

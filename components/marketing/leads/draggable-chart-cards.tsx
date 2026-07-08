@@ -11,11 +11,11 @@ import {
   rectSortingStrategy, useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Inbox, Zap, Trophy } from 'lucide-react'
+import { GripVertical, Inbox, Zap, Trophy, CalendarCheck } from 'lucide-react'
 import { DonutChart } from '@/components/marketing/charts/dashboard-charts'
 
-const STORAGE_KEY = 'leads-chart-cards-order-v1'
-const DEFAULT_ORDER = ['total-source', 'sql-source', 'closed-source']
+const STORAGE_KEY = 'leads-chart-cards-order-v2'
+const DEFAULT_ORDER = ['total-source', 'sql-source', 'closed-source', 'meetings-from']
 
 type ChartPoint = { name: string; value: number }
 
@@ -26,6 +26,8 @@ interface Props {
   sqlCount: number
   closedWonBySource: ChartPoint[]
   closedWonCount: number
+  meetingsByLeadFrom: ChartPoint[]
+  meetingsCount: number
 }
 
 const CARD_META: Record<string, {
@@ -55,6 +57,13 @@ const CARD_META: Record<string, {
     iconBg: 'bg-fuchsia-50',
     iconColor: 'text-fuchsia-600',
     Icon: Trophy,
+  },
+  'meetings-from': {
+    title: 'Successful Meetings via Lead From',
+    centerLabel: 'Meetings',
+    iconBg: 'bg-amber-50',
+    iconColor: 'text-amber-600',
+    Icon: CalendarCheck,
   },
 }
 
@@ -108,6 +117,7 @@ function SortableChartCard({ id, children }: { id: string; children: React.React
 
 export default function DraggableChartCards({
   totalBySource, totalCount, sqlBySource, sqlCount, closedWonBySource, closedWonCount,
+  meetingsByLeadFrom, meetingsCount,
 }: Props) {
   const [order, setOrder] = useState<string[]>(DEFAULT_ORDER)
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -143,9 +153,10 @@ export default function DraggableChartCards({
   }, [])
 
   const dataMap: Record<string, { data: ChartPoint[]; centerValue: string }> = {
-    'total-source': { data: totalBySource, centerValue: String(totalCount) },
-    'sql-source':   { data: sqlBySource,   centerValue: String(sqlCount) },
-    'closed-source': { data: closedWonBySource, centerValue: String(closedWonCount) },
+    'total-source':  { data: totalBySource,      centerValue: String(totalCount) },
+    'sql-source':    { data: sqlBySource,         centerValue: String(sqlCount) },
+    'closed-source': { data: closedWonBySource,   centerValue: String(closedWonCount) },
+    'meetings-from': { data: meetingsByLeadFrom,  centerValue: String(meetingsCount) },
   }
 
   const displayOrder = mounted ? order : DEFAULT_ORDER
@@ -160,7 +171,7 @@ export default function DraggableChartCards({
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={displayOrder} strategy={rectSortingStrategy}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
           {displayOrder.map(id => (
             <SortableChartCard key={id} id={id}>
               <ChartCardInner id={id} meta={CARD_META[id]} {...dataMap[id]} />
