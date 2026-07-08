@@ -20,6 +20,7 @@ interface Props {
   assigneeSuggestions: string[]
 }
 
+type Ctx = { updateField: (id: string, patch: Partial<Lead>) => void; saving: boolean; assigneeSuggestions: string[] }
 type ColKey = keyof Lead | 'seats'
 const COLUMNS: { key: ColKey; label: string; def: boolean }[] = [
   { key: 'sr_no',           label: '#',             def: true  },
@@ -212,7 +213,7 @@ export default function LeadsTable({ leads, ...suggestions }: Props) {
                 <tr key={row.id} className="hover:bg-indigo-50/30 transition-colors border-b border-slate-50 last:border-0">
                   {cols.map((c, i) => (
                     <td key={c.key} className={`py-2.5 px-3 align-middle ${i === 0 ? 'pl-5' : ''}`}>
-                      {renderCell(row, c.key, { updateField, saving: savingId === row.id })}
+                      {renderCell(row, c.key, { updateField, saving: savingId === row.id, assigneeSuggestions: suggestions.assigneeSuggestions })}
                     </td>
                   ))}
                   <td className="py-2.5 px-3 pr-5 text-right whitespace-nowrap">
@@ -250,11 +251,7 @@ export default function LeadsTable({ leads, ...suggestions }: Props) {
 }
 
 /* ── cell renderer ───────────────────────────────────────────── */
-function renderCell(
-  row: Lead,
-  key: ColKey,
-  ctx: { updateField: (id: string, patch: Partial<Lead>) => void; saving: boolean }
-) {
+function renderCell(row: Lead, key: ColKey, ctx: Ctx) {
   switch (key) {
     case 'sr_no':
       return <span className="text-slate-400 tabular-nums text-xs">{row.sr_no}</span>
@@ -314,6 +311,9 @@ function renderCell(
       return row.lead_status
         ? <span className={`inline-flex text-xs font-bold rounded-md px-2 py-0.5 whitespace-nowrap ${STATUS_STYLES[row.lead_status] ?? 'bg-slate-100 text-slate-600'}`}>{row.lead_status}</span>
         : <span className="text-slate-300 text-xs">—</span>
+    case 'assigned_to':
+      return <InlineSelect value={row.assigned_to ?? ''} options={ctx.assigneeSuggestions} includeEmpty saving={ctx.saving}
+        onChange={v => ctx.updateField(row.id, { assigned_to: v })} />
     default:
       return <span className="text-slate-600 text-sm whitespace-nowrap">{(row[key] as string) || '—'}</span>
   }
