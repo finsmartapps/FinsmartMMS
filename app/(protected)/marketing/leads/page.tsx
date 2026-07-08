@@ -6,6 +6,7 @@ import AddLeadForm from '@/components/marketing/leads/add-lead-form'
 import ImportLeads from '@/components/marketing/leads/import-leads'
 import LeadsTable from '@/components/marketing/leads/leads-table'
 import DraggableLeadCards from '@/components/marketing/leads/draggable-lead-cards'
+import DraggableChartCards from '@/components/marketing/leads/draggable-chart-cards'
 import PageSortableLayout from '@/components/marketing/leads/page-sortable-layout'
 import SeatsSection from '@/components/marketing/leads/seats-section'
 import LeadsFunnelSection from '@/components/marketing/leads/leads-funnel-section'
@@ -51,6 +52,25 @@ export default async function LeadsPage() {
   const successfulMeetingLeads = leads.filter(l => l.successful_meetings)
   const bySourceSuccessful = Object.entries(
     successfulMeetingLeads.reduce<Record<string, number>>((acc, l) => {
+      const k = l.lead_source || 'Unspecified'
+      acc[k] = (acc[k] ?? 0) + 1
+      return acc
+    }, {})
+  ).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
+
+  const sqlLeads = leads.filter(l => l.lead_status === 'SQL')
+  const closedWonLeads = leads.filter(l => l.lead_stage === 'Closed Won')
+
+  const bySourceSQL = Object.entries(
+    sqlLeads.reduce<Record<string, number>>((acc, l) => {
+      const k = l.lead_source || 'Unspecified'
+      acc[k] = (acc[k] ?? 0) + 1
+      return acc
+    }, {})
+  ).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
+
+  const bySourceClosedWon = Object.entries(
+    closedWonLeads.reduce<Record<string, number>>((acc, l) => {
       const k = l.lead_source || 'Unspecified'
       acc[k] = (acc[k] ?? 0) + 1
       return acc
@@ -211,6 +231,20 @@ export default async function LeadsPage() {
               </Panel>
             </div>
           ) : null,
+        },
+        {
+          id: 'source-breakdown',
+          label: 'Source Breakdown',
+          content: (
+            <DraggableChartCards
+              totalBySource={bySource}
+              totalCount={leads.length}
+              sqlBySource={bySourceSQL}
+              sqlCount={sqlLeads.length}
+              closedWonBySource={bySourceClosedWon}
+              closedWonCount={closedWonLeads.length}
+            />
+          ),
         },
         {
           id: 'table',
