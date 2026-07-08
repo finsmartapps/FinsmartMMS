@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { Plus, Pencil, Trash2, Loader2, CalendarCheck, ChevronUp, ChevronDown, Search, CheckCircle2, XCircle, RotateCcw, TrendingUp, Clock, ThumbsDown, Trophy } from 'lucide-react'
+import { Plus, Pencil, Trash2, Loader2, CalendarCheck, Search, CheckCircle2, XCircle, RotateCcw, TrendingUp, Clock, ThumbsDown, Trophy, CalendarDays } from 'lucide-react'
 import { Modal } from '@/components/sales/ui/Modal'
 import { formatShortDate } from '@/lib/utils'
 import { TIMEZONES, COMPANY_SIZES } from '@/lib/types'
@@ -16,17 +16,6 @@ const emptyForm = {
 }
 
 type SortKey = 'name' | 'company_name' | 'meeting_date' | 'lead_source'
-
-const COLS = [
-  { key: 'name' as SortKey,         label: 'Name',        sortable: true,  w: 'min-w-[160px]' },
-  { key: 'company_name' as SortKey, label: 'Company',     sortable: true,  w: 'min-w-[150px]' },
-  { key: null,                       label: 'Size',        sortable: false, w: 'min-w-[100px]' },
-  { key: 'lead_source' as SortKey,  label: 'Lead Source', sortable: true,  w: 'min-w-[130px]' },
-  { key: 'meeting_date' as SortKey, label: 'Date & Time', sortable: true,  w: 'min-w-[160px]' },
-  { key: null,                       label: 'Outcome',     sortable: false, w: 'min-w-[140px]' },
-  { key: null,                       label: 'Result',      sortable: false, w: 'min-w-[180px]' },
-  { key: null,                       label: 'Notes',       sortable: false, w: 'min-w-[160px]' },
-]
 
 const OUTCOME_OPTIONS: { value: MeetingOutcome; label: string; color: string; icon: React.ElementType }[] = [
   { value: 'completed',   label: 'Completed',   color: 'text-[#34C759] bg-green-50 border-green-200',   icon: CheckCircle2 },
@@ -210,6 +199,80 @@ function ResultDropdown({ meeting, onUpdate }: { meeting: Meeting; onUpdate: (up
   )
 }
 
+const SORT_OPTIONS: { key: SortKey; label: string }[] = [
+  { key: 'meeting_date', label: 'Date' },
+  { key: 'name', label: 'Name' },
+  { key: 'company_name', label: 'Company' },
+  { key: 'lead_source', label: 'Source' },
+]
+
+function MeetingCard({ m, dimmed, onEdit, onDelete, onUpdate }: {
+  m: Meeting
+  dimmed?: boolean
+  onEdit: (m: Meeting) => void
+  onDelete: (id: string) => void
+  onUpdate: (updated: Meeting) => void
+}) {
+  const initials = `${m.first_name[0] ?? ''}${m.last_name[0] ?? ''}`.toUpperCase()
+  const isUpcoming = m.meeting_date >= today
+
+  return (
+    <div className={`bg-white rounded-2xl border border-[#E5E5EA] p-4 transition-all ${dimmed ? 'opacity-70' : ''}`}
+      style={{ boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+      <div className="flex items-start gap-3">
+        <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white text-[13px] font-bold shrink-0 ${isUpcoming ? 'gradient-brand' : 'bg-[#C7C7CC]'}`}>
+          {initials}
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="flex items-center gap-1 min-w-0">
+              <span className="font-semibold text-[#1D1D1F] text-[14px] truncate">{m.first_name} {m.last_name}</span>
+              <div className="flex items-center gap-0.5 shrink-0">
+                <button onClick={() => onEdit(m)} title="Edit"
+                  className="p-1 rounded-md text-[#AEAEB2] hover:text-[#1D1D1F] hover:bg-[#F2F2F7] transition cursor-pointer">
+                  <Pencil size={12} />
+                </button>
+                <button onClick={() => onDelete(m.id)} title="Delete"
+                  className="p-1 rounded-md text-[#AEAEB2] hover:text-[#FF3B30] hover:bg-red-50 transition cursor-pointer">
+                  <Trash2 size={12} />
+                </button>
+              </div>
+            </div>
+            <div className="text-right shrink-0">
+              <p className="text-[12px] font-semibold text-[#1D1D1F]">{formatShortDate(m.meeting_date)}</p>
+              <p className="text-[11px] text-[#AEAEB2]">{m.meeting_time.slice(0, 5)} {m.timezone}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
+            <span className="text-[13px] text-[#6E6E73]">{m.company_name}</span>
+            {m.company_size && (
+              <span className="px-1.5 py-0.5 rounded bg-[#F2F2F7] text-[#6E6E73] text-[10px] font-medium whitespace-nowrap">{m.company_size}</span>
+            )}
+            {m.lead_source && (
+              <span className="px-1.5 py-0.5 rounded bg-blue-50 text-blue-600 text-[10px] font-semibold whitespace-nowrap border border-blue-100">{m.lead_source}</span>
+            )}
+          </div>
+          {m.notes && (
+            <p className="text-[12px] text-[#AEAEB2] italic mt-1.5 leading-snug line-clamp-2">{m.notes}</p>
+          )}
+          <div className="flex items-center gap-3 mt-2.5 pt-2.5 border-t border-[#F2F2F7] flex-wrap">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[10px] text-[#AEAEB2] font-semibold uppercase tracking-wider">Outcome</span>
+              <OutcomeDropdown meeting={m} onUpdate={onUpdate} />
+            </div>
+            {!isUpcoming && (
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-[#AEAEB2] font-semibold uppercase tracking-wider">Result</span>
+                <ResultDropdown meeting={m} onUpdate={onUpdate} />
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function MeetingsPage() {
   const [meetings, setMeetings] = useState<Meeting[]>([])
   const [loading, setLoading] = useState(true)
@@ -305,77 +368,6 @@ export default function MeetingsPage() {
 
   const inputCls = 'w-full border border-[#E5E5EA] rounded-xl px-3 py-2.5 text-sm text-[#1D1D1F] focus:outline-none focus:border-[#DC2626] focus:ring-2 focus:ring-[#DC2626]/10 transition bg-[#FAFAFA] placeholder-[#AEAEB2]'
 
-  const TH = ({ col }: { col: typeof COLS[number] }) => (
-    <th
-      className={`px-4 py-3 text-left text-[11px] font-semibold text-[#AEAEB2] uppercase tracking-wider whitespace-nowrap bg-[#FAFAFA] border-b border-[#E5E5EA] ${col.w} ${col.sortable ? 'cursor-pointer select-none hover:text-[#6E6E73]' : ''}`}
-      onClick={col.key ? () => toggleSort(col.key as SortKey) : undefined}
-    >
-      <div className="flex items-center gap-1">
-        {col.label}
-        {col.sortable && col.key && (
-          sortKey === col.key
-            ? (sortAsc ? <ChevronUp size={12} className="text-[#DC2626]" /> : <ChevronDown size={12} className="text-[#DC2626]" />)
-            : <ChevronUp size={12} className="text-[#D1D1D6]" />
-        )}
-      </div>
-    </th>
-  )
-
-  function DataRows({ rows, dimmed }: { rows: Meeting[]; dimmed?: boolean }) {
-    return (
-      <>
-        {rows.map((m) => (
-          <tr
-            key={m.id}
-            className={`border-b border-[#F2F2F7] hover:bg-[#FAFAFA] transition-colors ${dimmed ? 'opacity-70' : ''}`}
-          >
-            <td className="px-4 py-3">
-              <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-[#1D1D1F] text-[13px] whitespace-nowrap">{m.first_name} {m.last_name}</span>
-                <div className="flex items-center gap-0.5 shrink-0">
-                  <button onClick={() => openEdit(m)} title="Edit"
-                    className="p-1 rounded-md text-[#AEAEB2] hover:text-[#1D1D1F] hover:bg-[#F2F2F7] transition cursor-pointer">
-                    <Pencil size={11} />
-                  </button>
-                  <button onClick={() => handleDelete(m.id)} title="Delete"
-                    className="p-1 rounded-md text-[#AEAEB2] hover:text-[#FF3B30] hover:bg-red-50 transition cursor-pointer">
-                    <Trash2 size={11} />
-                  </button>
-                </div>
-              </div>
-            </td>
-            <td className="px-4 py-3">
-              <span className="text-[#6E6E73] text-[13px] block max-w-[140px] truncate">{m.company_name}</span>
-            </td>
-            <td className="px-4 py-3">
-              {m.company_size
-                ? <span className="inline-block px-2 py-0.5 rounded bg-[#F2F2F7] text-[#6E6E73] text-[11px] font-medium whitespace-nowrap">{m.company_size}</span>
-                : <span className="text-[#D1D1D6] text-[13px]">—</span>}
-            </td>
-            <td className="px-4 py-3">
-              {m.lead_source
-                ? <span className="inline-block px-2 py-0.5 rounded bg-blue-50 text-blue-600 text-[11px] font-semibold whitespace-nowrap border border-blue-100">{m.lead_source}</span>
-                : <span className="text-[#D1D1D6] text-[13px]">—</span>}
-            </td>
-            <td className="px-4 py-3 whitespace-nowrap">
-              <p className="text-[13px] font-medium text-[#1D1D1F]">{formatShortDate(m.meeting_date)}</p>
-              <p className="text-[11px] text-[#AEAEB2]">{m.meeting_time.slice(0, 5)} {m.timezone}</p>
-            </td>
-            <td className="px-4 py-3">
-              <OutcomeDropdown meeting={m} onUpdate={handleOutcomeUpdate} />
-            </td>
-            <td className="px-4 py-3">
-              <ResultDropdown meeting={m} onUpdate={handleOutcomeUpdate} />
-            </td>
-            <td className="px-4 py-3">
-              <span className="text-[12px] text-[#AEAEB2] italic block max-w-[180px] truncate">{m.notes || '—'}</span>
-            </td>
-          </tr>
-        ))}
-      </>
-    )
-  }
-
   return (
     <div className="flex flex-col h-full">
 
@@ -395,9 +387,9 @@ export default function MeetingsPage() {
         </button>
       </div>
 
-      {/* Search */}
+      {/* Search + Sort */}
       {meetings.length > 0 && (
-        <div className="px-6 py-3 border-b border-[#F2F2F7] bg-white flex items-center gap-3">
+        <div className="px-4 py-3 border-b border-[#F2F2F7] bg-white flex flex-col sm:flex-row sm:items-center gap-2.5">
           <div className="relative flex-1 max-w-xs">
             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#AEAEB2]" />
             <input
@@ -407,13 +399,26 @@ export default function MeetingsPage() {
               className="w-full pl-8 pr-3 py-2 border border-[#E5E5EA] rounded-lg text-[13px] text-[#1D1D1F] placeholder-[#AEAEB2] focus:outline-none focus:border-[#DC2626] focus:ring-1 focus:ring-[#DC2626]/10 transition bg-[#FAFAFA]"
             />
           </div>
-          {search && (
-            <button onClick={() => setSearch('')} className="text-[12px] text-[#AEAEB2] hover:text-[#6E6E73] transition">Clear</button>
-          )}
+          <div className="flex items-center gap-1.5 sm:ml-auto flex-wrap">
+            <span className="text-[11px] text-[#AEAEB2] font-medium mr-0.5">Sort:</span>
+            {SORT_OPTIONS.map(s => (
+              <button key={s.key} onClick={() => toggleSort(s.key)}
+                className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition border cursor-pointer ${
+                  sortKey === s.key
+                    ? 'bg-[#DC2626] text-white border-[#DC2626]'
+                    : 'bg-white text-[#6E6E73] border-[#E5E5EA] hover:border-[#AEAEB2]'
+                }`}>
+                {s.label}{sortKey === s.key ? (sortAsc ? ' ↑' : ' ↓') : ''}
+              </button>
+            ))}
+            {search && (
+              <button onClick={() => setSearch('')} className="text-[11px] text-[#AEAEB2] hover:text-[#6E6E73] transition ml-1">✕ Clear</button>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Table */}
+      {/* Card list */}
       {loading ? (
         <div className="flex-1 flex items-center justify-center">
           <Loader2 size={22} className="animate-spin text-[#DC2626]" />
@@ -438,43 +443,36 @@ export default function MeetingsPage() {
           </div>
         </div>
       ) : (
-        <div className="flex-1 overflow-auto">
-          <table className="w-full border-collapse" style={{ minWidth: 800 }}>
-            <thead className="sticky top-0 z-10">
-              <tr>{COLS.map((col, i) => <TH key={i} col={col} />)}</tr>
-            </thead>
-            <tbody>
-              {upcoming.length > 0 && (
-                <>
-                  <tr>
-                    <td colSpan={COLS.length} className="px-4 py-2 bg-green-50 border-y border-green-100">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-[#34C759] inline-block" />
-                        <span className="text-[11px] font-bold text-green-700 uppercase tracking-wider">Upcoming</span>
-                        <span className="text-[11px] text-green-600 font-medium">{upcoming.length} meeting{upcoming.length !== 1 ? 's' : ''}</span>
-                      </div>
-                    </td>
-                  </tr>
-                  <DataRows rows={upcoming} />
-                </>
-              )}
-              {past.length > 0 && (
-                <>
-                  <tr>
-                    <td colSpan={COLS.length} className="px-4 py-2 bg-[#F5F5F7] border-y border-[#E5E5EA]">
-                      <div className="flex items-center gap-2">
-                        <span className="w-2 h-2 rounded-full bg-[#AEAEB2] inline-block" />
-                        <span className="text-[11px] font-bold text-[#6E6E73] uppercase tracking-wider">Past</span>
-                        <span className="text-[11px] text-[#AEAEB2] font-medium">{past.length} meeting{past.length !== 1 ? 's' : ''}</span>
-                        <span className="text-[11px] text-[#AEAEB2] ml-2">— click Outcome to mark result</span>
-                      </div>
-                    </td>
-                  </tr>
-                  <DataRows rows={past} dimmed />
-                </>
-              )}
-            </tbody>
-          </table>
+        <div className="flex-1 overflow-auto px-4 py-5 space-y-6">
+          {upcoming.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3 px-1">
+                <span className="w-2 h-2 rounded-full bg-[#34C759] inline-block" />
+                <span className="text-[11px] font-bold text-green-700 uppercase tracking-wider">Upcoming</span>
+                <span className="text-[11px] text-green-600 font-medium">{upcoming.length} meeting{upcoming.length !== 1 ? 's' : ''}</span>
+              </div>
+              <div className="space-y-2.5">
+                {upcoming.map(m => (
+                  <MeetingCard key={m.id} m={m} onEdit={openEdit} onDelete={handleDelete} onUpdate={handleOutcomeUpdate} />
+                ))}
+              </div>
+            </div>
+          )}
+          {past.length > 0 && (
+            <div>
+              <div className="flex items-center gap-2 mb-3 px-1">
+                <span className="w-2 h-2 rounded-full bg-[#AEAEB2] inline-block" />
+                <span className="text-[11px] font-bold text-[#6E6E73] uppercase tracking-wider">Past</span>
+                <span className="text-[11px] text-[#AEAEB2] font-medium">{past.length} meeting{past.length !== 1 ? 's' : ''}</span>
+                <span className="text-[11px] text-[#AEAEB2] hidden sm:inline">— tap Outcome to mark result</span>
+              </div>
+              <div className="space-y-2.5">
+                {past.map(m => (
+                  <MeetingCard key={m.id} m={m} dimmed onEdit={openEdit} onDelete={handleDelete} onUpdate={handleOutcomeUpdate} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
