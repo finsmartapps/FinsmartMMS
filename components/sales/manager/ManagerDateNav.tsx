@@ -44,7 +44,7 @@ export function ManagerDateNav({ activeDate, todayDate }: Props) {
       <button
         onClick={prevDay}
         title="Previous day"
-        className="p-1.5 rounded-lg hover:bg-[#F5F5F7] text-[#6E6E73] hover:text-[#1D1D1F] transition"
+        className="p-1.5 rounded-lg hover:bg-[#F5F5F7] text-[#6E6E73] hover:text-[#1D1D1F] transition cursor-pointer"
       >
         <ChevronLeft size={16} />
       </button>
@@ -67,7 +67,7 @@ export function ManagerDateNav({ activeDate, todayDate }: Props) {
         onClick={nextDay}
         disabled={isToday}
         title="Next day"
-        className="p-1.5 rounded-lg hover:bg-[#F5F5F7] text-[#6E6E73] hover:text-[#1D1D1F] transition disabled:opacity-30 disabled:cursor-not-allowed"
+        className="p-1.5 rounded-lg hover:bg-[#F5F5F7] text-[#6E6E73] hover:text-[#1D1D1F] transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
       >
         <ChevronRight size={16} />
       </button>

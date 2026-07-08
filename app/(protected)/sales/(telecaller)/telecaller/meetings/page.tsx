@@ -1,6 +1,7 @@
 ﻿'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Plus, Pencil, Trash2, Loader2, CalendarCheck, ChevronUp, ChevronDown, Search, CheckCircle2, XCircle, RotateCcw, TrendingUp, Clock, ThumbsDown, Trophy } from 'lucide-react'
 import { Modal } from '@/components/sales/ui/Modal'
 import { formatShortDate } from '@/lib/utils'
@@ -87,7 +88,7 @@ function OutcomeDropdown({ meeting, onUpdate }: { meeting: Meeting; onUpdate: (u
       </button>
       {err && <p className="text-[10px] text-red-500 mt-0.5 max-w-[140px] leading-tight">{err}</p>}
 
-      {open && (
+      {open && createPortal(
         <>
           <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={() => setOpen(false)} />
           <div className="bg-white rounded-xl border border-[#E5E5EA] py-1 min-w-[160px]"
@@ -108,7 +109,8 @@ function OutcomeDropdown({ meeting, onUpdate }: { meeting: Meeting; onUpdate: (u
               </button>
             )}
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   )
@@ -180,7 +182,7 @@ function ResultDropdown({ meeting, onUpdate }: { meeting: Meeting; onUpdate: (up
 
       {err && <p className="text-[10px] text-red-500 mt-0.5 max-w-[180px] leading-tight">{err}</p>}
 
-      {open && (
+      {open && createPortal(
         <>
           <div className="fixed inset-0" style={{ zIndex: 9998 }} onClick={() => setOpen(false)} />
           <div className="bg-white rounded-xl border border-[#E5E5EA] py-1 min-w-[210px]"
@@ -202,7 +204,8 @@ function ResultDropdown({ meeting, onUpdate }: { meeting: Meeting; onUpdate: (up
               </button>
             )}
           </div>
-        </>
+        </>,
+        document.body
       )}
     </div>
   )
