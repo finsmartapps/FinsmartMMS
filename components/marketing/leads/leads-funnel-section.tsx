@@ -170,6 +170,7 @@ export default function LeadsFunnelSection({ leads }: { leads: LeadLite[] }) {
           name:             l.name,
           company_name:     l.company_name,
           assigned_to:      l.assigned_to,
+          lead_date:        l.lead_date,
         }))}
       />
     </div>

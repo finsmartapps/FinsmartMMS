@@ -15,6 +15,7 @@ interface LeadLite {
   name:             string | null
   company_name:     string | null
   assigned_to:      string | null
+  lead_date?:       string | null
 }
 
 function isClosed(l: LeadLite) {
@@ -26,7 +27,7 @@ const TYPE_COLOR: Record<string, string> = {
   'NBNC': 'bg-fuchsia-50 text-fuchsia-700 ring-fuchsia-200',
 }
 
-interface DrillDown { source: string; filter: 'NBEC' | 'NBNC' | 'ALL' }
+interface DrillDown { source: string; filter: 'MQL' | 'SQL' | 'NBEC' | 'NBNC' | 'ALL' }
 
 export default function SourceFunnelChart({ leads }: { leads: LeadLite[] }) {
   const [drill, setDrill] = useState<DrillDown | null>(null)
@@ -61,14 +62,20 @@ export default function SourceFunnelChart({ leads }: { leads: LeadLite[] }) {
     if (!drill) return []
     return leads.filter(l => {
       if ((l.lead_source?.trim() || 'Unspecified') !== drill.source) return false
+      if (drill.filter === 'MQL') return l.lead_status === 'MQL'
+      if (drill.filter === 'SQL') return l.lead_status === 'SQL'
       if (!isClosed(l)) return false
       if (drill.filter === 'ALL') return true
       return (l.customer_type ?? '').trim().toUpperCase() === drill.filter
     })
   }, [leads, drill])
 
+  const isStatusDrill = drill?.filter === 'MQL' || drill?.filter === 'SQL'
   const modalTitle = drill
-    ? drill.filter === 'ALL' ? `${drill.source} — All Closed` : `${drill.source} — ${drill.filter}`
+    ? drill.filter === 'ALL' ? `${drill.source} — All Closed`
+    : drill.filter === 'MQL' ? `${drill.source} — MQL Leads`
+    : drill.filter === 'SQL' ? `${drill.source} — SQL Leads`
+    : `${drill.source} — ${drill.filter}`
     : ''
 
   if (rows.length === 0) return null
@@ -115,12 +122,18 @@ export default function SourceFunnelChart({ leads }: { leads: LeadLite[] }) {
                     </td>
                     <td className="px-4 py-3 text-right font-bold text-slate-700 tabular-nums">{r.total}</td>
                     <td className="px-4 py-3 text-right tabular-nums">
-                      <span className="font-semibold text-indigo-700">{r.mql}</span>
-                      {r.mql > 0 && <span className="text-slate-400 ml-1">({mqlPct}%)</span>}
+                      {r.mql > 0
+                        ? <span onClick={() => setDrill({ source: r.source, filter: 'MQL' })} className={`font-semibold text-indigo-700 ${clickable}`}>
+                            {r.mql} <span className="text-slate-400">({mqlPct}%)</span>
+                          </span>
+                        : <span className="font-semibold text-indigo-700">0</span>}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums">
-                      <span className="font-semibold text-emerald-700">{r.sql}</span>
-                      {r.sql > 0 && <span className="text-slate-400 ml-1">({sqlPct}%)</span>}
+                      {r.sql > 0
+                        ? <span onClick={() => setDrill({ source: r.source, filter: 'SQL' })} className={`font-semibold text-emerald-700 ${clickable}`}>
+                            {r.sql} <span className="text-slate-400">({sqlPct}%)</span>
+                          </span>
+                        : <span className="font-semibold text-emerald-700">0</span>}
                     </td>
                     {/* NBEC — clickable */}
                     <td className="px-4 py-3 text-right tabular-nums">
@@ -180,7 +193,7 @@ export default function SourceFunnelChart({ leads }: { leads: LeadLite[] }) {
             <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-indigo-500 via-violet-600 to-fuchsia-600 rounded-t-2xl">
               <div>
                 <p className="text-sm font-extrabold text-white">{modalTitle}</p>
-                <p className="text-[11px] text-white/70 mt-0.5">{modalLeads.length} deal{modalLeads.length === 1 ? '' : 's'} · SQL + revenue</p>
+                <p className="text-[11px] text-white/70 mt-0.5">{modalLeads.length} lead{modalLeads.length === 1 ? '' : 's'}{isStatusDrill ? '' : ' · SQL + revenue'}</p>
               </div>
               <button onClick={() => setDrill(null)} className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors">
                 <X className="h-4 w-4 text-white" />
@@ -190,8 +203,51 @@ export default function SourceFunnelChart({ leads }: { leads: LeadLite[] }) {
             {/* Table */}
             <div className="overflow-auto flex-1">
               {modalLeads.length === 0
-                ? <p className="text-sm text-slate-400 text-center py-16">No deals found.</p>
-                : (
+                ? <p className="text-sm text-slate-400 text-center py-16">No leads found.</p>
+                : isStatusDrill ? (
+                  /* ── MQL / SQL leads table ── */
+                  <table className="w-full text-xs">
+                    <thead className="sticky top-0 bg-slate-50 border-b border-slate-100">
+                      <tr>
+                        {['#', 'Name', 'Company', 'Stage', 'Date', 'Assigned'].map(h => (
+                          <th key={h} className="px-4 py-2.5 text-left font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {modalLeads.map((l, i) => (
+                        <tr key={i} className="hover:bg-indigo-50/30 transition-colors">
+                          <td className="px-4 py-3 text-slate-400 tabular-nums">{i + 1}</td>
+                          <td className="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-400 to-fuchsia-500 flex items-center justify-center shrink-0">
+                                <User size={10} className="text-white" />
+                              </div>
+                              {l.name || '—'}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
+                            <div className="flex items-center gap-1">
+                              <Briefcase size={11} className="text-slate-300 shrink-0" />
+                              {l.company_name || '—'}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{l.lead_stage || '—'}</td>
+                          <td className="px-4 py-3 text-slate-500 tabular-nums whitespace-nowrap">{l.lead_date || '—'}</td>
+                          <td className="px-4 py-3 text-slate-600 whitespace-nowrap">{l.assigned_to || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot className="sticky bottom-0 bg-slate-50 border-t-2 border-slate-200">
+                      <tr>
+                        <td className="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-wider" colSpan={6}>
+                          {modalLeads.length} lead{modalLeads.length === 1 ? '' : 's'}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                ) : (
+                  /* ── Closed deals table ── */
                   <table className="w-full text-xs">
                     <thead className="sticky top-0 bg-slate-50 border-b border-slate-100">
                       <tr>
