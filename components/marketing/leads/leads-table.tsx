@@ -10,7 +10,7 @@ import {
 } from '@/lib/leads'
 import LeadFormModal from '@/components/marketing/leads/lead-form-modal'
 import type { Lead } from '@/types'
-import { Inbox, SlidersHorizontal, Pencil, Check, Trash2 } from 'lucide-react'
+import { Inbox, SlidersHorizontal, Pencil, Check, Trash2, Search, X } from 'lucide-react'
 
 interface Props {
   leads: Lead[]
@@ -60,6 +60,7 @@ export default function LeadsTable({ leads, ...suggestions }: Props) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [editing, setEditing] = useState<Lead | null>(null)
   const [savingId, setSavingId] = useState<string | null>(null)
+  const [search, setSearch] = useState('')
   const menuRef = useRef<HTMLDivElement>(null)
 
   // keep local rows in sync after router.refresh()
@@ -110,16 +111,41 @@ export default function LeadsTable({ leads, ...suggestions }: Props) {
     router.refresh()
   }
 
+  const q = search.trim().toLowerCase()
+  const filtered = q
+    ? rows.filter(r =>
+        r.name.toLowerCase().includes(q) ||
+        (r.email || '').toLowerCase().includes(q)
+      )
+    : rows
+
   const cols = COLUMNS.filter(c => visible[c.key])
   const visibleCount = cols.length
 
   return (
     <Panel
       icon={Inbox}
-      title={`All Leads (${rows.length})`}
+      title={q ? `All Leads (${filtered.length} of ${rows.length})` : `All Leads (${rows.length})`}
       accent="indigo"
       noPad
       action={
+        <div className="flex items-center gap-2">
+          {/* search */}
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400 pointer-events-none" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search name or email…"
+              className="h-8 pl-8 pr-7 text-xs rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-400 text-slate-700 placeholder:text-slate-400 w-52"
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                <X className="h-3.5 w-3.5" />
+              </button>
+            )}
+          </div>
         <div className="relative" ref={menuRef}>
           <button
             onClick={() => setMenuOpen(o => !o)}
@@ -149,9 +175,18 @@ export default function LeadsTable({ leads, ...suggestions }: Props) {
             </div>
           )}
         </div>
+        </div>
       }
     >
-      {rows.length === 0 ? (
+      {filtered.length === 0 && q ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <div className="w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center mb-4">
+            <Search className="h-7 w-7 text-slate-300" />
+          </div>
+          <p className="text-sm font-semibold text-slate-700">No results for &ldquo;{search}&rdquo;</p>
+          <p className="text-xs text-slate-400 mt-1">Try a different name or email.</p>
+        </div>
+      ) : rows.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center mb-4">
             <Inbox className="h-7 w-7 text-indigo-400" />
@@ -173,7 +208,7 @@ export default function LeadsTable({ leads, ...suggestions }: Props) {
               </tr>
             </thead>
             <tbody>
-              {rows.map(row => (
+              {filtered.map(row => (
                 <tr key={row.id} className="hover:bg-indigo-50/30 transition-colors border-b border-slate-50 last:border-0">
                   {cols.map((c, i) => (
                     <td key={c.key} className={`py-2.5 px-3 align-middle ${i === 0 ? 'pl-5' : ''}`}>
