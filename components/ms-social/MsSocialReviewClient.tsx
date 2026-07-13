@@ -117,76 +117,80 @@ function ReviewCard({
     setAction({ type: 'idle' })
   }
 
+  const embedUrl = toEmbedUrl(post.image_url)
+
   return (
     <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-      {/* Card body */}
-      <div className="px-5 pt-4 pb-3">
-        {/* Creator + status + meta row */}
-        <div className="flex items-center gap-2 mb-2.5 flex-wrap">
-          <span className="text-[11px] font-semibold text-slate-700 flex items-center gap-1">
-            <User size={10} className="text-pink-400" />
-            {post.creator_name ?? 'Unknown'}
-          </span>
-          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${badge.cls}`}>
-            {badge.label}
-          </span>
-          <span className="text-[11px] text-slate-400 flex items-center gap-1">
-            <Globe size={10} /> {post.platform}
-          </span>
-          <span className="text-[11px] text-slate-400 flex items-center gap-1 ml-auto flex-shrink-0">
-            <Clock size={10} />{' '}
-            {new Date(post.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
-          </span>
+      {/* ── Main content: image left + text right ── */}
+      <div className="flex gap-0 flex-1">
+        {/* Image pane */}
+        {embedUrl && (
+          <a
+            href={post.image_url!}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-shrink-0 w-44 bg-slate-100 self-stretch flex items-center justify-center overflow-hidden"
+          >
+            <img
+              src={embedUrl}
+              alt="Post image"
+              className="w-full h-full object-cover"
+              onError={e => {
+                const el = e.currentTarget as HTMLImageElement
+                el.parentElement!.style.display = 'none'
+              }}
+            />
+          </a>
+        )}
+
+        {/* Text pane */}
+        <div className="flex-1 px-5 pt-4 pb-3 min-w-0 flex flex-col gap-2">
+          {/* Meta row */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-[11px] font-semibold text-slate-700 flex items-center gap-1">
+              <User size={10} className="text-pink-400" />
+              {post.creator_name ?? 'Unknown'}
+            </span>
+            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${badge.cls}`}>
+              {badge.label}
+            </span>
+            <span className="text-[11px] text-slate-400 flex items-center gap-1">
+              <Globe size={10} /> {post.platform}
+            </span>
+            <span className="text-[11px] text-slate-400 flex items-center gap-1 ml-auto flex-shrink-0">
+              <Clock size={10} />{' '}
+              {new Date(post.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' })}
+            </span>
+          </div>
+
+          {/* Description */}
+          <p className="text-sm text-slate-700 leading-relaxed flex-1">{post.description}</p>
+
+          {/* Scheduled date */}
+          <p className="text-[11px] text-slate-400 flex items-center gap-1">
+            <Calendar size={10} /> Scheduled:{' '}
+            {new Date(post.publish_date + 'T00:00:00').toLocaleDateString('en-IN', {
+              day: 'numeric', month: 'short', year: 'numeric',
+            })}
+          </p>
         </div>
-
-        {/* Description */}
-        <p className="text-sm text-slate-700 leading-relaxed">{post.description}</p>
-
-        {/* Image preview */}
-        {post.image_url && (() => {
-          const embedUrl = toEmbedUrl(post.image_url)
-          return embedUrl ? (
-            <a href={post.image_url} target="_blank" rel="noopener noreferrer" className="block mt-3">
-              <img
-                src={embedUrl}
-                alt="Post image"
-                className="w-full rounded-lg border border-slate-200 object-cover max-h-48"
-                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
-              />
-            </a>
-          ) : null
-        })()}
-
-        {/* Scheduled date */}
-        <p className="mt-2 text-[11px] text-slate-400 flex items-center gap-1">
-          <Calendar size={10} /> Scheduled:{' '}
-          {new Date(post.publish_date + 'T00:00:00').toLocaleDateString('en-IN', {
-            day: 'numeric', month: 'short', year: 'numeric',
-          })}
-        </p>
       </div>
 
       {/* Reviewer notes for reviewed posts */}
       {post.status !== 'pending' && post.reviewer_notes && (
-        <div
-          className={`mx-5 mb-3 rounded-lg px-3 py-2.5 ${
-            post.status === 'approved'
-              ? 'bg-emerald-50 border border-emerald-200'
-              : 'bg-red-50 border border-red-200'
-          }`}
-        >
-          <p
-            className={`text-[11px] font-semibold mb-1 ${
-              post.status === 'approved' ? 'text-emerald-700' : 'text-red-700'
-            }`}
-          >
+        <div className={`mx-5 mb-3 rounded-lg px-3 py-2.5 ${
+          post.status === 'approved'
+            ? 'bg-emerald-50 border border-emerald-200'
+            : 'bg-red-50 border border-red-200'
+        }`}>
+          <p className={`text-[11px] font-semibold mb-1 ${
+            post.status === 'approved' ? 'text-emerald-700' : 'text-red-700'
+          }`}>
             {post.status === 'approved' ? 'Approval Notes:' : 'Rejection Notes:'}
           </p>
-          <p
-            className={`text-xs leading-relaxed ${
-              post.status === 'approved' ? 'text-emerald-800' : 'text-red-800'
-            }`}
-          >
+          <p className={`text-xs leading-relaxed ${
+            post.status === 'approved' ? 'text-emerald-800' : 'text-red-800'
+          }`}>
             {post.reviewer_notes}
           </p>
         </div>
@@ -194,9 +198,8 @@ function ReviewCard({
 
       {/* ── Inline action panels ── */}
 
-      {/* Approve panel */}
       {action.type === 'approve' && (
-        <div className="mx-5 mb-3 bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-3">
+        <div className="mx-5 mb-4 bg-emerald-50 border border-emerald-200 rounded-xl p-4 space-y-3">
           <label className="block text-[11px] font-semibold text-emerald-700 uppercase tracking-wider">
             Approval Notes (optional)
           </label>
@@ -212,14 +215,14 @@ function ReviewCard({
             <button
               onClick={() => handleReview('approve', action.notes)}
               disabled={submitting}
-              className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 transition"
+              className="flex items-center gap-2 text-sm font-semibold px-5 py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 transition"
             >
-              {submitting && <Loader2 size={12} className="animate-spin" />}
+              {submitting && <Loader2 size={14} className="animate-spin" />}
               {submitting ? 'Approving…' : 'Confirm Approve'}
             </button>
             <button
               onClick={() => setAction({ type: 'idle' })}
-              className="text-xs font-medium px-3 py-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 transition"
+              className="text-sm font-medium px-4 py-2.5 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-100 transition"
             >
               Cancel
             </button>
@@ -227,9 +230,8 @@ function ReviewCard({
         </div>
       )}
 
-      {/* Reject panel */}
       {action.type === 'reject' && (
-        <div className="mx-5 mb-3 bg-red-50 border border-red-200 rounded-xl p-4 space-y-3">
+        <div className="mx-5 mb-4 bg-red-50 border border-red-200 rounded-xl p-4 space-y-3">
           <label className="block text-[11px] font-semibold text-red-700 uppercase tracking-wider">
             Rejection Notes (required) *
           </label>
@@ -245,14 +247,14 @@ function ReviewCard({
             <button
               onClick={() => handleReview('reject', action.notes)}
               disabled={submitting}
-              className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 transition"
+              className="flex items-center gap-2 text-sm font-semibold px-5 py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 transition"
             >
-              {submitting && <Loader2 size={12} className="animate-spin" />}
+              {submitting && <Loader2 size={14} className="animate-spin" />}
               {submitting ? 'Rejecting…' : 'Confirm Reject'}
             </button>
             <button
               onClick={() => setAction({ type: 'idle' })}
-              className="text-xs font-medium px-3 py-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 transition"
+              className="text-sm font-medium px-4 py-2.5 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-100 transition"
             >
               Cancel
             </button>
@@ -260,14 +262,11 @@ function ReviewCard({
         </div>
       )}
 
-      {/* Edit panel */}
       {action.type === 'edit' && (
-        <div className="mx-5 mb-3 bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
+        <div className="mx-5 mb-4 bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
           <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Edit Post</p>
           <div>
-            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
-              Description *
-            </label>
+            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Description *</label>
             <textarea
               className={`${inputCls} resize-none`}
               rows={4}
@@ -277,25 +276,14 @@ function ReviewCard({
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                Publish Date *
-              </label>
-              <input
-                type="date"
-                className={inputCls}
-                value={action.publish_date}
-                onChange={e => setAction(a => a.type === 'edit' ? { ...a, publish_date: e.target.value } : a)}
-              />
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Publish Date *</label>
+              <input type="date" className={inputCls} value={action.publish_date}
+                onChange={e => setAction(a => a.type === 'edit' ? { ...a, publish_date: e.target.value } : a)} />
             </div>
             <div>
-              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                Platform
-              </label>
-              <select
-                className={inputCls}
-                value={action.platform}
-                onChange={e => setAction(a => a.type === 'edit' ? { ...a, platform: e.target.value } : a)}
-              >
+              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Platform</label>
+              <select className={inputCls} value={action.platform}
+                onChange={e => setAction(a => a.type === 'edit' ? { ...a, platform: e.target.value } : a)}>
                 <option>LinkedIn</option>
                 <option>Twitter</option>
                 <option>Instagram</option>
@@ -303,56 +291,46 @@ function ReviewCard({
             </div>
           </div>
           <div>
-            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
-              Image URL (optional)
-            </label>
-            <input
-              className={inputCls}
-              placeholder="https://…"
+            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">Image URL (optional)</label>
+            <input className={inputCls} placeholder="https://… or Google Drive share link"
               value={action.image_url}
-              onChange={e => setAction(a => a.type === 'edit' ? { ...a, image_url: e.target.value } : a)}
-            />
+              onChange={e => setAction(a => a.type === 'edit' ? { ...a, image_url: e.target.value } : a)} />
           </div>
           {error && <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
           <div className="flex items-center gap-2">
-            <button
-              onClick={handleSaveEdit}
-              disabled={submitting}
-              className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg bg-pink-600 text-white hover:bg-pink-700 disabled:opacity-60 transition"
-            >
-              {submitting && <Loader2 size={12} className="animate-spin" />}
+            <button onClick={handleSaveEdit} disabled={submitting}
+              className="flex items-center gap-2 text-sm font-semibold px-5 py-2.5 rounded-xl bg-pink-600 text-white hover:bg-pink-700 disabled:opacity-60 transition">
+              {submitting && <Loader2 size={14} className="animate-spin" />}
               {submitting ? 'Saving…' : 'Save Changes'}
             </button>
-            <button
-              onClick={() => setAction({ type: 'idle' })}
-              className="text-xs font-medium px-3 py-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 transition"
-            >
+            <button onClick={() => setAction({ type: 'idle' })}
+              className="text-sm font-medium px-4 py-2.5 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-100 transition">
               Cancel
             </button>
           </div>
         </div>
       )}
 
-      {/* Action buttons — pending only, idle state */}
+      {/* ── Action buttons ── */}
       {post.status === 'pending' && action.type === 'idle' && (
-        <div className="px-5 pb-3 flex items-center gap-2 flex-wrap">
+        <div className="px-5 pb-4 pt-1 flex items-center gap-3 border-t border-slate-100 mt-2">
           <button
             onClick={startApprove}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-700 hover:bg-emerald-100 transition"
+            className="flex-1 flex items-center justify-center gap-2 text-sm font-semibold py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition shadow-sm"
           >
-            <CheckCircle size={12} /> Approve
+            <CheckCircle size={16} /> Approve
           </button>
           <button
             onClick={startReject}
-            className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 transition"
+            className="flex-1 flex items-center justify-center gap-2 text-sm font-semibold py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 transition shadow-sm"
           >
-            <XCircle size={12} /> Reject
+            <XCircle size={16} /> Reject
           </button>
           <button
             onClick={startEdit}
-            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition ml-auto"
+            className="flex items-center gap-1.5 text-sm font-medium px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition"
           >
-            <PenLine size={12} /> Edit
+            <PenLine size={14} /> Edit
           </button>
         </div>
       )}
@@ -360,10 +338,7 @@ function ReviewCard({
       {/* Submitted date */}
       <div className="px-5 pb-3">
         <p className="text-[10px] text-slate-400">
-          Submitted{' '}
-          {new Date(post.created_at).toLocaleDateString('en-IN', {
-            day: 'numeric', month: 'short', year: 'numeric',
-          })}
+          Submitted {new Date(post.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
         </p>
       </div>
     </div>
