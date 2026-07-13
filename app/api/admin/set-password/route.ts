@@ -10,7 +10,7 @@ async function requireAdmin() {
     .select('role')
     .eq('id', user.id)
     .single()
-  return profile?.role === 'admin' ? user : null
+  return (profile?.role === 'admin' || profile?.role === 'manager') ? user : null
 }
 
 export async function POST(req: Request) {
