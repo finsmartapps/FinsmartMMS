@@ -77,10 +77,14 @@ function RoleBadge({ role }: { role: Role | null }) {
   )
 }
 
-function ModuleCheckbox({ label, dot, checked, onChange }: { label: string; dot: string; checked: boolean; onChange: () => void }) {
+function ModuleCheckbox({ label, dot, checked, onChange, disabled }: { label: string; dot: string; checked: boolean; onChange: () => void; disabled?: boolean }) {
   return (
-    <label className="flex items-center gap-3 p-3 rounded-xl border border-[#E5E5EA] cursor-pointer hover:bg-[#F5F5F7] transition select-none">
-      <input type="checkbox" checked={checked} onChange={onChange} className="w-4 h-4 accent-violet-600 rounded" />
+    <label className={`flex items-center gap-3 p-3 rounded-xl border transition select-none ${
+      disabled
+        ? 'border-[#E5E5EA] bg-[#F5F5F7] opacity-40 cursor-not-allowed'
+        : 'border-[#E5E5EA] cursor-pointer hover:bg-[#F5F5F7]'
+    }`}>
+      <input type="checkbox" checked={checked} onChange={onChange} disabled={disabled} className="w-4 h-4 accent-violet-600 rounded" />
       <span className={`w-2 h-2 rounded-full ${dot}`} />
       <span className="text-[13px] font-medium text-[#1D1D1F]">{label}</span>
     </label>
@@ -441,7 +445,11 @@ export default function AdminUsersPage() {
                           form.role === r.value ? 'border-violet-400 bg-violet-50 text-violet-700' : 'border-[#E5E5EA] text-[#6E6E73] hover:bg-[#F5F5F7]'
                         }`}>
                           <input type="radio" className="accent-violet-600" checked={form.role === r.value}
-                            onChange={() => setForm(f => ({ ...f, role: r.value }))} />
+                            onChange={() => setForm(f => ({
+                              ...f,
+                              role: r.value,
+                              ...(r.value === 'warehouse_user' ? { has_sales: false, has_marketing: false, has_expenses: false, has_warehouse: true, has_advocacy: false } : {}),
+                            }))} />
                           <Icon size={13} />
                           <span className="text-[12px] font-medium">{r.label}</span>
                         </label>
@@ -454,7 +462,9 @@ export default function AdminUsersPage() {
                   <div className="space-y-2">
                     {MODULES.map(m => (
                       <ModuleCheckbox key={m.key} label={m.label} dot={m.dot}
-                        checked={form[m.key]} onChange={() => setForm(f => ({ ...f, [m.key]: !f[m.key] }))} />
+                        checked={form[m.key]}
+                        disabled={form.role === 'warehouse_user' && m.key !== 'has_warehouse'}
+                        onChange={() => setForm(f => ({ ...f, [m.key]: !f[m.key] }))} />
                     ))}
                   </div>
                 </div>
@@ -498,7 +508,11 @@ export default function AdminUsersPage() {
                           editForm.role === r.value ? 'border-violet-400 bg-violet-50 text-violet-700' : 'border-[#E5E5EA] text-[#6E6E73] hover:bg-[#F5F5F7]'
                         }`}>
                           <input type="radio" className="accent-violet-600" checked={editForm.role === r.value}
-                            onChange={() => setEditForm(f => ({ ...f, role: r.value }))} />
+                            onChange={() => setEditForm(f => ({
+                              ...f,
+                              role: r.value,
+                              ...(r.value === 'warehouse_user' ? { has_sales: false, has_marketing: false, has_expenses: false, has_warehouse: true, has_advocacy: false } : {}),
+                            }))} />
                           <Icon size={13} />
                           <span className="text-[12px] font-medium">{r.label}</span>
                         </label>
@@ -511,7 +525,9 @@ export default function AdminUsersPage() {
                   <div className="space-y-2">
                     {MODULES.map(m => (
                       <ModuleCheckbox key={m.key} label={m.label} dot={m.dot}
-                        checked={editForm[m.key]} onChange={() => setEditForm(f => ({ ...f, [m.key]: !f[m.key] }))} />
+                        checked={editForm[m.key]}
+                        disabled={editForm.role === 'warehouse_user' && m.key !== 'has_warehouse'}
+                        onChange={() => setEditForm(f => ({ ...f, [m.key]: !f[m.key] }))} />
                     ))}
                   </div>
                 </div>
