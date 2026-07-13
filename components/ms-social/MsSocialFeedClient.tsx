@@ -105,7 +105,7 @@ function PostImage({ url, linkUrl }: { url: string; linkUrl: string }) {
     <a href={linkUrl} target="_blank" rel="noopener noreferrer"
       className="block w-full overflow-hidden bg-slate-100">
       <img src={url} alt=""
-        className="w-full max-h-[480px] object-cover"
+        className="w-full"
         onError={() => setFailed(true)} />
     </a>
   )
