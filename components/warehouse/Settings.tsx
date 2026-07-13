@@ -1,28 +1,36 @@
 'use client'
 import { useState } from 'react'
-import { Settings2, Mail, User, Truck, ToggleLeft, KeyRound, CheckCircle, Loader2 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { Settings2, Mail, User, Truck, ToggleLeft, KeyRound, CheckCircle, Loader2, Eye, EyeOff, X } from 'lucide-react'
 
 const MIKE_EMAIL = 'mike@gtldelivers.com'
 
 export default function WarehouseSettings() {
-  const [resetStatus, setResetStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle')
-  const [resetError, setResetError] = useState('')
+  const [showForm, setShowForm] = useState(false)
+  const [password, setPassword] = useState('')
+  const [showPw, setShowPw] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+  const [errorMsg, setErrorMsg] = useState('')
 
-  async function handleResetPassword() {
-    setResetStatus('loading')
-    setResetError('')
-    const supabase = createClient()
-    const { error } = await supabase.auth.resetPasswordForEmail(MIKE_EMAIL, {
-      redirectTo: `${window.location.origin}/login`,
+  function openForm() { setShowForm(true); setPassword(''); setStatus('idle'); setErrorMsg('') }
+  function closeForm() { setShowForm(false); setPassword(''); setStatus('idle'); setErrorMsg('') }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (password.length < 6) { setErrorMsg('Password must be at least 6 characters.'); return }
+    setStatus('loading')
+    setErrorMsg('')
+    const res = await fetch('/api/admin/set-password', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: MIKE_EMAIL, password }),
     })
-    if (error) {
-      setResetError(error.message)
-      setResetStatus('error')
-      setTimeout(() => setResetStatus('idle'), 4000)
+    const json = await res.json()
+    if (!res.ok) {
+      setErrorMsg(json.error || 'Something went wrong.')
+      setStatus('error')
     } else {
-      setResetStatus('sent')
-      setTimeout(() => setResetStatus('idle'), 5000)
+      setStatus('done')
+      setTimeout(closeForm, 2500)
     }
   }
 
@@ -33,6 +41,7 @@ export default function WarehouseSettings() {
         <p className="text-xs text-slate-500 mt-0.5">System configuration and preferences</p>
       </div>
 
+      {/* Warehouse Manager */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100">
           <div className="flex items-center gap-2">
@@ -41,7 +50,8 @@ export default function WarehouseSettings() {
           </div>
           <p className="text-xs text-slate-400 mt-0.5">The GTL Delivers contact who handles physical shipments.</p>
         </div>
-        <div className="px-5 py-4">
+        <div className="px-5 py-4 space-y-3">
+          {/* Mike row */}
           <div className="flex items-center gap-3 bg-slate-50 rounded-xl px-4 py-3 border border-slate-200">
             <div className="w-10 h-10 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
               <Truck size={16} className="text-emerald-600" />
@@ -51,27 +61,80 @@ export default function WarehouseSettings() {
               <p className="text-xs text-slate-400">{MIKE_EMAIL} · GTL Delivers</p>
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-full">Active</span>
-            <button
-              onClick={handleResetPassword}
-              disabled={resetStatus === 'loading' || resetStatus === 'sent'}
-              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60 ${
-                resetStatus === 'sent'
-                  ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
-                  : 'bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 ring-1 ring-slate-200 hover:ring-indigo-200'
-              }`}
-            >
-              {resetStatus === 'loading' && <Loader2 size={12} className="animate-spin" />}
-              {resetStatus === 'sent' && <CheckCircle size={12} />}
-              {resetStatus === 'idle' || resetStatus === 'error' ? <KeyRound size={12} /> : null}
-              {resetStatus === 'sent' ? 'Email sent!' : resetStatus === 'loading' ? 'Sending…' : 'Reset Password'}
-            </button>
+            {!showForm && (
+              <button
+                onClick={openForm}
+                className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 ring-1 ring-slate-200 hover:ring-indigo-200 transition-colors"
+              >
+                <KeyRound size={12} /> Set Password
+              </button>
+            )}
           </div>
-          {resetStatus === 'error' && (
-            <p className="text-xs text-red-600 mt-2 px-1">{resetError || 'Failed to send reset email. Try again.'}</p>
+
+          {/* Inline password form */}
+          {showForm && (
+            <form onSubmit={handleSubmit} className="bg-indigo-50/60 border border-indigo-100 rounded-xl px-4 py-4 space-y-3">
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs font-semibold text-indigo-700">Set new password for Mike</p>
+                <button type="button" onClick={closeForm} className="text-slate-400 hover:text-slate-600 transition-colors">
+                  <X size={14} />
+                </button>
+              </div>
+
+              {status === 'done' ? (
+                <div className="flex items-center gap-2 py-2 text-emerald-700">
+                  <CheckCircle size={16} />
+                  <span className="text-sm font-semibold">Password updated successfully!</span>
+                </div>
+              ) : (
+                <>
+                  <div className="relative">
+                    <input
+                      type={showPw ? 'text' : 'password'}
+                      value={password}
+                      onChange={e => { setPassword(e.target.value); setErrorMsg('') }}
+                      placeholder="New password (min. 6 characters)"
+                      autoFocus
+                      className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 bg-white focus:outline-none focus:ring-2 focus:ring-indigo-400/30 focus:border-indigo-400 pr-10 transition"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPw(v => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+
+                  {errorMsg && (
+                    <p className="text-xs text-red-600">{errorMsg}</p>
+                  )}
+
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="submit"
+                      disabled={status === 'loading'}
+                      className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                    >
+                      {status === 'loading' && <Loader2 size={12} className="animate-spin" />}
+                      {status === 'loading' ? 'Saving…' : 'Set Password'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={closeForm}
+                      className="text-xs font-semibold px-4 py-2 rounded-lg bg-white text-slate-600 hover:bg-slate-100 ring-1 ring-slate-200 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              )}
+            </form>
           )}
         </div>
       </div>
 
+      {/* Email Notifications */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100">
           <div className="flex items-center gap-2">
@@ -100,6 +163,7 @@ export default function WarehouseSettings() {
         </div>
       </div>
 
+      {/* Admin Account */}
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100">
           <div className="flex items-center gap-2">
