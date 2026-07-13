@@ -3,8 +3,17 @@
 import { useState } from 'react'
 import {
   Loader2, CheckCircle, XCircle, PenLine,
-  Calendar, Globe, ImageIcon, User, Clock,
+  Calendar, Globe, User, Clock,
 } from 'lucide-react'
+
+function toEmbedUrl(url: string | null): string | null {
+  if (!url) return null
+  const match = url.match(/\/file\/d\/([^/?]+)/)
+  if (match) return `https://drive.google.com/uc?export=view&id=${match[1]}`
+  const idMatch = url.match(/[?&]id=([^&]+)/)
+  if (idMatch && url.includes('drive.google.com')) return `https://drive.google.com/uc?export=view&id=${idMatch[1]}`
+  return url
+}
 
 type SocialPost = {
   id: string
@@ -133,17 +142,20 @@ function ReviewCard({
         {/* Description */}
         <p className="text-sm text-slate-700 leading-relaxed">{post.description}</p>
 
-        {/* Image link */}
-        {post.image_url && (
-          <a
-            href={post.image_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 inline-flex items-center gap-1.5 text-xs text-pink-600 hover:text-pink-700 font-medium"
-          >
-            <ImageIcon size={11} /> View Image
-          </a>
-        )}
+        {/* Image preview */}
+        {post.image_url && (() => {
+          const embedUrl = toEmbedUrl(post.image_url)
+          return embedUrl ? (
+            <a href={post.image_url} target="_blank" rel="noopener noreferrer" className="block mt-3">
+              <img
+                src={embedUrl}
+                alt="Post image"
+                className="w-full rounded-lg border border-slate-200 object-cover max-h-48"
+                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+              />
+            </a>
+          ) : null
+        })()}
 
         {/* Scheduled date */}
         <p className="mt-2 text-[11px] text-slate-400 flex items-center gap-1">

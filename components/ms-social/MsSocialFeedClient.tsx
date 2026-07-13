@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import {
   Plus, Loader2, X, Calendar, Globe, PenLine,
-  Trash2, RotateCcw, ImageIcon,
+  Trash2, RotateCcw,
 } from 'lucide-react'
 
 type SocialPost = {
@@ -24,6 +24,15 @@ const inputCls =
   'w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 ' +
   'focus:outline-none focus:border-pink-400 focus:ring-2 focus:ring-pink-400/10 ' +
   'transition bg-slate-50 placeholder-slate-400'
+
+function toEmbedUrl(url: string | null): string | null {
+  if (!url) return null
+  const match = url.match(/\/file\/d\/([^/?]+)/)
+  if (match) return `https://drive.google.com/uc?export=view&id=${match[1]}`
+  const idMatch = url.match(/[?&]id=([^&]+)/)
+  if (idMatch && url.includes('drive.google.com')) return `https://drive.google.com/uc?export=view&id=${idMatch[1]}`
+  return url
+}
 
 const STATUS_BADGE: Record<SocialPost['status'], { label: string; cls: string }> = {
   pending:  { label: 'Pending',  cls: 'bg-amber-50  text-amber-700  border-amber-200'   },
@@ -121,17 +130,20 @@ function PostCard({
         {/* Description */}
         <p className="text-sm text-slate-700 leading-relaxed line-clamp-4">{post.description}</p>
 
-        {/* Image link */}
-        {post.image_url && (
-          <a
-            href={post.image_url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 inline-flex items-center gap-1.5 text-xs text-pink-600 hover:text-pink-700 font-medium"
-          >
-            <ImageIcon size={11} /> View Image
-          </a>
-        )}
+        {/* Image preview */}
+        {post.image_url && (() => {
+          const embedUrl = toEmbedUrl(post.image_url)
+          return embedUrl ? (
+            <a href={post.image_url} target="_blank" rel="noopener noreferrer" className="block mt-3">
+              <img
+                src={embedUrl}
+                alt="Post image"
+                className="w-full rounded-lg border border-slate-200 object-cover max-h-48"
+                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
+              />
+            </a>
+          ) : null
+        })()}
       </div>
 
       {/* Rejection notes banner */}
