@@ -1,7 +1,31 @@
 'use client'
-import { Settings2, Mail, User, Truck, ToggleLeft } from 'lucide-react'
+import { useState } from 'react'
+import { Settings2, Mail, User, Truck, ToggleLeft, KeyRound, CheckCircle, Loader2 } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+
+const MIKE_EMAIL = 'mike@gtldelivers.com'
 
 export default function WarehouseSettings() {
+  const [resetStatus, setResetStatus] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle')
+  const [resetError, setResetError] = useState('')
+
+  async function handleResetPassword() {
+    setResetStatus('loading')
+    setResetError('')
+    const supabase = createClient()
+    const { error } = await supabase.auth.resetPasswordForEmail(MIKE_EMAIL, {
+      redirectTo: `${window.location.origin}/login`,
+    })
+    if (error) {
+      setResetError(error.message)
+      setResetStatus('error')
+      setTimeout(() => setResetStatus('idle'), 4000)
+    } else {
+      setResetStatus('sent')
+      setTimeout(() => setResetStatus('idle'), 5000)
+    }
+  }
+
   return (
     <div className="space-y-6 max-w-2xl mx-auto">
       <div>
@@ -24,10 +48,27 @@ export default function WarehouseSettings() {
             </div>
             <div className="flex-1">
               <p className="text-sm font-semibold text-slate-900">Mike</p>
-              <p className="text-xs text-slate-400">mike@gtldelivers.com · GTL Delivers</p>
+              <p className="text-xs text-slate-400">{MIKE_EMAIL} · GTL Delivers</p>
             </div>
             <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-full">Active</span>
+            <button
+              onClick={handleResetPassword}
+              disabled={resetStatus === 'loading' || resetStatus === 'sent'}
+              className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60 ${
+                resetStatus === 'sent'
+                  ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
+                  : 'bg-slate-100 text-slate-600 hover:bg-indigo-50 hover:text-indigo-700 ring-1 ring-slate-200 hover:ring-indigo-200'
+              }`}
+            >
+              {resetStatus === 'loading' && <Loader2 size={12} className="animate-spin" />}
+              {resetStatus === 'sent' && <CheckCircle size={12} />}
+              {resetStatus === 'idle' || resetStatus === 'error' ? <KeyRound size={12} /> : null}
+              {resetStatus === 'sent' ? 'Email sent!' : resetStatus === 'loading' ? 'Sending…' : 'Reset Password'}
+            </button>
           </div>
+          {resetStatus === 'error' && (
+            <p className="text-xs text-red-600 mt-2 px-1">{resetError || 'Failed to send reset email. Try again.'}</p>
+          )}
         </div>
       </div>
 
