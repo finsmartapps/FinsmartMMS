@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import {
   Loader2, CheckCircle, XCircle, PenLine,
-  ChevronDown, ChevronUp, MoreHorizontal,
+  ChevronDown, ChevronUp,
 } from 'lucide-react'
 
 type SocialPost = {
@@ -121,7 +121,6 @@ function ReviewCard({ post, onUpdate }: { post: SocialPost; onUpdate: (updated: 
   const [action,     setAction]     = useState<CardAction>({ type: 'idle' })
   const [submitting, setSubmitting] = useState(false)
   const [error,      setError]      = useState('')
-  const [menuOpen,   setMenuOpen]   = useState(false)
 
   const cfg      = STATUS_CONFIG[post.status]
   const embedUrl = toEmbedUrl(post.image_url)
@@ -174,29 +173,12 @@ function ReviewCard({ post, onUpdate }: { post: SocialPost; onUpdate: (updated: 
           </p>
         </div>
 
-        {/* Status badge + menu */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        {/* Status badge */}
+        <div className="flex-shrink-0">
           <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1.5 ${cfg.badgeCls}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
             {cfg.label}
           </span>
-          <div className="relative">
-            <button onClick={() => setMenuOpen(o => !o)}
-              className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition">
-              <MoreHorizontal size={16} />
-            </button>
-            {menuOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                <div className="absolute right-0 top-8 z-20 bg-white border border-slate-200 rounded-xl shadow-lg py-1 min-w-[130px]">
-                  <button onClick={() => { setMenuOpen(false); setAction({ type: 'edit', description: post.description, image_url: post.image_url ?? '', publish_date: post.publish_date, platform: post.platform }); setError('') }}
-                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition">
-                    <PenLine size={13} /> Edit Post
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
         </div>
       </div>
 
@@ -235,6 +217,10 @@ function ReviewCard({ post, onUpdate }: { post: SocialPost; onUpdate: (updated: 
             className="flex-1 flex items-center justify-center gap-2 text-sm font-semibold py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 transition shadow-sm">
             <XCircle size={15} /> Reject
           </button>
+          <button onClick={() => { setAction({ type: 'edit', description: post.description, image_url: post.image_url ?? '', publish_date: post.publish_date, platform: post.platform }); setError('') }}
+            className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition">
+            <PenLine size={14} /> Edit
+          </button>
         </div>
       )}
 
@@ -248,6 +234,10 @@ function ReviewCard({ post, onUpdate }: { post: SocialPost; onUpdate: (updated: 
           <button onClick={() => { setAction({ type: 'reject', notes: '' }); setError('') }}
             className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl border border-red-300 text-red-700 hover:bg-red-50 transition">
             <XCircle size={13} /> Reject
+          </button>
+          <button onClick={() => { setAction({ type: 'edit', description: post.description, image_url: post.image_url ?? '', publish_date: post.publish_date, platform: post.platform }); setError('') }}
+            className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition">
+            <PenLine size={13} /> Edit
           </button>
         </div>
       )}
