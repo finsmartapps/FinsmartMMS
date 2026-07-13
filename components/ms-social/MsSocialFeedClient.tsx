@@ -4,7 +4,8 @@ import { useState } from 'react'
 import {
   Plus, Loader2, X, PenLine, Trash2, RotateCcw,
   CheckCircle2, AlertCircle, ChevronDown, ChevronUp,
-  MoreHorizontal, Link2, Check,
+  MoreHorizontal, Link2, Check, BarChart2, LayoutList,
+  ExternalLink,
 } from 'lucide-react'
 
 type SocialPost = {
@@ -64,9 +65,9 @@ function initials(name: string) {
 }
 
 const STATUS_CONFIG = {
-  pending:  { label: 'Pending Review', badgeCls: 'bg-amber-50 text-amber-700 border-amber-200',       dot: 'bg-amber-400'  },
+  pending:  { label: 'Pending Review', badgeCls: 'bg-amber-50 text-amber-700 border-amber-200',       dot: 'bg-amber-400'   },
   approved: { label: 'Approved',       badgeCls: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-400' },
-  rejected: { label: 'Changes Needed', badgeCls: 'bg-red-50 text-red-700 border-red-200',             dot: 'bg-red-400'    },
+  rejected: { label: 'Changes Needed', badgeCls: 'bg-red-50 text-red-700 border-red-200',             dot: 'bg-red-400'     },
 }
 
 const BLANK_FORM = { description: '', image_url: '', publish_date: '', platform: 'LinkedIn' }
@@ -89,7 +90,7 @@ const CHAR_LIMIT = 300
 
 function PostText({ text }: { text: string }) {
   const [expanded, setExpanded] = useState(false)
-  const long = text.length > CHAR_LIMIT
+  const long  = text.length > CHAR_LIMIT
   const shown = long && !expanded ? text.slice(0, CHAR_LIMIT) + '…' : text
   return (
     <div className="text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
@@ -112,9 +113,7 @@ function PostImage({ url, linkUrl }: { url: string; linkUrl: string }) {
   return (
     <a href={linkUrl} target="_blank" rel="noopener noreferrer"
       className="block w-full overflow-hidden bg-slate-100">
-      <img src={url} alt=""
-        className="w-full"
-        onError={() => setFailed(true)} />
+      <img src={url} alt="" className="w-full" onError={() => setFailed(true)} />
     </a>
   )
 }
@@ -153,8 +152,7 @@ function EditForm({ postId, initial, isResubmit, onSave, onCancel }: {
         {isResubmit ? 'Edit & Resubmit' : 'Edit Post'}
       </p>
       <textarea className={`${inputCls} resize-none`} rows={7}
-        value={form.description}
-        onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+        value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Publish Date *</label>
@@ -165,9 +163,7 @@ function EditForm({ postId, initial, isResubmit, onSave, onCancel }: {
           <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Platform</label>
           <select className={inputCls} value={form.platform}
             onChange={e => setForm(f => ({ ...f, platform: e.target.value }))}>
-            <option>LinkedIn</option>
-            <option>Twitter</option>
-            <option>Instagram</option>
+            <option>LinkedIn</option><option>Twitter</option><option>Instagram</option>
           </select>
         </div>
       </div>
@@ -176,8 +172,7 @@ function EditForm({ postId, initial, isResubmit, onSave, onCancel }: {
           Image URL <span className="normal-case font-normal text-slate-400">(Google Drive link or direct image URL)</span>
         </label>
         <input className={inputCls} placeholder="https://drive.google.com/file/d/…"
-          value={form.image_url}
-          onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} />
+          value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} />
       </div>
       {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-4 py-2.5 rounded-xl">{error}</p>}
       <div className="flex items-center gap-3">
@@ -195,26 +190,21 @@ function EditForm({ postId, initial, isResubmit, onSave, onCancel }: {
   )
 }
 
-// ── Post card (LinkedIn style) ─────────────────────────────────────────────────
+// ── Post card ─────────────────────────────────────────────────────────────────
 
 function PostCard({ post, userName, onDelete, onUpdate }: {
-  post: SocialPost
-  userName: string
-  onDelete: (id: string) => void
-  onUpdate: (updated: SocialPost) => void
+  post: SocialPost; userName: string
+  onDelete: (id: string) => void; onUpdate: (updated: SocialPost) => void
 }) {
-  const [editing,   setEditing]   = useState(false)
-  const [deleting,  setDeleting]  = useState(false)
-  const [menuOpen,  setMenuOpen]  = useState(false)
-  const [copied,    setCopied]    = useState(false)
+  const [editing,  setEditing]  = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [copied,   setCopied]   = useState(false)
 
   function copyApprovalLink() {
     if (!post.approval_token) return
     const url = `${window.location.origin}/approve/${post.approval_token}`
-    navigator.clipboard.writeText(url).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
+    navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
   }
 
   const cfg      = STATUS_CONFIG[post.status]
@@ -231,8 +221,6 @@ function PostCard({ post, userName, onDelete, onUpdate }: {
 
   return (
     <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-
-      {/* ── Header ── */}
       <div className="flex items-start gap-3 px-5 pt-4 pb-3">
         <Avatar name={userName} />
         <div className="flex-1 min-w-0">
@@ -248,8 +236,6 @@ function PostCard({ post, userName, onDelete, onUpdate }: {
             </span>
           </div>
         </div>
-
-        {/* Status + menu */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1.5 ${cfg.badgeCls}`}>
             <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
@@ -289,13 +275,9 @@ function PostCard({ post, userName, onDelete, onUpdate }: {
           )}
         </div>
       </div>
-
-      {/* ── Body: text ── */}
       <div className="px-5 pb-3">
         <PostText text={post.description} />
       </div>
-
-      {/* ── Reviewer feedback ── */}
       {post.status === 'rejected' && post.reviewer_notes && !editing && (
         <div className="mx-5 mb-3 flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
           <AlertCircle size={15} className="text-red-400 flex-shrink-0 mt-0.5" />
@@ -314,11 +296,7 @@ function PostCard({ post, userName, onDelete, onUpdate }: {
           </div>
         </div>
       )}
-
-      {/* ── Image (full width, at bottom) ── */}
       {embedUrl && !editing && <PostImage url={embedUrl} linkUrl={post.image_url!} />}
-
-      {/* ── Rejected quick-action bar ── */}
       {post.status === 'rejected' && !editing && (
         <div className="px-5 py-3 border-t border-slate-100 flex items-center gap-3">
           <button onClick={() => setEditing(true)}
@@ -327,8 +305,6 @@ function PostCard({ post, userName, onDelete, onUpdate }: {
           </button>
         </div>
       )}
-
-      {/* ── Edit form ── */}
       {editing && (
         <EditForm
           postId={post.id}
@@ -339,6 +315,204 @@ function PostCard({ post, userName, onDelete, onUpdate }: {
         />
       )}
     </div>
+  )
+}
+
+// ── Stats helpers ─────────────────────────────────────────────────────────────
+
+type DayGroup = {
+  date: string
+  posts: SocialPost[]
+  approved: SocialPost[]
+  pending: SocialPost[]
+  rejected: SocialPost[]
+  publishDates: string[]
+}
+
+function groupByDay(posts: SocialPost[]): DayGroup[] {
+  const map = new Map<string, SocialPost[]>()
+  for (const p of posts) {
+    const day = p.created_at.split('T')[0]
+    if (!map.has(day)) map.set(day, [])
+    map.get(day)!.push(p)
+  }
+  return Array.from(map.entries())
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([date, ps]) => ({
+      date,
+      posts: ps,
+      approved:     ps.filter(p => p.status === 'approved'),
+      pending:      ps.filter(p => p.status === 'pending'),
+      rejected:     ps.filter(p => p.status === 'rejected'),
+      publishDates: [...new Set(ps.map(p => p.publish_date))].sort(),
+    }))
+}
+
+// ── Posts popup modal ─────────────────────────────────────────────────────────
+
+function PostsModal({ title, posts, onClose }: {
+  title: string; posts: SocialPost[]; onClose: () => void
+}) {
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/40 z-40 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200 flex flex-col max-h-[80vh]">
+          {/* Header */}
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 flex-shrink-0">
+            <div>
+              <p className="font-semibold text-slate-900">{title}</p>
+              <p className="text-[12px] text-slate-400 mt-0.5">{posts.length} post{posts.length !== 1 ? 's' : ''}</p>
+            </div>
+            <button onClick={onClose}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition">
+              <X size={16} />
+            </button>
+          </div>
+          {/* List */}
+          <div className="flex-1 overflow-y-auto divide-y divide-slate-100">
+            {posts.map(post => {
+              const cfg = STATUS_CONFIG[post.status]
+              const embedUrl = toEmbedUrl(post.image_url)
+              return (
+                <div key={post.id} className="px-5 py-4 space-y-2.5">
+                  {/* Status + dates */}
+                  <div className="flex items-center justify-between gap-3 flex-wrap">
+                    <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border flex items-center gap-1.5 ${cfg.badgeCls}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                      {cfg.label}
+                    </span>
+                    <div className="flex items-center gap-3 text-[11px] text-slate-400">
+                      <span>Submitted: {fmtDate(post.created_at.split('T')[0])}</span>
+                      <span className="text-blue-600 font-semibold">Publish: {fmtPublishDate(post.publish_date)}</span>
+                    </div>
+                  </div>
+                  {/* Text preview */}
+                  <p className="text-sm text-slate-700 leading-relaxed line-clamp-3">{post.description}</p>
+                  {/* Thumbnail */}
+                  {embedUrl && (
+                    <a href={post.image_url!} target="_blank" rel="noopener noreferrer"
+                      className="flex items-center gap-1.5 text-[12px] text-slate-400 hover:text-pink-600 transition">
+                      <ExternalLink size={11} /> View image
+                    </a>
+                  )}
+                  {/* Reviewer notes */}
+                  {post.reviewer_notes && (
+                    <div className={`text-[12px] rounded-lg px-3 py-2 ${
+                      post.status === 'approved'
+                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
+                        : 'bg-red-50 text-red-800 border border-red-200'
+                    }`}>
+                      <span className="font-semibold">Note: </span>{post.reviewer_notes}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
+// ── Stats table ───────────────────────────────────────────────────────────────
+
+function StatsTable({ posts }: { posts: SocialPost[] }) {
+  const [modal, setModal] = useState<{ title: string; posts: SocialPost[] } | null>(null)
+  const groups = groupByDay(posts)
+
+  const totalApproved = posts.filter(p => p.status === 'approved').length
+  const totalPending  = posts.filter(p => p.status === 'pending').length
+  const totalRejected = posts.filter(p => p.status === 'rejected').length
+
+  function open(title: string, filtered: SocialPost[]) {
+    if (filtered.length > 0) setModal({ title, posts: filtered })
+  }
+
+  if (groups.length === 0) {
+    return (
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm py-20 text-center">
+        <BarChart2 size={28} className="text-slate-300 mx-auto mb-3" />
+        <p className="font-semibold text-slate-500">No data yet</p>
+        <p className="text-sm text-slate-400 mt-1">Submit your first post to see stats here</p>
+      </div>
+    )
+  }
+
+  const CountCell = ({
+    count, color, title, filtered,
+  }: { count: number; color: string; title: string; filtered: SocialPost[] }) => (
+    <td className="px-4 py-3.5 text-center">
+      {count > 0 ? (
+        <button onClick={() => open(title, filtered)}
+          className={`font-bold text-[15px] hover:underline transition ${color}`}>
+          {count}
+        </button>
+      ) : (
+        <span className="text-slate-200 text-sm select-none">—</span>
+      )}
+    </td>
+  )
+
+  return (
+    <>
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[580px]">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                {['Sr.', 'Submitted Date', 'Publishing Date', '', '', ''].map((h, i) => (
+                  <th key={i} className={`px-4 py-3 text-[11px] font-bold uppercase tracking-wider ${
+                    i < 3 ? 'text-left text-slate-500' : [
+                      'text-center text-emerald-600',
+                      'text-center text-amber-600',
+                      'text-center text-red-600',
+                    ][i - 3]
+                  }`}>
+                    {h || ['Approved', 'Pending', 'Rejected'][i - 3]}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {groups.map((g, i) => (
+                <tr key={g.date} className="hover:bg-slate-50/60 transition">
+                  <td className="px-4 py-3.5 text-slate-400 text-[13px] w-10">{i + 1}</td>
+                  <td className="px-4 py-3.5 text-slate-700 text-[13px] font-medium whitespace-nowrap">
+                    {fmtDate(g.date)}
+                  </td>
+                  <td className="px-4 py-3.5 text-slate-500 text-[13px]">
+                    {g.publishDates.length === 1
+                      ? fmtPublishDate(g.publishDates[0])
+                      : g.publishDates.map(d => fmtPublishDate(d)).join(', ')}
+                  </td>
+                  <CountCell count={g.approved.length} color="text-emerald-600"
+                    title={`Approved — ${fmtDate(g.date)}`} filtered={g.approved} />
+                  <CountCell count={g.pending.length} color="text-amber-600"
+                    title={`Pending — ${fmtDate(g.date)}`} filtered={g.pending} />
+                  <CountCell count={g.rejected.length} color="text-red-600"
+                    title={`Rejected — ${fmtDate(g.date)}`} filtered={g.rejected} />
+                </tr>
+              ))}
+            </tbody>
+            <tfoot className="border-t-2 border-slate-200 bg-slate-50">
+              <tr>
+                <td colSpan={3} className="px-4 py-3 text-[12px] font-bold text-slate-600">Total</td>
+                <CountCell count={totalApproved} color="text-emerald-700"
+                  title="All Approved" filtered={posts.filter(p => p.status === 'approved')} />
+                <CountCell count={totalPending} color="text-amber-700"
+                  title="All Pending" filtered={posts.filter(p => p.status === 'pending')} />
+                <CountCell count={totalRejected} color="text-red-700"
+                  title="All Rejected" filtered={posts.filter(p => p.status === 'rejected')} />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+      {modal && <PostsModal title={modal.title} posts={modal.posts} onClose={() => setModal(null)} />}
+    </>
   )
 }
 
@@ -359,6 +533,7 @@ export function MsSocialFeedClient({
   const [form,      setForm]      = useState(BLANK_FORM)
   const [creating,  setCreating]  = useState(false)
   const [formError, setFormError] = useState('')
+  const [viewMode,  setViewMode]  = useState<'feed' | 'stats'>('feed')
 
   async function handleCreate() {
     setFormError('')
@@ -386,13 +561,15 @@ export function MsSocialFeedClient({
   return (
     <>
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-5">
-        {/* Header */}
+
+        {/* ── Header ── */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
             <h1 className="text-2xl font-bold text-slate-900 tracking-tight">MS Social</h1>
             <p className="text-slate-500 text-sm mt-0.5">Hi {userName} — submit LinkedIn posts for manager approval</p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 flex-wrap">
+            {/* Stats summary chips */}
             <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-4 py-2 shadow-sm text-sm">
               <span className="font-bold text-amber-600">{counts.pending}</span>
               <span className="text-slate-400 text-[11px]">Pending</span>
@@ -407,6 +584,22 @@ export function MsSocialFeedClient({
                 </>
               )}
             </div>
+            {/* View toggle */}
+            <div className="flex items-center bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+              <button onClick={() => setViewMode('feed')}
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold transition ${
+                  viewMode === 'feed' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-50'
+                }`}>
+                <LayoutList size={14} /> Feed
+              </button>
+              <button onClick={() => setViewMode('stats')}
+                className={`flex items-center gap-1.5 px-3 py-2 text-sm font-semibold transition ${
+                  viewMode === 'stats' ? 'bg-slate-900 text-white' : 'text-slate-500 hover:bg-slate-50'
+                }`}>
+                <BarChart2 size={14} /> Stats
+              </button>
+            </div>
+            {/* New Post */}
             <button
               onClick={() => { setShowNew(true); setFormError(''); setForm(BLANK_FORM) }}
               className="flex items-center gap-1.5 bg-pink-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-pink-700 transition shadow-sm">
@@ -415,8 +608,10 @@ export function MsSocialFeedClient({
           </div>
         </div>
 
-        {/* Feed */}
-        {posts.length === 0 ? (
+        {/* ── Content ── */}
+        {viewMode === 'stats' ? (
+          <StatsTable posts={posts} />
+        ) : posts.length === 0 ? (
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm py-20 text-center">
             <div className="w-14 h-14 bg-pink-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <PenLine size={24} className="text-pink-400" />
@@ -464,8 +659,7 @@ export function MsSocialFeedClient({
                   <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Post Content *</label>
                   <textarea className={`${inputCls} resize-none`} rows={7}
                     placeholder="Write your LinkedIn post content here…"
-                    value={form.description}
-                    onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+                    value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -477,9 +671,7 @@ export function MsSocialFeedClient({
                     <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">Platform</label>
                     <select className={inputCls} value={form.platform}
                       onChange={e => setForm(f => ({ ...f, platform: e.target.value }))}>
-                      <option>LinkedIn</option>
-                      <option>Twitter</option>
-                      <option>Instagram</option>
+                      <option>LinkedIn</option><option>Twitter</option><option>Instagram</option>
                     </select>
                   </div>
                 </div>
@@ -488,8 +680,7 @@ export function MsSocialFeedClient({
                     Image URL <span className="normal-case font-normal text-slate-400">(Google Drive link or any image URL)</span>
                   </label>
                   <input className={inputCls} placeholder="https://drive.google.com/file/d/…"
-                    value={form.image_url}
-                    onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} />
+                    value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} />
                 </div>
                 {formError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-4 py-2.5 rounded-xl">{formError}</p>}
               </div>
