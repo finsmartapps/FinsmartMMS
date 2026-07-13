@@ -56,7 +56,7 @@ export default function LoginPage() {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, has_sales, has_marketing, has_expenses, has_warehouse, is_active')
+      .select('role, has_sales, has_marketing, has_expenses, has_warehouse, has_advocacy, has_ms_social, is_active')
       .eq('id', data.user.id)
       .single()
 
@@ -75,6 +75,10 @@ export default function LoginPage() {
       router.push('/expenses')
     } else if (profile.has_warehouse) {
       router.push('/warehouse')
+    } else if (profile.has_advocacy) {
+      router.push('/advocacy')
+    } else if (profile.has_ms_social) {
+      router.push('/ms-social')
     } else {
       setError('No modules assigned to your account. Contact your administrator.')
       await supabase.auth.signOut()
