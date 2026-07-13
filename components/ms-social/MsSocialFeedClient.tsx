@@ -4,7 +4,7 @@ import { useState } from 'react'
 import {
   Plus, Loader2, X, PenLine, Trash2, RotateCcw,
   CheckCircle2, AlertCircle, ChevronDown, ChevronUp,
-  MoreHorizontal,
+  MoreHorizontal, Link2, Check,
 } from 'lucide-react'
 
 type SocialPost = {
@@ -19,6 +19,7 @@ type SocialPost = {
   reviewed_by: string | null
   created_at: string
   reviewed_at: string | null
+  approval_token: string | null
 }
 
 const inputCls =
@@ -205,6 +206,16 @@ function PostCard({ post, userName, onDelete, onUpdate }: {
   const [editing,   setEditing]   = useState(false)
   const [deleting,  setDeleting]  = useState(false)
   const [menuOpen,  setMenuOpen]  = useState(false)
+  const [copied,    setCopied]    = useState(false)
+
+  function copyApprovalLink() {
+    if (!post.approval_token) return
+    const url = `${window.location.origin}/approve/${post.approval_token}`
+    navigator.clipboard.writeText(url).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
 
   const cfg      = STATUS_CONFIG[post.status]
   const embedUrl = toEmbedUrl(post.image_url)
@@ -253,7 +264,14 @@ function PostCard({ post, userName, onDelete, onUpdate }: {
               {menuOpen && (
                 <>
                   <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
-                  <div className="absolute right-0 top-8 z-20 bg-white border border-slate-200 rounded-xl shadow-lg py-1 min-w-[130px]">
+                  <div className="absolute right-0 top-8 z-20 bg-white border border-slate-200 rounded-xl shadow-lg py-1 min-w-[170px]">
+                    {post.approval_token && (
+                      <button onClick={() => { setMenuOpen(false); copyApprovalLink() }}
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition">
+                        {copied ? <Check size={13} className="text-emerald-500" /> : <Link2 size={13} />}
+                        {copied ? 'Link copied!' : 'Copy Approval Link'}
+                      </button>
+                    )}
                     <button onClick={() => { setMenuOpen(false); setEditing(true) }}
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-slate-700 hover:bg-slate-50 transition">
                       <PenLine size={13} />
