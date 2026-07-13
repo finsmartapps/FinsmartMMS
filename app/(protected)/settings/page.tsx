@@ -5,12 +5,13 @@ import { useRouter } from 'next/navigation'
 import { Plus, Loader2, Pencil, Trash2, ShieldCheck, Shield, Star } from 'lucide-react'
 
 // ── Types ─────────────────────────────────────────────────────────
-type Role = 'manager' | 'telecaller' | 'warehouse_user'
+type Role = 'manager' | 'telecaller' | 'warehouse_user' | 'employee'
 
 const ROLES: { value: Role; label: string; icon: React.ElementType }[] = [
-  { value: 'manager',       label: 'Manager',       icon: ShieldCheck },
-  { value: 'telecaller',    label: 'Telecaller',    icon: Shield      },
+  { value: 'manager',        label: 'Manager',        icon: ShieldCheck },
+  { value: 'telecaller',     label: 'Telecaller',     icon: Shield      },
   { value: 'warehouse_user', label: 'Warehouse User', icon: Star        },
+  { value: 'employee',       label: 'Employee',       icon: Star        },
 ]
 
 interface UserRow {

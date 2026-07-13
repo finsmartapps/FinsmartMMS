@@ -34,7 +34,7 @@ create table public.profiles (
   id            uuid        references auth.users(id) on delete cascade primary key,
   name          text        not null,
   email         text        not null unique,
-  role          text        check (role in ('admin', 'manager', 'telecaller', 'finance_manager')),
+  role          text        check (role in ('admin', 'manager', 'telecaller', 'finance_manager', 'warehouse_user', 'employee')),
   has_sales     boolean     not null default false,
   has_marketing boolean     not null default false,
   has_expenses  boolean     not null default false,
