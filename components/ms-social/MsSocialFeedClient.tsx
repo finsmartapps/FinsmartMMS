@@ -41,6 +41,13 @@ function fmtDate(iso: string) {
   })
 }
 
+function fmtPublishDate(iso: string) {
+  const d  = new Date(iso + 'T00:00:00')
+  const dd = String(d.getDate()).padStart(2, '0')
+  const mm = String(d.getMonth() + 1).padStart(2, '0')
+  return `${dd}/${mm}/${d.getFullYear()}`
+}
+
 function timeAgo(iso: string) {
   const ms = Date.now() - new Date(iso).getTime()
   const m  = Math.floor(ms / 60000)
@@ -223,9 +230,12 @@ function PostCard({ post, userName, onDelete, onUpdate }: {
             <span className="text-[11px] text-slate-400 border border-slate-300 rounded px-1 leading-4">1st</span>
           </div>
           <p className="text-[12px] text-slate-500 mt-0.5">Finsmart Accounting</p>
-          <p className="text-[11px] text-slate-400 mt-0.5">
-            {post.platform} · {timeAgo(post.created_at)} · Scheduled {fmtDate(post.publish_date)}
-          </p>
+          <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+            <span className="text-[11px] text-slate-400">{post.platform} · {timeAgo(post.created_at)}</span>
+            <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-1.5 py-0.5">
+              Publishing Date: {fmtPublishDate(post.publish_date)}
+            </span>
+          </div>
         </div>
 
         {/* Status + menu */}
