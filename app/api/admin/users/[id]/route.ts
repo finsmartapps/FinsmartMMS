@@ -10,7 +10,7 @@ async function requireAdmin() {
     .select('role')
     .eq('id', user.id)
     .single()
-  if (profile?.role !== 'admin') return { user: null, db: null, authAdmin: null }
+  if (profile?.role !== 'admin' && profile?.role !== 'manager') return { user: null, db: null, authAdmin: null }
   const db = await createAdminClient()
   const authAdmin = createAuthAdminClient()
   return { user, db, authAdmin }

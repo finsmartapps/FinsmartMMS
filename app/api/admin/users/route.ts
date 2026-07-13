@@ -10,7 +10,7 @@ async function requireAdmin() {
     .select('role')
     .eq('id', user.id)
     .single()
-  if (profile?.role !== 'admin') return { user: null, db: null, authAdmin: null }
+  if (profile?.role !== 'admin' && profile?.role !== 'manager') return { user: null, db: null, authAdmin: null }
   const db = await createAdminClient()         // service role — bypasses RLS for DB queries
   const authAdmin = createAuthAdminClient()    // standard client — exposes auth.admin.*
   return { user, db, authAdmin }

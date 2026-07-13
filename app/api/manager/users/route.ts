@@ -6,7 +6,7 @@ async function assertManager() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { user: null, db: null, authAdmin: null }
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'manager') return { user: null, db: null, authAdmin: null }
+  if (profile?.role !== 'manager' && profile?.role !== 'admin' && profile?.role !== 'manager') return { user: null, db: null, authAdmin: null }
   const db = await createAdminClient()
   const authAdmin = createAuthAdminClient()
   return { user, db, authAdmin }

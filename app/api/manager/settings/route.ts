@@ -6,7 +6,7 @@ async function requireManager() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { supabase, user: null, error: NextResponse.json({ error: 'Unauthorized' }, { status: 401 }) }
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'manager') return { supabase, user, error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
+  if (profile?.role !== 'manager' && profile?.role !== 'admin' && profile?.role !== 'manager') return { supabase, user, error: NextResponse.json({ error: 'Forbidden' }, { status: 403 }) }
   return { supabase, user, error: null }
 }
 

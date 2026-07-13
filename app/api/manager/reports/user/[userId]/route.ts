@@ -7,7 +7,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ user
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const { data: selfProfile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (selfProfile?.role !== 'manager') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  if (selfProfile?.role !== 'manager' && selfProfile?.role !== 'admin') return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { userId } = await params
   const { searchParams } = new URL(req.url)

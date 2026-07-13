@@ -10,7 +10,7 @@ async function requireManager() {
     .select('role')
     .eq('id', user.id)
     .single()
-  if (profile?.role !== 'manager') return { user: null, supabase: null }
+  if (profile?.role !== 'manager' && profile?.role !== 'admin' && profile?.role !== 'manager') return { user: null, supabase: null }
   return { user, supabase }
 }
 

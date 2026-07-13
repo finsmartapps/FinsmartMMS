@@ -6,7 +6,7 @@ async function getManagerSupabase() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { supabase, user: null, forbidden: true }
   const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single()
-  if (profile?.role !== 'manager') return { supabase, user, forbidden: true }
+  if (profile?.role !== 'manager' && profile?.role !== 'admin' && profile?.role !== 'manager') return { supabase, user, forbidden: true }
   return { supabase, user, forbidden: false }
 }
 
