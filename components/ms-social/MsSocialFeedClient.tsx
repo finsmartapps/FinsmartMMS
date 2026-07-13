@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import {
   Plus, Loader2, X, Calendar, Globe, PenLine,
-  Trash2, RotateCcw,
+  Trash2, RotateCcw, CheckCircle2, AlertCircle,
 } from 'lucide-react'
 
 type SocialPost = {
@@ -23,7 +23,7 @@ type SocialPost = {
 const inputCls =
   'w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm text-slate-800 ' +
   'focus:outline-none focus:border-pink-400 focus:ring-2 focus:ring-pink-400/10 ' +
-  'transition bg-slate-50 placeholder-slate-400'
+  'transition bg-white placeholder-slate-400'
 
 function toEmbedUrl(url: string | null): string | null {
   if (!url) return null
@@ -34,15 +34,121 @@ function toEmbedUrl(url: string | null): string | null {
   return url
 }
 
-const STATUS_BADGE: Record<SocialPost['status'], { label: string; cls: string }> = {
-  pending:  { label: 'Pending',  cls: 'bg-amber-50  text-amber-700  border-amber-200'   },
-  approved: { label: 'Approved', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  rejected: { label: 'Rejected', cls: 'bg-red-50    text-red-700    border-red-200'     },
+function fmtDate(iso: string) {
+  return new Date(iso + 'T00:00:00').toLocaleDateString('en-IN', {
+    day: 'numeric', month: 'short', year: 'numeric',
+  })
+}
+
+const STATUS_CONFIG = {
+  pending:  { label: 'Pending Review', badgeCls: 'bg-amber-50 text-amber-700 border-amber-200',  accent: 'border-l-amber-400'   },
+  approved: { label: 'Approved',       badgeCls: 'bg-emerald-50 text-emerald-700 border-emerald-200', accent: 'border-l-emerald-400' },
+  rejected: { label: 'Changes Needed', badgeCls: 'bg-red-50 text-red-700 border-red-200',        accent: 'border-l-red-400'     },
 }
 
 const BLANK_FORM = { description: '', image_url: '', publish_date: '', platform: 'LinkedIn' }
 
-// ── Post card ──────────────────────────────────────────────────────────────────
+// ── Edit form (renders below a card) ─────────────────────────────────────────
+
+function EditForm({
+  postId,
+  initial,
+  isResubmit,
+  onSave,
+  onCancel,
+}: {
+  postId: string
+  initial: { description: string; image_url: string; publish_date: string; platform: string }
+  isResubmit: boolean
+  onSave: (updated: SocialPost) => void
+  onCancel: () => void
+}) {
+  const [form, setForm] = useState(initial)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  async function handleSave() {
+    setError('')
+    if (!form.description.trim()) { setError('Description is required'); return }
+    if (!form.publish_date)       { setError('Publish date is required'); return }
+    setSaving(true)
+    const res = await fetch(`/api/ms-social/posts/${postId}`, {
+      method:  'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({
+        description:  form.description,
+        image_url:    form.image_url || null,
+        publish_date: form.publish_date,
+        platform:     form.platform,
+      }),
+    })
+    const data = await res.json()
+    setSaving(false)
+    if (!res.ok) { setError(data.error ?? 'Failed to save'); return }
+    onSave(data.post)
+  }
+
+  return (
+    <div className="bg-slate-50 border border-slate-200 border-t-0 rounded-b-xl px-6 py-5 space-y-4">
+      <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest">
+        {isResubmit ? 'Edit & Resubmit' : 'Edit Post'}
+      </p>
+      <div>
+        <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+          Post Content *
+        </label>
+        <textarea
+          className={`${inputCls} resize-none`}
+          rows={6}
+          value={form.description}
+          onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
+        />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+            Publish Date *
+          </label>
+          <input type="date" className={inputCls} value={form.publish_date}
+            onChange={e => setForm(f => ({ ...f, publish_date: e.target.value }))} />
+        </div>
+        <div>
+          <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+            Platform
+          </label>
+          <select className={inputCls} value={form.platform}
+            onChange={e => setForm(f => ({ ...f, platform: e.target.value }))}>
+            <option>LinkedIn</option>
+            <option>Twitter</option>
+            <option>Instagram</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+          Image URL <span className="normal-case font-normal">(Google Drive share link or any image URL)</span>
+        </label>
+        <input className={inputCls} placeholder="https://drive.google.com/file/d/…"
+          value={form.image_url}
+          onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} />
+      </div>
+      {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-4 py-2.5 rounded-xl">{error}</p>}
+      <div className="flex items-center gap-3 pt-1">
+        <button onClick={handleSave} disabled={saving}
+          className="flex items-center gap-2 text-sm font-semibold px-6 py-2.5 rounded-xl bg-pink-600 text-white hover:bg-pink-700 disabled:opacity-60 transition shadow-sm">
+          {saving && <Loader2 size={14} className="animate-spin" />}
+          {saving ? 'Submitting…' : isResubmit ? 'Resubmit for Approval' : 'Save Changes'}
+        </button>
+        <button onClick={onCancel}
+          className="text-sm font-medium px-4 py-2.5 rounded-xl border border-slate-200 text-slate-500 hover:bg-white transition">
+          Cancel
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ── Post card ─────────────────────────────────────────────────────────────────
 
 function PostCard({
   post,
@@ -53,51 +159,14 @@ function PostCard({
   onDelete: (id: string) => void
   onUpdate: (updated: SocialPost) => void
 }) {
-  const [editing, setEditing] = useState(false)
-  const [editForm, setEditForm] = useState({
-    description:  post.description,
-    image_url:    post.image_url ?? '',
-    publish_date: post.publish_date,
-    platform:     post.platform,
-  })
-  const [saving,   setSaving]   = useState(false)
+  const [editing,  setEditing]  = useState(false)
   const [deleting, setDeleting] = useState(false)
-  const [error,    setError]    = useState('')
 
-  const badge = STATUS_BADGE[post.status]
+  const cfg      = STATUS_CONFIG[post.status]
+  const embedUrl = toEmbedUrl(post.image_url)
+  const canEdit  = post.status === 'pending' || post.status === 'rejected'
 
-  function startEdit() {
-    setEditForm({
-      description:  post.description,
-      image_url:    post.image_url ?? '',
-      publish_date: post.publish_date,
-      platform:     post.platform,
-    })
-    setError('')
-    setEditing(true)
-  }
-
-  async function handleSave() {
-    setError('')
-    if (!editForm.description.trim()) { setError('Description is required'); return }
-    if (!editForm.publish_date)       { setError('Publish date is required'); return }
-    setSaving(true)
-    const res = await fetch(`/api/ms-social/posts/${post.id}`, {
-      method:  'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({
-        description:  editForm.description,
-        image_url:    editForm.image_url || null,
-        publish_date: editForm.publish_date,
-        platform:     editForm.platform,
-      }),
-    })
-    const data = await res.json()
-    setSaving(false)
-    if (!res.ok) { setError(data.error ?? 'Failed to save'); return }
-    onUpdate(data.post)
-    setEditing(false)
-  }
+  function startEdit() { setEditing(true) }
 
   async function handleDelete() {
     if (!confirm('Delete this post?')) return
@@ -108,167 +177,112 @@ function PostCard({
   }
 
   return (
-    <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden flex flex-col">
-      {/* Card body */}
-      <div className="px-5 pt-4 pb-3 flex-1">
-        {/* Status + meta row */}
-        <div className="flex items-center gap-2 mb-2.5 flex-wrap">
-          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${badge.cls}`}>
-            {badge.label}
-          </span>
-          <span className="text-[11px] text-slate-400 flex items-center gap-1">
-            <Globe size={10} /> {post.platform}
-          </span>
-          <span className="text-[11px] text-slate-400 flex items-center gap-1">
-            <Calendar size={10} />{' '}
-            {new Date(post.publish_date + 'T00:00:00').toLocaleDateString('en-IN', {
-              day: 'numeric', month: 'short', year: 'numeric',
-            })}
-          </span>
-        </div>
+    <div>
+      {/* ── Card ── */}
+      <div className={`bg-white border border-slate-200 border-l-4 ${cfg.accent} ${
+        editing ? 'rounded-t-xl' : 'rounded-xl'
+      } shadow-sm overflow-hidden flex`}>
 
-        {/* Description */}
-        <p className="text-sm text-slate-700 leading-relaxed line-clamp-4">{post.description}</p>
+        {/* Image */}
+        {embedUrl && (
+          <a href={post.image_url!} target="_blank" rel="noopener noreferrer"
+            className="flex-shrink-0 w-52 bg-slate-100 self-stretch overflow-hidden">
+            <img src={embedUrl} alt="Post image"
+              className="w-full h-full object-cover"
+              onError={e => { (e.currentTarget as HTMLImageElement).parentElement!.style.display = 'none' }} />
+          </a>
+        )}
 
-        {/* Image preview */}
-        {post.image_url && (() => {
-          const embedUrl = toEmbedUrl(post.image_url)
-          return embedUrl ? (
-            <a href={post.image_url} target="_blank" rel="noopener noreferrer" className="block mt-3">
-              <img
-                src={embedUrl}
-                alt="Post image"
-                className="w-full rounded-lg border border-slate-200 object-cover max-h-48"
-                onError={e => { (e.currentTarget as HTMLImageElement).style.display = 'none' }}
-              />
-            </a>
-          ) : null
-        })()}
-      </div>
-
-      {/* Rejection notes banner */}
-      {post.status === 'rejected' && post.reviewer_notes && !editing && (
-        <div className="mx-5 mb-3 bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
-          <p className="text-[11px] font-semibold text-red-600 mb-1">Reviewer Notes:</p>
-          <p className="text-xs text-red-700 leading-relaxed">{post.reviewer_notes}</p>
-        </div>
-      )}
-
-      {/* Inline edit form */}
-      {editing && (
-        <div className="mx-5 mb-3 bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
-              Description *
-            </label>
-            <textarea
-              className={`${inputCls} resize-none`}
-              rows={4}
-              value={editForm.description}
-              onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))}
-            />
+        {/* Content */}
+        <div className="flex-1 min-w-0 px-6 py-5 flex flex-col gap-3">
+          {/* Meta row */}
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className={`text-[11px] font-semibold px-2.5 py-1 rounded-full border ${cfg.badgeCls}`}>
+              {cfg.label}
+            </span>
+            <span className="text-[11px] text-slate-400 flex items-center gap-1">
+              <Globe size={10} /> {post.platform}
+            </span>
+            <span className="text-[11px] text-slate-400 flex items-center gap-1">
+              <Calendar size={10} /> {fmtDate(post.publish_date)}
+            </span>
+            <span className="ml-auto text-[11px] text-slate-400">
+              Submitted {new Date(post.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </span>
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                Publish Date *
-              </label>
-              <input
-                type="date"
-                className={inputCls}
-                value={editForm.publish_date}
-                onChange={e => setEditForm(f => ({ ...f, publish_date: e.target.value }))}
-              />
+
+          {/* Description */}
+          <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap flex-1">{post.description}</p>
+
+          {/* Rejection notes */}
+          {post.status === 'rejected' && post.reviewer_notes && !editing && (
+            <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+              <AlertCircle size={15} className="text-red-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[11px] font-semibold text-red-600 mb-0.5">Reviewer Feedback</p>
+                <p className="text-sm text-red-700 leading-relaxed">{post.reviewer_notes}</p>
+              </div>
             </div>
-            <div>
-              <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
-                Platform
-              </label>
-              <select
-                className={inputCls}
-                value={editForm.platform}
-                onChange={e => setEditForm(f => ({ ...f, platform: e.target.value }))}
-              >
-                <option>LinkedIn</option>
-                <option>Twitter</option>
-                <option>Instagram</option>
-              </select>
-            </div>
-          </div>
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1">
-              Image URL (optional)
-            </label>
-            <input
-              className={inputCls}
-              placeholder="https://…"
-              value={editForm.image_url}
-              onChange={e => setEditForm(f => ({ ...f, image_url: e.target.value }))}
-            />
-          </div>
-          {error && <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{error}</p>}
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-lg bg-pink-600 text-white hover:bg-pink-700 disabled:opacity-60 transition"
-            >
-              {saving && <Loader2 size={12} className="animate-spin" />}
-              {saving ? 'Saving…' : post.status === 'rejected' ? 'Resubmit' : 'Save'}
-            </button>
-            <button
-              onClick={() => setEditing(false)}
-              className="text-xs font-medium px-3 py-2 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-100 transition"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Action row — only for editable statuses */}
-      {!editing && (post.status === 'pending' || post.status === 'rejected') && (
-        <div className="px-5 pb-3 flex items-center gap-2">
-          {post.status === 'rejected' ? (
-            <button
-              onClick={startEdit}
-              className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-pink-50 border border-pink-200 text-pink-700 hover:bg-pink-100 transition"
-            >
-              <RotateCcw size={12} /> Edit &amp; Resubmit
-            </button>
-          ) : (
-            <button
-              onClick={startEdit}
-              className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 transition"
-            >
-              <PenLine size={12} /> Edit
-            </button>
           )}
-          <button
-            onClick={handleDelete}
-            disabled={deleting}
-            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-red-600 hover:border-red-200 hover:bg-red-50 disabled:opacity-50 transition ml-auto"
-          >
-            {deleting ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
-            {deleting ? 'Deleting…' : 'Delete'}
-          </button>
-        </div>
-      )}
 
-      {/* Submitted date */}
-      <div className="px-5 pb-3">
-        <p className="text-[10px] text-slate-400">
-          Submitted{' '}
-          {new Date(post.created_at).toLocaleDateString('en-IN', {
-            day: 'numeric', month: 'short', year: 'numeric',
-          })}
-        </p>
+          {/* Approved notes */}
+          {post.status === 'approved' && post.reviewer_notes && (
+            <div className="flex items-start gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
+              <CheckCircle2 size={15} className="text-emerald-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-[11px] font-semibold text-emerald-700 mb-0.5">Reviewer Note</p>
+                <p className="text-sm text-emerald-800 leading-relaxed">{post.reviewer_notes}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          {!editing && (
+            <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+              {post.status === 'rejected' && (
+                <button onClick={startEdit}
+                  className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl bg-pink-600 text-white hover:bg-pink-700 transition shadow-sm">
+                  <RotateCcw size={13} /> Edit &amp; Resubmit
+                </button>
+              )}
+              {post.status === 'pending' && (
+                <button onClick={startEdit}
+                  className="flex items-center gap-1.5 text-sm font-medium px-4 py-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition">
+                  <PenLine size={13} /> Edit
+                </button>
+              )}
+              {canEdit && (
+                <button onClick={handleDelete} disabled={deleting}
+                  className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border border-slate-200 text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 disabled:opacity-50 transition ml-auto">
+                  {deleting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
+                  {deleting ? 'Deleting…' : 'Delete'}
+                </button>
+              )}
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* ── Edit form below card ── */}
+      {editing && (
+        <EditForm
+          postId={post.id}
+          initial={{
+            description:  post.description,
+            image_url:    post.image_url ?? '',
+            publish_date: post.publish_date,
+            platform:     post.platform,
+          }}
+          isResubmit={post.status === 'rejected'}
+          onSave={updated => { onUpdate(updated); setEditing(false) }}
+          onCancel={() => setEditing(false)}
+        />
+      )}
     </div>
   )
 }
 
-// ── Main feed ──────────────────────────────────────────────────────────────────
+// ── Main feed ─────────────────────────────────────────────────────────────────
 
 export function MsSocialFeedClient({
   initialPosts,
@@ -279,14 +293,12 @@ export function MsSocialFeedClient({
   userId: string
   userName: string
 }) {
+  void userId
   const [posts,     setPosts]     = useState(initialPosts)
   const [showNew,   setShowNew]   = useState(false)
   const [form,      setForm]      = useState(BLANK_FORM)
   const [creating,  setCreating]  = useState(false)
   const [formError, setFormError] = useState('')
-
-  // Suppress unused warning — userId available for future use
-  void userId
 
   async function handleCreate() {
     setFormError('')
@@ -311,14 +323,6 @@ export function MsSocialFeedClient({
     setForm(BLANK_FORM)
   }
 
-  function handleDelete(id: string) {
-    setPosts(prev => prev.filter(p => p.id !== id))
-  }
-
-  function handleUpdate(updated: SocialPost) {
-    setPosts(prev => prev.map(p => p.id === updated.id ? updated : p))
-  }
-
   const counts = {
     pending:  posts.filter(p => p.status === 'pending').length,
     approved: posts.filter(p => p.status === 'approved').length,
@@ -327,61 +331,60 @@ export function MsSocialFeedClient({
 
   return (
     <>
-      <div className="max-w-4xl mx-auto px-6 py-6 space-y-6">
+      <div className="max-w-3xl mx-auto px-6 py-8 space-y-6">
         {/* Header */}
-        <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
           <div>
-            <h1 className="text-[26px] font-bold text-slate-900 tracking-tight">MS Social</h1>
-            <p className="text-slate-500 text-sm mt-0.5">
-              Hi {userName} — submit LinkedIn posts for manager approval
-            </p>
+            <h1 className="text-2xl font-bold text-slate-900 tracking-tight">MS Social</h1>
+            <p className="text-slate-500 text-sm mt-0.5">Hi {userName} — submit LinkedIn posts for manager approval</p>
           </div>
-          <div className="flex items-center gap-3 flex-wrap">
-            {/* Stat chips */}
-            <div className="flex items-center gap-2">
-              <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-center shadow-sm">
-                <p className="text-lg font-bold text-amber-600">{counts.pending}</p>
-                <p className="text-[10px] text-slate-400">Pending</p>
-              </div>
-              <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-center shadow-sm">
-                <p className="text-lg font-bold text-emerald-600">{counts.approved}</p>
-                <p className="text-[10px] text-slate-400">Approved</p>
-              </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-4 py-2 shadow-sm">
+              <span className="text-base font-bold text-amber-600">{counts.pending}</span>
+              <span className="text-[11px] text-slate-400">Pending</span>
+              <span className="w-px h-3 bg-slate-200 mx-1" />
+              <span className="text-base font-bold text-emerald-600">{counts.approved}</span>
+              <span className="text-[11px] text-slate-400">Approved</span>
               {counts.rejected > 0 && (
-                <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-center shadow-sm">
-                  <p className="text-lg font-bold text-red-600">{counts.rejected}</p>
-                  <p className="text-[10px] text-slate-400">Rejected</p>
-                </div>
+                <>
+                  <span className="w-px h-3 bg-slate-200 mx-1" />
+                  <span className="text-base font-bold text-red-600">{counts.rejected}</span>
+                  <span className="text-[11px] text-slate-400">Rejected</span>
+                </>
               )}
             </div>
             <button
               onClick={() => { setShowNew(true); setFormError(''); setForm(BLANK_FORM) }}
-              className="flex items-center gap-1.5 bg-pink-600 text-white text-[13px] font-semibold px-4 py-2.5 rounded-xl hover:bg-pink-700 transition shadow-sm"
+              className="flex items-center gap-1.5 bg-pink-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-pink-700 transition shadow-sm"
             >
               <Plus size={15} /> New Post
             </button>
           </div>
         </div>
 
-        {/* Posts grid */}
+        {/* Feed */}
         {posts.length === 0 ? (
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm py-16 text-center">
-            <div className="w-12 h-12 bg-pink-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
-              <PenLine size={20} className="text-pink-400" />
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm py-20 text-center">
+            <div className="w-14 h-14 bg-pink-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <PenLine size={24} className="text-pink-400" />
             </div>
-            <p className="font-semibold text-slate-600">No posts yet</p>
-            <p className="text-sm text-slate-400 mt-1">
-              Click &ldquo;New Post&rdquo; to submit your first LinkedIn post for review
-            </p>
+            <p className="font-semibold text-slate-600 text-lg">No posts yet</p>
+            <p className="text-sm text-slate-400 mt-1 mb-6">Submit your first LinkedIn post for review</p>
+            <button
+              onClick={() => { setShowNew(true); setFormError(''); setForm(BLANK_FORM) }}
+              className="inline-flex items-center gap-1.5 bg-pink-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl hover:bg-pink-700 transition"
+            >
+              <Plus size={15} /> New Post
+            </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="space-y-4">
             {posts.map(post => (
               <PostCard
                 key={post.id}
                 post={post}
-                onDelete={handleDelete}
-                onUpdate={handleUpdate}
+                onDelete={id => setPosts(prev => prev.filter(p => p.id !== id))}
+                onUpdate={updated => setPosts(prev => prev.map(p => p.id === updated.id ? updated : p))}
               />
             ))}
           </div>
@@ -391,61 +394,43 @@ export function MsSocialFeedClient({
       {/* New Post modal */}
       {showNew && (
         <>
-          <div
-            className="fixed inset-0 bg-black/40 z-40 backdrop-blur-sm"
-            onClick={() => setShowNew(false)}
-          />
+          <div className="fixed inset-0 bg-black/40 z-40 backdrop-blur-sm" onClick={() => setShowNew(false)} />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg border border-slate-200">
-              {/* Modal header */}
+            <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl border border-slate-200">
               <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
                 <div>
                   <p className="text-[15px] font-semibold text-slate-900">New Post</p>
-                  <p className="text-[12px] text-slate-400 mt-0.5">Submit a post for manager approval</p>
+                  <p className="text-[12px] text-slate-400 mt-0.5">Submit a LinkedIn post for manager approval</p>
                 </div>
-                <button
-                  onClick={() => setShowNew(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition"
-                >
+                <button onClick={() => setShowNew(false)}
+                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition">
                   <X size={16} />
                 </button>
               </div>
-
-              {/* Modal body */}
               <div className="px-6 py-5 space-y-4 max-h-[65vh] overflow-y-auto">
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-                    Description *
+                    Post Content *
                   </label>
-                  <textarea
-                    className={`${inputCls} resize-none`}
-                    rows={5}
+                  <textarea className={`${inputCls} resize-none`} rows={7}
                     placeholder="Write your LinkedIn post content here…"
                     value={form.description}
-                    onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                  />
+                    onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
                       Publish Date *
                     </label>
-                    <input
-                      type="date"
-                      className={inputCls}
-                      value={form.publish_date}
-                      onChange={e => setForm(f => ({ ...f, publish_date: e.target.value }))}
-                    />
+                    <input type="date" className={inputCls} value={form.publish_date}
+                      onChange={e => setForm(f => ({ ...f, publish_date: e.target.value }))} />
                   </div>
                   <div>
                     <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
                       Platform
                     </label>
-                    <select
-                      className={inputCls}
-                      value={form.platform}
-                      onChange={e => setForm(f => ({ ...f, platform: e.target.value }))}
-                    >
+                    <select className={inputCls} value={form.platform}
+                      onChange={e => setForm(f => ({ ...f, platform: e.target.value }))}>
                       <option>LinkedIn</option>
                       <option>Twitter</option>
                       <option>Instagram</option>
@@ -454,35 +439,23 @@ export function MsSocialFeedClient({
                 </div>
                 <div>
                   <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-                    Image URL (optional)
+                    Image URL <span className="normal-case font-normal text-slate-400">(Google Drive share link or any image URL)</span>
                   </label>
-                  <input
-                    className={inputCls}
-                    placeholder="https://…"
+                  <input className={inputCls} placeholder="https://drive.google.com/file/d/…"
                     value={form.image_url}
-                    onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))}
-                  />
+                    onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} />
                 </div>
-                {formError && (
-                  <p className="text-xs text-red-600 bg-red-50 px-3 py-2 rounded-lg">{formError}</p>
-                )}
+                {formError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-4 py-2.5 rounded-xl">{formError}</p>}
               </div>
-
-              {/* Modal footer */}
               <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100">
-                <button
-                  onClick={() => setShowNew(false)}
-                  className="text-[13px] font-medium px-4 py-2 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 transition"
-                >
+                <button onClick={() => setShowNew(false)}
+                  className="text-sm font-medium px-4 py-2.5 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 transition">
                   Cancel
                 </button>
-                <button
-                  onClick={handleCreate}
-                  disabled={creating}
-                  className="flex items-center gap-1.5 text-[13px] font-semibold px-5 py-2.5 rounded-xl bg-pink-600 text-white hover:bg-pink-700 disabled:opacity-60 transition"
-                >
+                <button onClick={handleCreate} disabled={creating}
+                  className="flex items-center gap-1.5 text-sm font-semibold px-6 py-2.5 rounded-xl bg-pink-600 text-white hover:bg-pink-700 disabled:opacity-60 transition">
                   {creating && <Loader2 size={14} className="animate-spin" />}
-                  {creating ? 'Submitting…' : 'Submit Post'}
+                  {creating ? 'Submitting…' : 'Submit for Approval'}
                 </button>
               </div>
             </div>
