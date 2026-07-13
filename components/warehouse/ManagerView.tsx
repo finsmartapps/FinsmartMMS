@@ -164,30 +164,113 @@ function ShipmentCard({
   )
 }
 
-function DispatchedCard({ shipment, events }: { shipment: WmsShipment; events: WmsEvent[] }) {
+function DispatchedCard({ shipment, events, items }: { shipment: WmsShipment; events: WmsEvent[]; items: WmsItem[] }) {
+  const [expanded, setExpanded] = useState(false)
   const event = events.find(e => e.id === shipment.eventId)
   const statusLabel: Record<string, string> = { in_transit: 'In Transit', delivered: 'Delivered', at_event: 'At Event' }
   const statusColor: Record<string, string> = { in_transit: 'text-blue-600', delivered: 'text-emerald-600', at_event: 'text-amber-600' }
+  const statusBg: Record<string, string>    = { in_transit: 'bg-blue-500/10', delivered: 'bg-emerald-500/10', at_event: 'bg-amber-500/10' }
 
   return (
-    <div className="flex items-center gap-3 bg-white border border-slate-200 rounded-xl px-4 py-3">
-      <div className="w-8 h-8 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
-        <Truck size={14} className="text-emerald-600" />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-slate-700 truncate">{event?.name || 'Unknown'}</p>
-        <div className="flex items-center gap-2 mt-0.5">
-          <span className={`text-[10px] font-semibold ${statusColor[shipment.status] || 'text-slate-500'}`}>
-            {statusLabel[shipment.status] || shipment.status}
-          </span>
-          {shipment.trackingRef && (
-            <span className="text-[10px] text-slate-400 flex items-center gap-1">
-              <Hash size={9} />{shipment.trackingRef}
+    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+      <div
+        className="flex items-center gap-3 px-4 py-3 cursor-pointer"
+        onClick={() => setExpanded(v => !v)}
+      >
+        <div className="w-8 h-8 rounded-full bg-emerald-500/15 flex items-center justify-center flex-shrink-0">
+          <Truck size={14} className="text-emerald-600" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-slate-700 truncate">{event?.name || 'Unknown'}</p>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className={`text-[10px] font-semibold ${statusColor[shipment.status] || 'text-slate-500'}`}>
+              {statusLabel[shipment.status] || shipment.status}
             </span>
-          )}
+            {shipment.trackingRef && (
+              <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                <Hash size={9} />{shipment.trackingRef}
+              </span>
+            )}
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-[10px] text-slate-400">{shipment.dispatchDate}</span>
+          {expanded ? <ChevronUp size={14} className="text-slate-400" /> : <ChevronDown size={14} className="text-slate-400" />}
         </div>
       </div>
-      <span className="text-[10px] text-slate-400 flex-shrink-0">{shipment.dispatchDate}</span>
+
+      {expanded && (
+        <div className="border-t border-slate-100 px-4 py-4 space-y-4">
+          {/* Status + meta */}
+          <div className="flex flex-wrap gap-2">
+            <span className={`inline-flex items-center gap-1.5 text-[11px] font-semibold px-3 py-1.5 rounded-full ${statusBg[shipment.status] || 'bg-slate-100'} ${statusColor[shipment.status] || 'text-slate-600'}`}>
+              <Truck size={11} />
+              {statusLabel[shipment.status] || shipment.status}
+            </span>
+            {shipment.trackingRef && (
+              <span className="inline-flex items-center gap-1.5 text-[11px] font-mono font-semibold px-3 py-1.5 rounded-full bg-slate-100 text-slate-700">
+                <Hash size={11} />{shipment.trackingRef}
+              </span>
+            )}
+          </div>
+
+          {/* Event details */}
+          <div className="space-y-1.5">
+            {event?.location && (
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <span className="font-medium text-slate-400 w-16 flex-shrink-0">Destination</span>
+                <span className="text-slate-700">{event.location}</span>
+              </div>
+            )}
+            {shipment.dispatchDate && (
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <span className="font-medium text-slate-400 w-16 flex-shrink-0">Dispatched</span>
+                <span className="text-slate-700">{shipment.dispatchDate}</span>
+              </div>
+            )}
+            {shipment.deliveryDate && (
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <span className="font-medium text-slate-400 w-16 flex-shrink-0">Delivered</span>
+                <span className="text-slate-700">{shipment.deliveryDate}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Items */}
+          {shipment.items.length > 0 && (
+            <div className="space-y-2">
+              <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Items Shipped</p>
+              {shipment.items.map((line, i) => {
+                const item = items.find(it => it.id === line.itemId)
+                return (
+                  <div key={i} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50">
+                    <div className="w-5 h-5 rounded-full bg-emerald-600 flex items-center justify-center flex-shrink-0">
+                      <CheckCircle2 size={12} className="text-white" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[10px] font-mono font-bold text-blue-600">{item?.label || '?'}</span>
+                        <span className="text-xs text-slate-700 font-medium truncate">{item?.name || 'Unknown'}</span>
+                      </div>
+                      {item?.location && (
+                        <p className="text-[10px] text-slate-400 mt-0.5">Location: {item.location}</p>
+                      )}
+                    </div>
+                    <span className="text-sm font-bold text-slate-900 flex-shrink-0">× {line.quantity}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {shipment.notes && (
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+              <AlertCircle size={13} className="text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-xs text-amber-800">{shipment.notes}</p>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }
@@ -292,7 +375,7 @@ export default function ManagerView() {
           <div className="space-y-2">
             <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Recently Dispatched</p>
             {dispatchedShipments.map(s => (
-              <DispatchedCard key={s.id} shipment={s} events={events} />
+              <DispatchedCard key={s.id} shipment={s} events={events} items={items} />
             ))}
           </div>
         )}
