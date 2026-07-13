@@ -1,23 +1,19 @@
-'use client'
-import { Loader2 } from 'lucide-react'
-import { useWarehouseStore } from '@/components/warehouse/useWarehouseStore'
-import Dashboard from '@/components/warehouse/Dashboard'
+import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import WarehouseDashboardPage from '@/components/warehouse/WarehouseDashboardPage'
 
-export default function WarehousePage() {
-  const { data, loading, error } = useWarehouseStore()
+export default async function WarehousePage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
 
-  if (loading) return (
-    <div className="flex items-center justify-center h-64">
-      <Loader2 size={20} className="animate-spin text-slate-400" />
-    </div>
-  )
-  if (error) return (
-    <div className="p-6 text-sm text-rose-500">Failed to load warehouse data: {error}</div>
-  )
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
 
-  return (
-    <div className="p-6">
-      <Dashboard data={data} />
-    </div>
-  )
+  if (profile?.role === 'warehouse_user') redirect('/warehouse/queue')
+
+  return <WarehouseDashboardPage />
 }

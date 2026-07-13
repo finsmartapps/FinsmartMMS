@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Plus, Loader2, Pencil, Trash2, Shield, ShieldCheck, ShieldAlert, BadgeDollarSign, Star } from 'lucide-react'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type Role = 'admin' | 'manager' | 'telecaller' | 'finance_manager' | 'finsmart_user'
+type Role = 'admin' | 'manager' | 'telecaller' | 'finance_manager' | 'warehouse_user'
 
 interface UserRow {
   id: string; name: string; email: string; role: Role | null; is_active: boolean
@@ -37,7 +37,7 @@ const ROLES: { value: Role; label: string; icon: React.ElementType; badge: strin
   { value: 'manager',         label: 'Manager',         icon: ShieldCheck,    badge: 'bg-blue-50 text-blue-700 ring-blue-200'       },
   { value: 'telecaller',      label: 'Telecaller',      icon: Shield,         badge: 'bg-green-50 text-green-700 ring-green-200'    },
   { value: 'finance_manager', label: 'Finance Manager', icon: BadgeDollarSign, badge: 'bg-amber-50 text-amber-700 ring-amber-200'  },
-  { value: 'finsmart_user',   label: 'Finsmart User',   icon: Star,           badge: 'bg-sky-50 text-sky-700 ring-sky-200'         },
+  { value: 'warehouse_user',   label: 'Warehouse User',   icon: Star,           badge: 'bg-sky-50 text-sky-700 ring-sky-200'         },
 ]
 
 const BLANK_FORM = {

@@ -27,7 +27,7 @@ interface NavGroup {
 
 interface Props {
   userName: string
-  salesRole: 'admin' | 'manager' | 'telecaller' | 'finance_manager' | 'finsmart_user' | null
+  salesRole: 'admin' | 'manager' | 'telecaller' | 'finance_manager' | 'warehouse_user' | null
   hasSales: boolean
   hasMarketing: boolean
   hasExpenses: boolean
@@ -308,12 +308,12 @@ const ROLE_LABELS: Record<string, string> = {
   manager: 'Manager',
   telecaller: 'Telecaller',
   finance_manager: 'Finance Manager',
-  finsmart_user: 'Finsmart User',
+  warehouse_user: 'Warehouse User',
 }
 
 interface FooterProps {
   userName: string
-  salesRole: 'admin' | 'manager' | 'telecaller' | 'finance_manager' | 'finsmart_user' | null
+  salesRole: 'admin' | 'manager' | 'telecaller' | 'finance_manager' | 'warehouse_user' | null
   hasMarketing: boolean
   loggingOut: boolean
   onLogout: () => void

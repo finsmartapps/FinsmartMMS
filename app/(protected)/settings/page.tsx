@@ -5,12 +5,12 @@ import { useRouter } from 'next/navigation'
 import { Plus, Loader2, Pencil, Trash2, ShieldCheck, Shield, Star } from 'lucide-react'
 
 // ── Types ─────────────────────────────────────────────────────────
-type Role = 'manager' | 'telecaller' | 'finsmart_user'
+type Role = 'manager' | 'telecaller' | 'warehouse_user'
 
 const ROLES: { value: Role; label: string; icon: React.ElementType }[] = [
   { value: 'manager',       label: 'Manager',       icon: ShieldCheck },
   { value: 'telecaller',    label: 'Telecaller',    icon: Shield      },
-  { value: 'finsmart_user', label: 'Finsmart User', icon: Star        },
+  { value: 'warehouse_user', label: 'Warehouse User', icon: Star        },
 ]
 
 interface UserRow {
@@ -299,7 +299,7 @@ export default function SettingsPage() {
                     {u.role ? (() => {
                       const r = ROLES.find(x => x.value === u.role)
                       const Icon = r?.icon ?? ShieldCheck
-                      const cls = u.role === 'manager' ? 'bg-blue-50 text-blue-700' : u.role === 'finsmart_user' ? 'bg-sky-50 text-sky-700' : 'bg-green-50 text-green-700'
+                      const cls = u.role === 'manager' ? 'bg-blue-50 text-blue-700' : u.role === 'warehouse_user' ? 'bg-sky-50 text-sky-700' : 'bg-green-50 text-green-700'
                       return <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold ${cls}`}><Icon size={10} />{r?.label ?? u.role}</span>
                     })() : <span className="text-[11px] text-[#AEAEB2]">—</span>}
                   </td>

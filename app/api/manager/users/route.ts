@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Password must be at least 6 characters.' }, { status: 400 })
   if (!has_sales && !has_marketing && !has_expenses && !has_warehouse && !has_advocacy)
     return NextResponse.json({ error: 'Select at least one module.' }, { status: 400 })
-  if (!['manager', 'telecaller', 'finsmart_user'].includes(role))
+  if (!['manager', 'telecaller', 'warehouse_user'].includes(role))
     return NextResponse.json({ error: 'Invalid role.' }, { status: 400 })
 
   const { data: authData, error: authError } = await authAdmin.auth.admin.createUser({
@@ -81,7 +81,7 @@ export async function PATCH(req: NextRequest) {
   if ('is_active' in fields) updates.is_active = Boolean(fields.is_active)
 
   if ('role' in fields) {
-    if (fields.role !== null && !['manager', 'telecaller', 'finsmart_user'].includes(fields.role))
+    if (fields.role !== null && !['manager', 'telecaller', 'warehouse_user'].includes(fields.role))
       return NextResponse.json({ error: 'Invalid role.' }, { status: 400 })
     updates.role = fields.role ?? null
   }

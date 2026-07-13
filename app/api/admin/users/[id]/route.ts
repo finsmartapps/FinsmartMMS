@@ -29,7 +29,7 @@ export async function PATCH(
   const body = await req.json()
   const updates: Record<string, unknown> = {}
 
-  const VALID_ROLES = ['admin', 'manager', 'telecaller', 'finance_manager', 'finsmart_user']
+  const VALID_ROLES = ['admin', 'manager', 'telecaller', 'finance_manager', 'warehouse_user']
 
   if ('role' in body) {
     if (!VALID_ROLES.includes(body.role)) {

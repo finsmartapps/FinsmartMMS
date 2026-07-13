@@ -16,6 +16,11 @@ export default async function ProtectedLayout({ children }: { children: React.Re
 
   if (!profile || !profile.is_active) redirect('/login')
 
+  // Warehouse-only users (warehouse_user) get a clean full-screen view without the sidebar
+  if (profile.role === 'warehouse_user') {
+    return <div className="min-h-screen bg-slate-50">{children}</div>
+  }
+
   // Fetch sales module permissions only if user has sales access
   let allowedSalesModules: string[] = []
   if (profile.has_sales && profile.role) {
