@@ -230,7 +230,8 @@ interface NavContentProps {
 
 function getMsSocialGroups(isManagerOrAdmin: boolean): NavGroup[] {
   const links: NavLink[] = [
-    { href: '/ms-social', label: 'My Posts', icon: Share2 },
+    { href: '/ms-social',       label: 'My Posts', icon: Share2     },
+    { href: '/ms-social/stats', label: 'My Stats', icon: BarChart2  },
   ]
   if (isManagerOrAdmin) {
     links.push({ href: '/ms-social/review', label: 'Review Posts', icon: LayoutList })
