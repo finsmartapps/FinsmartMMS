@@ -68,7 +68,7 @@ export default function LoginPage() {
     }
 
     if (profile.has_sales) {
-      router.push(profile.role === 'manager' ? '/sales/manager' : '/sales/telecaller')
+      router.push(profile.role === 'manager' || profile.role === 'admin' ? '/sales/manager' : '/sales/telecaller')
     } else if (profile.has_marketing) {
       router.push('/marketing')
     } else if (profile.has_expenses) {
