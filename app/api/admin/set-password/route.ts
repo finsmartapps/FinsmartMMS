@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createClient, createAuthAdminClient } from '@/lib/supabase/server'
+import { createClient, createAdminClient, createAuthAdminClient } from '@/lib/supabase/server'
 
 export async function POST(req: Request) {
   // Verify caller is authenticated
@@ -14,14 +14,21 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Password must be at least 6 characters.' }, { status: 400 })
   }
 
-  const admin = createAuthAdminClient()
-  const { data: { users }, error: listError } = await admin.auth.admin.listUsers({ perPage: 1000 })
-  if (listError) return NextResponse.json({ error: listError.message }, { status: 500 })
+  // Look up the target user's ID from the profiles table
+  const db = await createAdminClient()
+  const { data: profile, error: profileError } = await db
+    .from('profiles')
+    .select('id')
+    .eq('email', email.trim().toLowerCase())
+    .single()
 
-  const target = users.find(u => u.email === email)
-  if (!target) return NextResponse.json({ error: 'User not found.' }, { status: 404 })
+  if (profileError || !profile) {
+    return NextResponse.json({ error: 'User not found in profiles.' }, { status: 404 })
+  }
 
-  const { error: updateError } = await admin.auth.admin.updateUserById(target.id, { password })
+  // Update the auth user's password using the service role client
+  const authAdmin = createAuthAdminClient()
+  const { error: updateError } = await authAdmin.auth.admin.updateUserById(profile.id, { password })
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
 
   return NextResponse.json({ success: true })
