@@ -38,6 +38,9 @@ create table public.profiles (
   has_sales     boolean     not null default false,
   has_marketing boolean     not null default false,
   has_expenses  boolean     not null default false,
+  has_warehouse boolean     not null default false,
+  has_advocacy  boolean     not null default false,
+  has_ms_social boolean     not null default false,
   is_active     boolean     not null default true,
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
@@ -564,6 +567,34 @@ create policy "travel_receipts_update" on storage.objects for update using (buck
 create policy "travel_receipts_delete" on storage.objects for delete using (bucket_id = 'travel-receipts');
 
 -- ============================================================
+-- MS SOCIAL MODULE
+-- ============================================================
+
+create table public.ms_social_posts (
+  id             uuid        primary key default gen_random_uuid(),
+  description    text        not null,
+  image_url      text,
+  publish_date   date        not null,
+  platform       text        not null default 'LinkedIn',
+  status         text        not null default 'pending'
+                             check (status in ('pending', 'approved', 'rejected')),
+  reviewer_notes text,
+  created_by     uuid        not null references public.profiles(id) on delete cascade,
+  reviewed_by    uuid        references public.profiles(id),
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now(),
+  reviewed_at    timestamptz
+);
+
+create trigger trg_ms_social_posts_updated_at
+  before update on public.ms_social_posts
+  for each row execute function public.handle_updated_at();
+
+alter table public.ms_social_posts enable row level security;
+create policy "authenticated manage ms_social_posts" on public.ms_social_posts
+  for all using (auth.uid() is not null);
+
+-- ============================================================
 -- SEED DATA
 -- ============================================================
 
@@ -636,3 +667,4 @@ insert into public.plan_events (name, quarter, sql_target_min, sql_target_max, m
   ('NJCPA',                      'Q3',    10, 15, 18, 'CPA Firms',  'Events Lead', 'Smaller but targeted event',      3),
   ('Xerocon',                    'Q3',    15, 20, 25, 'Small Firms','Events Lead', 'SMB / app ecosystem fit',         4),
   ('Intuit Connect / Tax / TR',  'Q3–Q4', 40, 50, 60, 'Mixed',      'Events Lead', 'Tax and ecosystem conferences',   5);
+

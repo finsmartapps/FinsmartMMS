@@ -22,7 +22,7 @@ export async function GET() {
 
   const { data: users, error } = await db
     .from('profiles')
-    .select('id, name, email, role, is_active, has_sales, has_marketing, has_expenses, has_warehouse, has_advocacy, created_at')
+    .select('id, name, email, role, is_active, has_sales, has_marketing, has_expenses, has_warehouse, has_advocacy, has_ms_social, created_at')
     .order('name')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   const { user, db, authAdmin } = await requireAdmin()
   if (!user || !db || !authAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { name, email, password, role, has_sales, has_marketing, has_expenses, has_warehouse, has_advocacy } = await req.json()
+  const { name, email, password, role, has_sales, has_marketing, has_expenses, has_warehouse, has_advocacy, has_ms_social } = await req.json()
 
   if (!name?.trim() || !email?.trim() || !password?.trim()) {
     return NextResponse.json({ error: 'Name, email and password are required.' }, { status: 400 })
@@ -66,6 +66,7 @@ export async function POST(req: NextRequest) {
       has_expenses: Boolean(has_expenses),
       has_warehouse: Boolean(has_warehouse),
       has_advocacy: Boolean(has_advocacy),
+      has_ms_social: Boolean(has_ms_social),
     })
 
   if (profileError) {
