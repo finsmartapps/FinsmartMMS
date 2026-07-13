@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Loader2, Pencil, Trash2, Shield, ShieldCheck, ShieldAlert, BadgeDollarSign, Star } from 'lucide-react'
+import { Plus, Loader2, Pencil, Trash2, Shield, ShieldCheck, ShieldAlert, BadgeDollarSign, Star, Info, AlertTriangle } from 'lucide-react'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type Role = 'admin' | 'manager' | 'telecaller' | 'finance_manager' | 'warehouse_user' | 'employee'
@@ -84,6 +84,70 @@ function ModuleCheckbox({ label, dot, checked, onChange }: { label: string; dot:
       <span className={`w-2 h-2 rounded-full ${dot}`} />
       <span className="text-[13px] font-medium text-[#1D1D1F]">{label}</span>
     </label>
+  )
+}
+
+type ModuleState = { has_sales: boolean; has_marketing: boolean; has_expenses: boolean; has_warehouse: boolean; has_advocacy: boolean }
+
+function getHints(role: Role, m: ModuleState): { type: 'info' | 'warning'; text: string }[] {
+  const hints: { type: 'info' | 'warning'; text: string }[] = []
+  const noModules = !m.has_sales && !m.has_marketing && !m.has_expenses && !m.has_warehouse && !m.has_advocacy
+
+  if (role === 'warehouse_user') {
+    hints.push({ type: 'info', text: 'Warehouse Users get a simplified shipment queue view with no sidebar — designed for external partners like GTL Delivers.' })
+    if (!m.has_warehouse)
+      hints.push({ type: 'warning', text: 'Enable the Warehouse module so this user can log in.' })
+    if (m.has_sales || m.has_marketing || m.has_expenses || m.has_advocacy)
+      hints.push({ type: 'warning', text: 'Modules other than Warehouse won\'t be visible to this user — only the shipment queue is accessible for this role.' })
+  }
+
+  if (role === 'employee') {
+    if (noModules)
+      hints.push({ type: 'warning', text: 'No modules selected — this user will have no landing page after login.' })
+    if (m.has_sales)
+      hints.push({ type: 'info', text: 'Employees with Sales access land on the telecaller view, not the manager dashboard.' })
+    if (m.has_warehouse)
+      hints.push({ type: 'warning', text: 'Employees with Warehouse access see the full admin UI (inventory, events, shipments). For external partners who only need a shipment queue, use Warehouse User role instead.' })
+  }
+
+  if (role === 'telecaller') {
+    if (!m.has_sales)
+      hints.push({ type: 'warning', text: 'Telecaller without Sales module — this user will have no landing page after login.' })
+  }
+
+  if (role === 'finance_manager') {
+    if (!m.has_expenses)
+      hints.push({ type: 'info', text: 'Finance Manager role — consider enabling the Expenses module.' })
+  }
+
+  if (role === 'manager' || role === 'admin') {
+    if (m.has_sales)
+      hints.push({ type: 'info', text: 'Manager / Admin with Sales access lands on the manager dashboard with full team controls.' })
+    if (noModules)
+      hints.push({ type: 'warning', text: 'No modules selected — this user will have no landing page after login.' })
+  }
+
+  return hints
+}
+
+function FormHints({ role, modules }: { role: Role; modules: ModuleState }) {
+  const hints = getHints(role, modules)
+  if (hints.length === 0) return null
+  return (
+    <div className="space-y-2">
+      {hints.map((h, i) => (
+        <div key={i} className={`flex items-start gap-2.5 px-3 py-2.5 rounded-xl text-[12px] ${
+          h.type === 'warning'
+            ? 'bg-amber-50 border border-amber-200 text-amber-800'
+            : 'bg-blue-50 border border-blue-100 text-blue-800'
+        }`}>
+          {h.type === 'warning'
+            ? <AlertTriangle size={13} className="text-amber-500 flex-shrink-0 mt-0.5" />
+            : <Info size={13} className="text-blue-500 flex-shrink-0 mt-0.5" />}
+          {h.text}
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -394,6 +458,7 @@ export default function AdminUsersPage() {
                     ))}
                   </div>
                 </div>
+                <FormHints role={form.role} modules={form} />
                 {formError && <p className="text-[12px] text-red-600 bg-red-50 px-3 py-2 rounded-lg">{formError}</p>}
               </div>
               <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#F2F2F7]">
@@ -450,6 +515,7 @@ export default function AdminUsersPage() {
                     ))}
                   </div>
                 </div>
+                <FormHints role={editForm.role} modules={editForm} />
                 {editError && <p className="text-[12px] text-red-600 bg-red-50 px-3 py-2 rounded-lg">{editError}</p>}
               </div>
               <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-[#F2F2F7]">
