@@ -133,17 +133,17 @@ export function MsSocialApprovalClient({
     if (ok) setDone('rejected')
   }
 
-  async function handleEdit() {
+  async function handleEditAndApprove() {
     if (!editForm.description.trim()) { setError('Description is required'); return }
     if (!editForm.publish_date) { setError('Publish date is required'); return }
     const ok = await callApi({
-      action: 'edit',
+      action: 'edit-and-approve',
       description: editForm.description,
       image_url: editForm.image_url,
       publish_date: editForm.publish_date,
       platform: editForm.platform,
     })
-    if (ok) { setDone('saved'); setPanel('idle') }
+    if (ok) { setDone('approved'); setPanel('idle') }
   }
 
   return (
@@ -347,10 +347,10 @@ export function MsSocialApprovalClient({
               </div>
               {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-4 py-2.5 rounded-xl">{error}</p>}
               <div className="flex items-center gap-3">
-                <button onClick={handleEdit} disabled={submitting}
-                  className="flex items-center gap-2 text-sm font-semibold px-6 py-2.5 rounded-xl bg-pink-600 text-white hover:bg-pink-700 disabled:opacity-60 transition shadow-sm">
+                <button onClick={handleEditAndApprove} disabled={submitting}
+                  className="flex items-center gap-2 text-sm font-semibold px-6 py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 transition shadow-sm">
                   {submitting && <Loader2 size={14} className="animate-spin" />}
-                  {submitting ? 'Saving…' : 'Save Changes'}
+                  {submitting ? 'Saving…' : '✓ Save & Approve'}
                 </button>
                 <button onClick={() => { setPanel('idle'); setError('') }}
                   className="text-sm font-medium px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 transition">

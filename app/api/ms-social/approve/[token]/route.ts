@@ -66,6 +66,18 @@ export async function PATCH(
       publish_date,
       platform: platform || 'LinkedIn',
     }
+  } else if (action === 'edit-and-approve') {
+    if (!description?.trim()) return NextResponse.json({ error: 'Description is required' }, { status: 400 })
+    if (!publish_date) return NextResponse.json({ error: 'Publish date is required' }, { status: 400 })
+    updateData = {
+      description,
+      image_url: image_url || null,
+      publish_date,
+      platform: platform || 'LinkedIn',
+      status: 'approved',
+      reviewer_notes: null,
+      reviewed_at: new Date().toISOString(),
+    }
   } else {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
   }
