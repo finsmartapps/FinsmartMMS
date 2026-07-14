@@ -20,9 +20,9 @@ export function deriveTargets(s: Settings): DerivedTargets {
     monthly_mqls: digital_mqls / 12,
     digital_meetings,
     monthly_meetings: digital_meetings / 12,
-    weekly_mqls: Math.ceil(digital_mqls / 12 / 4),
-    weekly_sqls: Math.ceil(annual_sqls / 12 / 4),
-    weekly_meetings: Math.ceil(digital_meetings / 12 / 4),
+    weekly_mqls: Math.ceil(digital_mqls / 52),
+    weekly_sqls: Math.ceil(annual_sqls / 52),
+    weekly_meetings: Math.ceil(digital_meetings / 52),
   }
 }
 
