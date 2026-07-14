@@ -88,6 +88,16 @@ export default function LeadsFunnelSection({ leads }: { leads: LeadLite[] }) {
     [mode, pickMonth, customFrom, customTo],
   )
 
+  const groupBy = useMemo((): 'weekly' | 'monthly' => {
+    if (mode === 'year') return 'monthly'
+    if (mode === 'custom') {
+      const from = new Date(range.from), to = new Date(range.to)
+      const days = (to.getTime() - from.getTime()) / 86400000
+      return days > 56 ? 'monthly' : 'weekly'
+    }
+    return 'weekly'
+  }, [mode, range])
+
   const filtered = useMemo(
     () => leads.filter(l => { const d = l.lead_date ?? ''; return d >= range.from && d <= range.to }),
     [leads, range],
@@ -152,6 +162,7 @@ export default function LeadsFunnelSection({ leads }: { leads: LeadLite[] }) {
       <WeeklyFunnelChart
         leads={filtered.map(l => ({ lead_date: l.lead_date, lead_status: l.lead_status }))}
         range={range}
+        groupBy={groupBy}
       />
       <EventFunnelChart
         leads={filtered.map(l => ({ data_source: l.data_source, lead_status: l.lead_status }))}

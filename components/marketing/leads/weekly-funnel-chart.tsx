@@ -25,11 +25,39 @@ function weekLabel(mon: Date) {
   return mon.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-export default function WeeklyFunnelChart({ leads, range }: { leads: LeadLite[]; range: Range }) {
+export default function WeeklyFunnelChart({ leads, range, groupBy = 'weekly' }: {
+  leads: LeadLite[]
+  range: Range
+  groupBy?: 'weekly' | 'monthly'
+}) {
   const { data, totalMql, totalSql, rangeLabel } = useMemo(() => {
+    const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
+    const rangeLabel = `${parseIso(range.from).toLocaleDateString('en-US', opts)} – ${parseIso(range.to).toLocaleDateString('en-US', { ...opts, year: 'numeric' })}`
+
+    if (groupBy === 'monthly') {
+      const buckets: { name: string; MQL: number; SQL: number }[] = []
+      const endDate = parseIso(range.to)
+      const cur = new Date(parseIso(range.from).getFullYear(), parseIso(range.from).getMonth(), 1)
+      while (cur <= endDate) {
+        const y = cur.getFullYear(), m = cur.getMonth()
+        const from = `${y}-${String(m + 1).padStart(2, '0')}-01`
+        const to   = `${y}-${String(m + 1).padStart(2, '0')}-${String(new Date(y, m + 1, 0).getDate()).padStart(2, '0')}`
+        const month = leads.filter(l => (l.lead_date ?? '') >= from && (l.lead_date ?? '') <= to)
+        buckets.push({
+          name: cur.toLocaleDateString('en-US', { month: 'short' }),
+          MQL:  month.filter(l => l.lead_status === 'MQL').length,
+          SQL:  month.filter(l => l.lead_status === 'SQL').length,
+        })
+        cur.setMonth(m + 1)
+      }
+      const totalMql = buckets.reduce((s, w) => s + w.MQL, 0)
+      const totalSql = buckets.reduce((s, w) => s + w.SQL, 0)
+      return { data: buckets, totalMql, totalSql, rangeLabel }
+    }
+
+    // weekly
     const start = mondayOf(parseIso(range.from))
     const end   = parseIso(range.to)
-
     const weeks: { name: string; MQL: number; SQL: number }[] = []
     const cur = new Date(start)
     while (cur <= end) {
@@ -47,17 +75,15 @@ export default function WeeklyFunnelChart({ leads, range }: { leads: LeadLite[];
 
     const totalMql = weeks.reduce((s, w) => s + w.MQL, 0)
     const totalSql = weeks.reduce((s, w) => s + w.SQL, 0)
-
-    const opts: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' }
-    const rangeLabel = `${parseIso(range.from).toLocaleDateString('en-US', opts)} – ${parseIso(range.to).toLocaleDateString('en-US', { ...opts, year: 'numeric' })}`
-
     return { data: weeks, totalMql, totalSql, rangeLabel }
-  }, [leads, range])
+  }, [leads, range, groupBy])
+
+  const chartTitle = groupBy === 'monthly' ? 'Monthly MQL + SQL' : 'Weekly MQL + SQL'
 
   return (
     <Panel
       icon={TrendingUp}
-      title="Weekly MQL + SQL"
+      title={chartTitle}
       accent="indigo"
       caption={`${rangeLabel} · ${totalMql} MQL · ${totalSql} SQL · ${totalMql + totalSql} total`}
     >
