@@ -19,17 +19,18 @@ const OPTIONS: { mode: FilterMode; label: string }[] = [
 ]
 
 interface LeadLite {
-  lead_date:        string | null
-  lead_status:      string | null
-  lead_source:      string | null
-  data_source:      string | null
-  lead_stage:       string | null
-  customer_type:    string | null
-  mrr_value:        number | null
-  one_time_revenue: number | null
-  name:             string | null
-  company_name:     string | null
-  assigned_to:      string | null
+  lead_date:           string | null
+  lead_status:         string | null
+  lead_source:         string | null
+  data_source:         string | null
+  lead_stage:          string | null
+  customer_type:       string | null
+  mrr_value:           number | null
+  one_time_revenue:    number | null
+  name:                string | null
+  company_name:        string | null
+  assigned_to:         string | null
+  successful_meetings: boolean | null
 }
 
 function isoDate(d: Date) {
@@ -172,16 +173,17 @@ export default function LeadsFunnelSection({ leads }: { leads: LeadLite[] }) {
       />
       <SourceFunnelChart
         leads={filtered.map(l => ({
-          lead_source:      l.lead_source,
-          lead_status:      l.lead_status,
-          lead_stage:       l.lead_stage,
-          customer_type:    l.customer_type,
-          mrr_value:        l.mrr_value,
-          one_time_revenue: l.one_time_revenue,
-          name:             l.name,
-          company_name:     l.company_name,
-          assigned_to:      l.assigned_to,
-          lead_date:        l.lead_date,
+          lead_source:          l.lead_source,
+          lead_status:          l.lead_status,
+          lead_stage:           l.lead_stage,
+          customer_type:        l.customer_type,
+          mrr_value:            l.mrr_value,
+          one_time_revenue:     l.one_time_revenue,
+          name:                 l.name,
+          company_name:         l.company_name,
+          assigned_to:          l.assigned_to,
+          lead_date:            l.lead_date,
+          successful_meetings:  l.successful_meetings,
         }))}
       />
     </div>

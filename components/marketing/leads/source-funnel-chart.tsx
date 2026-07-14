@@ -6,16 +6,17 @@ import { GitMerge, X, Briefcase, User } from 'lucide-react'
 import { classifyLeadSource, CATEGORY_STYLES, formatUSD, annualContractValue } from '@/lib/leads'
 
 interface LeadLite {
-  lead_source:      string | null
-  lead_status:      string | null
-  lead_stage:       string | null
-  customer_type:    string | null
-  mrr_value:        number | null
-  one_time_revenue: number | null
-  name:             string | null
-  company_name:     string | null
-  assigned_to:      string | null
-  lead_date?:       string | null
+  lead_source:         string | null
+  lead_status:         string | null
+  lead_stage:          string | null
+  customer_type:       string | null
+  mrr_value:           number | null
+  one_time_revenue:    number | null
+  name:                string | null
+  company_name:        string | null
+  assigned_to:         string | null
+  lead_date?:          string | null
+  successful_meetings?: boolean | null
 }
 
 function isClosed(l: LeadLite) {
@@ -33,13 +34,14 @@ export default function SourceFunnelChart({ leads }: { leads: LeadLite[] }) {
   const [drill, setDrill] = useState<DrillDown | null>(null)
 
   const rows = useMemo(() => {
-    const map: Record<string, { total: number; mql: number; sql: number; nbec: number; nbnc: number; other: number }> = {}
+    const map: Record<string, { total: number; mql: number; sql: number; nbec: number; nbnc: number; other: number; meetings: number }> = {}
     for (const l of leads) {
       const src = l.lead_source?.trim() || 'Unspecified'
-      if (!map[src]) map[src] = { total: 0, mql: 0, sql: 0, nbec: 0, nbnc: 0, other: 0 }
+      if (!map[src]) map[src] = { total: 0, mql: 0, sql: 0, nbec: 0, nbnc: 0, other: 0, meetings: 0 }
       map[src].total++
       if (l.lead_status === 'MQL') map[src].mql++
       if (l.lead_status === 'SQL') map[src].sql++
+      if (l.successful_meetings) map[src].meetings++
       if (isClosed(l)) {
         const ct = (l.customer_type ?? '').trim().toUpperCase()
         if (ct === 'NBEC') map[src].nbec++
@@ -53,8 +55,8 @@ export default function SourceFunnelChart({ leads }: { leads: LeadLite[] }) {
   }, [leads])
 
   const totals = rows.reduce(
-    (acc, r) => ({ total: acc.total + r.total, mql: acc.mql + r.mql, sql: acc.sql + r.sql, customers: acc.customers + r.customers, nbec: acc.nbec + r.nbec, nbnc: acc.nbnc + r.nbnc }),
-    { total: 0, mql: 0, sql: 0, customers: 0, nbec: 0, nbnc: 0 },
+    (acc, r) => ({ total: acc.total + r.total, mql: acc.mql + r.mql, sql: acc.sql + r.sql, customers: acc.customers + r.customers, nbec: acc.nbec + r.nbec, nbnc: acc.nbnc + r.nbnc, meetings: acc.meetings + r.meetings }),
+    { total: 0, mql: 0, sql: 0, customers: 0, nbec: 0, nbnc: 0, meetings: 0 },
   )
 
   // Modal leads
@@ -99,6 +101,7 @@ export default function SourceFunnelChart({ leads }: { leads: LeadLite[] }) {
                 <th className="px-4 py-2.5 text-right font-bold text-emerald-500 uppercase tracking-wider">SQL</th>
                 <th className="px-4 py-2.5 text-right font-bold text-amber-500 uppercase tracking-wider">NBEC</th>
                 <th className="px-4 py-2.5 text-right font-bold text-fuchsia-500 uppercase tracking-wider">NBNC</th>
+                <th className="px-4 py-2.5 text-right font-bold text-sky-500 uppercase tracking-wider">Meetings</th>
                 <th className="px-4 py-2.5 text-right font-bold text-fuchsia-600 uppercase tracking-wider">Closed</th>
                 <th className="px-4 py-2.5 text-right font-bold text-fuchsia-600 uppercase tracking-wider pr-5">Conv %</th>
               </tr>
@@ -147,6 +150,12 @@ export default function SourceFunnelChart({ leads }: { leads: LeadLite[] }) {
                         ? <span onClick={() => setDrill({ source: r.source, filter: 'NBNC' })} className={`font-bold text-fuchsia-700 bg-fuchsia-50 px-1.5 py-0.5 rounded ${clickable}`}>{r.nbnc}</span>
                         : <span className="text-slate-300">—</span>}
                     </td>
+                    {/* Meetings */}
+                    <td className="px-4 py-3 text-right tabular-nums">
+                      {r.meetings > 0
+                        ? <span className="font-bold text-sky-700">{r.meetings}</span>
+                        : <span className="text-slate-300">—</span>}
+                    </td>
                     {/* Closed total — clickable */}
                     <td className="px-4 py-3 text-right tabular-nums">
                       {r.customers > 0
@@ -173,6 +182,7 @@ export default function SourceFunnelChart({ leads }: { leads: LeadLite[] }) {
                 <td className="px-4 py-2.5 text-right font-bold text-emerald-700 tabular-nums">{totals.sql}</td>
                 <td className="px-4 py-2.5 text-right font-bold text-amber-600 tabular-nums">{totals.nbec}</td>
                 <td className="px-4 py-2.5 text-right font-bold text-fuchsia-700 tabular-nums">{totals.nbnc}</td>
+                <td className="px-4 py-2.5 text-right font-bold text-sky-700 tabular-nums">{totals.meetings}</td>
                 <td className="px-4 py-2.5 text-right font-bold text-fuchsia-700 tabular-nums">{totals.customers}</td>
                 <td className="px-4 py-2.5 pr-5 text-right font-bold text-fuchsia-700 tabular-nums">
                   {totals.total > 0 ? ((totals.customers / totals.total) * 100).toFixed(1) : '0.0'}%
