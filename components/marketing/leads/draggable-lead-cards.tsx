@@ -11,10 +11,59 @@ import {
   rectSortingStrategy, useSortable,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { GripVertical, Inbox, Users, ArrowUpRight, CalendarCheck, Armchair, DollarSign, X } from 'lucide-react'
+import { GripVertical, Inbox, Users, ArrowUpRight, CalendarCheck, Armchair, DollarSign, X, ChevronDown } from 'lucide-react'
 import SqlCard from './sql-card'
 import CustomerCard from './customer-card'
+import { hoursToSeats } from '@/lib/leads'
 import type { Lead } from '@/types'
+
+// ── Date filter helpers ────────────────────────────────────────────────────────
+
+type FilterKey = 'all' | 'this-month' | 'last-month' | 'last-quarter' | 'this-year' | 'custom'
+
+const FILTER_LABELS: Record<FilterKey, string> = {
+  'all': 'All Time',
+  'this-month': 'This Month',
+  'last-month': 'Last Month',
+  'last-quarter': 'Last Quarter',
+  'this-year': 'This Year',
+  'custom': 'Custom',
+}
+
+function getDateRange(key: FilterKey, customStart: string, customEnd: string): [string, string] | null {
+  if (key === 'all') return null
+  const today = new Date()
+  const y = today.getFullYear()
+  const mo = today.getMonth() // 0-indexed
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const iso = (d: Date) => d.toISOString().split('T')[0]
+
+  if (key === 'this-month') {
+    return [`${y}-${pad(mo + 1)}-01`, iso(today)]
+  }
+  if (key === 'last-month') {
+    const lm = mo === 0 ? 11 : mo - 1
+    const ly = mo === 0 ? y - 1 : y
+    const lastDay = new Date(ly, lm + 1, 0).getDate()
+    return [`${ly}-${pad(lm + 1)}-01`, `${ly}-${pad(lm + 1)}-${pad(lastDay)}`]
+  }
+  if (key === 'last-quarter') {
+    const q = Math.floor(mo / 3)           // current quarter 0-3
+    const pq = q === 0 ? 3 : q - 1        // previous quarter
+    const py = q === 0 ? y - 1 : y
+    const qStartMo = pq * 3 + 1           // 1-indexed month
+    const qEndMo   = pq * 3 + 3
+    const lastDay  = new Date(py, qEndMo, 0).getDate()
+    return [`${py}-${pad(qStartMo)}-01`, `${py}-${pad(qEndMo)}-${pad(lastDay)}`]
+  }
+  if (key === 'this-year') {
+    return [`${y}-01-01`, iso(today)]
+  }
+  if (key === 'custom' && customStart && customEnd) {
+    return [customStart, customEnd]
+  }
+  return null
+}
 
 const STORAGE_KEY = 'leads-card-order-v2'
 const DEFAULT_ORDER = ['total', 'mql', 'sql', 'meetings', 'customers', 'avg-seats', 'avg-revenue']
@@ -186,8 +235,34 @@ export default function DraggableLeadCards({
   const [activeId, setActiveId] = useState<string | null>(null)
   const [mounted, setMounted] = useState(false)
   const [meetingsOpen, setMeetingsOpen] = useState(false)
+  const [filterKey, setFilterKey] = useState<FilterKey>('all')
+  const [customStart, setCustomStart] = useState('')
+  const [customEnd, setCustomEnd] = useState('')
+  const [showCustom, setShowCustom] = useState(false)
 
-  const meetingLeads = leads.filter(l => l.successful_meetings)
+  // ── filtered leads + derived KPIs ─────────────────────────────────────────
+  const dateRange = getDateRange(filterKey, customStart, customEnd)
+  const displayLeads = dateRange
+    ? leads.filter(l => !!l.lead_date && l.lead_date >= dateRange[0] && l.lead_date <= dateRange[1])
+    : leads
+
+  const isClosedBiz = (l: Lead) =>
+    l.lead_stage === 'Closed Won' ||
+    (l.lead_status === 'SQL' && ((l.mrr_value ?? 0) > 0 || (l.one_time_revenue ?? 0) > 0))
+
+  const displayMQLCount       = displayLeads.filter(l => l.lead_status === 'MQL').length
+  const displaySQLLeads       = displayLeads.filter(l => l.lead_status === 'SQL')
+  const displayCustomers      = displayLeads.filter(isClosedBiz)
+  const displayOpportunity    = displayLeads.filter(l => l.lead_status === 'Opportunity').length
+  const displayMeetings       = displayLeads.filter(l => l.successful_meetings)
+  const displayTotalSeats     = displayCustomers.reduce((s, l) => s + hoursToSeats(l.closed_hours ?? 0), 0)
+  const displayTotalMRR       = displayCustomers.reduce((s, l) => s + (l.mrr_value ?? 0), 0)
+  const displayAvgSeats       = displayCustomers.length > 0 ? displayTotalSeats / displayCustomers.length : 0
+  const displayAvgRevenue     = displayTotalSeats > 0 ? displayTotalMRR / displayTotalSeats : 0
+
+  const periodLabel = FILTER_LABELS[filterKey] === 'All Time' ? 'all-time' : FILTER_LABELS[filterKey].toLowerCase()
+
+  const meetingLeads = displayMeetings
 
   useEffect(() => {
     setMounted(true)
@@ -226,17 +301,17 @@ export default function DraggableLeadCards({
   const cardMap: Record<string, React.ReactNode> = {
     total: (
       <RollupCardInner
-        icon={Inbox} label="Total Leads" value={leads.length} foot="all-time"
+        icon={Inbox} label="Total Leads" value={displayLeads.length} foot={periodLabel}
         gradient="from-slate-600 to-slate-800"
       />
     ),
     mql: (
       <RollupCardInner
-        icon={Users} label="MQLs" value={mqlCount} foot={mqlTargetLabel}
+        icon={Users} label="MQLs" value={displayMQLCount} foot={mqlTargetLabel}
         gradient="from-indigo-500 via-indigo-600 to-violet-700"
       />
     ),
-    sql: <SqlCard sqls={sqlLeads} targetLabel={sqlTargetLabel} />,
+    sql: <SqlCard sqls={displaySQLLeads} targetLabel={sqlTargetLabel} />,
     meetings: (
       <button
         onClick={() => setMeetingsOpen(true)}
@@ -244,25 +319,25 @@ export default function DraggableLeadCards({
         title="Click to view all successful meetings"
       >
         <RollupCardInner
-          icon={CalendarCheck} label="Successful Meetings" value={successfulMeetingsCount}
+          icon={CalendarCheck} label="Successful Meetings" value={displayMeetings.length}
           foot="click to view details"
           gradient="from-amber-500 via-orange-500 to-rose-500"
         />
       </button>
     ),
-    customers: <CustomerCard customers={customers} opportunityCount={opportunityCount} />,
+    customers: <CustomerCard customers={displayCustomers} opportunityCount={displayOpportunity} />,
     'avg-seats': (
       <RollupCardInner
         icon={Armchair} label="Avg. Seats / Customer"
-        value={avgSeatsPerCustomer > 0 ? Number(avgSeatsPerCustomer.toFixed(2)).toString() : '—'}
-        foot={`across ${customers.length} customer${customers.length === 1 ? '' : 's'}`}
+        value={displayAvgSeats > 0 ? Number(displayAvgSeats.toFixed(2)).toString() : '—'}
+        foot={`across ${displayCustomers.length} customer${displayCustomers.length === 1 ? '' : 's'}`}
         gradient="from-teal-500 via-cyan-500 to-sky-600"
       />
     ),
     'avg-revenue': (
       <RollupCardInner
         icon={DollarSign} label="Avg. Revenue / Seat"
-        value={avgRevenuePerSeat > 0 ? `$${Math.round(avgRevenuePerSeat).toLocaleString()}` : '—'}
+        value={displayAvgRevenue > 0 ? `$${Math.round(displayAvgRevenue).toLocaleString()}` : '—'}
         foot="MRR ÷ seats closed"
         gradient="from-emerald-500 via-green-500 to-teal-600"
       />
@@ -274,8 +349,50 @@ export default function DraggableLeadCards({
   // Avoid hydration mismatch — render static order on server, real order after mount
   const displayOrder = mounted ? order : DEFAULT_ORDER
 
+  function selectFilter(key: FilterKey) {
+    setFilterKey(key)
+    setShowCustom(key === 'custom')
+    if (key !== 'custom') { setCustomStart(''); setCustomEnd('') }
+  }
+
   return (
     <>
+    {/* ── Date filter bar ── */}
+    <div className="flex flex-wrap items-center gap-2 mb-4">
+      {(Object.keys(FILTER_LABELS) as FilterKey[]).map(key => (
+        <button
+          key={key}
+          onClick={() => selectFilter(key)}
+          className={`flex items-center gap-1 text-xs font-semibold px-3 py-1.5 rounded-full border transition ${
+            filterKey === key
+              ? 'bg-slate-800 text-white border-slate-800 shadow-sm'
+              : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-800'
+          }`}
+        >
+          {key === 'custom' && <ChevronDown size={11} />}
+          {FILTER_LABELS[key]}
+        </button>
+      ))}
+      {filterKey !== 'all' && (
+        <span className="text-[11px] text-slate-400 ml-1">
+          {dateRange ? `${dateRange[0]} → ${dateRange[1]}` : ''}
+        </span>
+      )}
+    </div>
+    {showCustom && (
+      <div className="flex items-center gap-3 mb-4 flex-wrap">
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">From</label>
+          <input type="date" value={customStart} onChange={e => setCustomStart(e.target.value)}
+            className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-slate-400 transition" />
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">To</label>
+          <input type="date" value={customEnd} onChange={e => setCustomEnd(e.target.value)}
+            className="text-sm border border-slate-200 rounded-lg px-3 py-1.5 focus:outline-none focus:border-slate-400 transition" />
+        </div>
+      </div>
+    )}
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}

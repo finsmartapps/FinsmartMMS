@@ -97,6 +97,15 @@ function parseAllRows(text: string): string[][] {
   return allRows
 }
 
+// Detects if the first column looks like a date — signals a missing Sr. column
+function detectColumnShift(text: string, hasHeader: boolean): boolean {
+  const allRows = parseAllRows(text)
+  const dataRows = hasHeader ? allRows.slice(1) : allRows
+  if (!dataRows.length) return false
+  const firstCell = (dataRows[0][0] ?? '').trim()
+  return /^\d{1,2}[-/]\d{1,2}[-/]\d{2,4}$/.test(firstCell) || /^\d{4}-\d{2}-\d{2}$/.test(firstCell)
+}
+
 function buildLeads(text: string, hasHeader: boolean): { rows: ParsedLead[]; skipped: SkippedRow[]; inBatchDup: number } {
   const today = new Date().toISOString().split('T')[0]
   const allRows = parseAllRows(text)
@@ -182,6 +191,7 @@ export default function ImportLeads({ existingEmails = [] }: { existingEmails?: 
 
   const emailSet = new Set(existingEmails.map(e => e.trim().toLowerCase()).filter(Boolean))
   const preview = text.trim() ? buildLeads(text, hasHeader) : { rows: [], skipped: [] as SkippedRow[], inBatchDup: 0 }
+  const columnShiftDetected = text.trim() ? detectColumnShift(text, hasHeader) : false
 
   // split preview rows into new vs already-existing (by email or email+date for CW) for the summary
   const emailKey = (r: ParsedLead) => ((r.email as string) || '').trim().toLowerCase()
@@ -402,6 +412,18 @@ export default function ImportLeads({ existingEmails = [] }: { existingEmails?: 
                         )}
                       </div>
                     ))}
+                  </div>
+                </div>
+              )}
+
+              {columnShiftDetected && (
+                <div className="rounded-xl ring-2 ring-red-300 bg-red-50 px-3 py-3 flex items-start gap-2.5">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-500" />
+                  <div className="text-xs text-red-800">
+                    <span className="font-bold block mb-0.5">Column shift detected — missing Sr. column?</span>
+                    Your first column looks like a date. The expected format starts with a <strong>Sr. number</strong>, then Date, Name, Email, Phone…
+                    If the Sr. column is missing, all fields will be shifted left by one and dates, names, and emails will be mapped incorrectly.
+                    Add a blank or numbered first column to fix this.
                   </div>
                 </div>
               )}
