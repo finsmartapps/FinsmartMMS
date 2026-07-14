@@ -28,7 +28,7 @@ const TYPE_COLOR: Record<string, string> = {
   'NBNC': 'bg-fuchsia-50 text-fuchsia-700 ring-fuchsia-200',
 }
 
-interface DrillDown { source: string; filter: 'MQL' | 'SQL' | 'NBEC' | 'NBNC' | 'ALL' }
+interface DrillDown { source: string; filter: 'MQL' | 'SQL' | 'NBEC' | 'NBNC' | 'ALL' | 'MEETINGS' }
 
 export default function SourceFunnelChart({ leads }: { leads: LeadLite[] }) {
   const [drill, setDrill] = useState<DrillDown | null>(null)
@@ -66,17 +66,19 @@ export default function SourceFunnelChart({ leads }: { leads: LeadLite[] }) {
       if ((l.lead_source?.trim() || 'Unspecified') !== drill.source) return false
       if (drill.filter === 'MQL') return l.lead_status === 'MQL'
       if (drill.filter === 'SQL') return l.lead_status === 'SQL'
+      if (drill.filter === 'MEETINGS') return !!l.successful_meetings
       if (!isClosed(l)) return false
       if (drill.filter === 'ALL') return true
       return (l.customer_type ?? '').trim().toUpperCase() === drill.filter
     })
   }, [leads, drill])
 
-  const isStatusDrill = drill?.filter === 'MQL' || drill?.filter === 'SQL'
+  const isStatusDrill = drill?.filter === 'MQL' || drill?.filter === 'SQL' || drill?.filter === 'MEETINGS'
   const modalTitle = drill
-    ? drill.filter === 'ALL' ? `${drill.source} — All Closed`
-    : drill.filter === 'MQL' ? `${drill.source} — MQL Leads`
-    : drill.filter === 'SQL' ? `${drill.source} — SQL Leads`
+    ? drill.filter === 'ALL'      ? `${drill.source} — All Closed`
+    : drill.filter === 'MQL'      ? `${drill.source} — MQL Leads`
+    : drill.filter === 'SQL'      ? `${drill.source} — SQL Leads`
+    : drill.filter === 'MEETINGS' ? `${drill.source} — Successful Meetings`
     : `${drill.source} — ${drill.filter}`
     : ''
 
@@ -150,10 +152,10 @@ export default function SourceFunnelChart({ leads }: { leads: LeadLite[] }) {
                         ? <span onClick={() => setDrill({ source: r.source, filter: 'NBNC' })} className={`font-bold text-fuchsia-700 bg-fuchsia-50 px-1.5 py-0.5 rounded ${clickable}`}>{r.nbnc}</span>
                         : <span className="text-slate-300">—</span>}
                     </td>
-                    {/* Meetings */}
+                    {/* Meetings — clickable */}
                     <td className="px-4 py-3 text-right tabular-nums">
                       {r.meetings > 0
-                        ? <span className="font-bold text-sky-700">{r.meetings}</span>
+                        ? <span onClick={() => setDrill({ source: r.source, filter: 'MEETINGS' })} className={`font-bold text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded ${clickable}`}>{r.meetings}</span>
                         : <span className="text-slate-300">—</span>}
                     </td>
                     {/* Closed total — clickable */}
