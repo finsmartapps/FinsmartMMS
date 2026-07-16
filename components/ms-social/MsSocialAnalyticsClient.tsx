@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { BarChart2, X, ExternalLink, Users, Calendar } from 'lucide-react'
+import { BarChart2, X, ExternalLink, Users, Calendar, ArrowUpRight } from 'lucide-react'
 
 type SocialPost = {
   id: string
@@ -65,12 +65,18 @@ function PostsModal({ title, posts, onClose }: { title: string; posts: SocialPos
                     <p className="text-[11px] text-slate-400 font-medium">{post.creator_name}</p>
                   )}
                   <p className="text-sm text-slate-700 leading-relaxed line-clamp-3">{post.description}</p>
-                  {post.image_url && (
-                    <a href={post.image_url} target="_blank" rel="noopener noreferrer"
-                      className="flex items-center gap-1.5 text-[12px] text-slate-400 hover:text-pink-600 transition">
-                      <ExternalLink size={11} /> View image
+                  <div className="flex items-center gap-3">
+                    <a href={`/ms-social/review?post=${post.id}`}
+                      className="flex items-center gap-1 text-[12px] font-semibold text-indigo-600 hover:text-indigo-800 transition">
+                      <ArrowUpRight size={12} /> Review
                     </a>
-                  )}
+                    {post.image_url && (
+                      <a href={post.image_url} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-1.5 text-[12px] text-slate-400 hover:text-pink-600 transition">
+                        <ExternalLink size={11} /> View image
+                      </a>
+                    )}
+                  </div>
                   {post.reviewer_notes && (
                     <div className={`text-[12px] rounded-lg px-3 py-2 ${
                       post.status === 'approved'

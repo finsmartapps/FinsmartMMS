@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef, Suspense } from 'react'
+import { useSearchParams } from 'next/navigation'
 import {
   Loader2, CheckCircle, XCircle, PenLine,
   ChevronDown, ChevronUp,
@@ -124,7 +125,12 @@ type CardAction =
   | { type: 'reject';  notes: string }
   | { type: 'edit'; description: string; image_url: string; publish_date: string; platform: string }
 
-function ReviewCard({ post, onUpdate }: { post: SocialPost; onUpdate: (updated: SocialPost) => void }) {
+function ReviewCard({ post, onUpdate, highlighted, cardRef }: {
+  post: SocialPost
+  onUpdate: (updated: SocialPost) => void
+  highlighted?: boolean
+  cardRef?: React.RefObject<HTMLDivElement>
+}) {
   const [action,     setAction]     = useState<CardAction>({ type: 'idle' })
   const [submitting, setSubmitting] = useState(false)
   const [error,      setError]      = useState('')
@@ -164,7 +170,9 @@ function ReviewCard({ post, onUpdate }: { post: SocialPost; onUpdate: (updated: 
   }
 
   return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div ref={cardRef} className={`bg-white rounded-2xl border shadow-sm overflow-hidden transition-all duration-500 ${
+      highlighted ? 'border-indigo-400 ring-2 ring-indigo-300/50' : 'border-slate-200'
+    }`}>
 
       {/* ── Header ── */}
       <div className="flex items-start gap-3 px-5 pt-4 pb-3">
@@ -349,9 +357,24 @@ function ReviewCard({ post, onUpdate }: { post: SocialPost; onUpdate: (updated: 
 
 // ── Main review view ──────────────────────────────────────────────────────────
 
-export function MsSocialReviewClient({ initialPosts }: { initialPosts: SocialPost[] }) {
+function ReviewClientInner({ initialPosts }: { initialPosts: SocialPost[] }) {
   const [posts, setPosts] = useState(initialPosts)
-  const [tab,   setTab]   = useState<'pending' | 'all'>('pending')
+  const searchParams      = useSearchParams()
+  const highlightId       = searchParams.get('post')
+
+  const highlightPost = highlightId ? posts.find(p => p.id === highlightId) : null
+  const defaultTab    = highlightPost && highlightPost.status !== 'pending' ? 'all' : 'pending'
+  const [tab, setTab] = useState<'pending' | 'all'>(defaultTab)
+
+  const highlightRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (highlightRef.current) {
+      setTimeout(() => {
+        highlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      }, 300)
+    }
+  }, [])
 
   function handleUpdate(updated: SocialPost) {
     setPosts(prev => prev.map(p => p.id === updated.id ? updated : p))
@@ -412,10 +435,24 @@ export function MsSocialReviewClient({ initialPosts }: { initialPosts: SocialPos
       ) : (
         <div className="space-y-4">
           {filtered.map(post => (
-            <ReviewCard key={post.id} post={post} onUpdate={handleUpdate} />
+            <ReviewCard
+              key={post.id}
+              post={post}
+              onUpdate={handleUpdate}
+              highlighted={post.id === highlightId}
+              cardRef={post.id === highlightId ? highlightRef : undefined}
+            />
           ))}
         </div>
       )}
     </div>
+  )
+}
+
+export function MsSocialReviewClient({ initialPosts }: { initialPosts: SocialPost[] }) {
+  return (
+    <Suspense fallback={null}>
+      <ReviewClientInner initialPosts={initialPosts} />
+    </Suspense>
   )
 }
