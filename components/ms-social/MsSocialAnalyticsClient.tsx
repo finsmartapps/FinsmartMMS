@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { BarChart2, X, ExternalLink, Users } from 'lucide-react'
+import { BarChart2, X, ExternalLink, Users, Calendar } from 'lucide-react'
 
 type SocialPost = {
   id: string
@@ -61,6 +61,9 @@ function PostsModal({ title, posts, onClose }: { title: string; posts: SocialPos
                       <span className="text-blue-600 font-semibold">Publish: {fmtPublishDate(post.publish_date)}</span>
                     </div>
                   </div>
+                  {post.creator_name && (
+                    <p className="text-[11px] text-slate-400 font-medium">{post.creator_name}</p>
+                  )}
                   <p className="text-sm text-slate-700 leading-relaxed line-clamp-3">{post.description}</p>
                   {post.image_url && (
                     <a href={post.image_url} target="_blank" rel="noopener noreferrer"
@@ -89,6 +92,7 @@ function PostsModal({ title, posts, onClose }: { title: string; posts: SocialPos
 
 export function MsSocialAnalyticsClient({ posts }: { posts: SocialPost[] }) {
   const [modal, setModal] = useState<{ title: string; posts: SocialPost[] } | null>(null)
+  const [view, setView] = useState<'member' | 'day'>('member')
 
   const userRows = useMemo(() => {
     const map = new Map<string, SocialPost[]>()
@@ -107,6 +111,24 @@ export function MsSocialAnalyticsClient({ posts }: { posts: SocialPost[] }) {
         lastSubmitted: userPosts.map(p => p.created_at).sort().at(-1) ?? '',
       }))
       .sort((a, b) => b.total - a.total)
+  }, [posts])
+
+  const dayRows = useMemo(() => {
+    const map = new Map<string, SocialPost[]>()
+    for (const p of posts) {
+      const day = p.created_at.split('T')[0]
+      if (!map.has(day)) map.set(day, [])
+      map.get(day)!.push(p)
+    }
+    return Array.from(map.entries())
+      .map(([day, dayPosts]) => ({
+        day,
+        total:    dayPosts.length,
+        approved: dayPosts.filter(p => p.status === 'approved'),
+        pending:  dayPosts.filter(p => p.status === 'pending'),
+        rejected: dayPosts.filter(p => p.status === 'rejected'),
+      }))
+      .sort((a, b) => b.day.localeCompare(a.day))
   }, [posts])
 
   const totals = {
@@ -170,14 +192,36 @@ export function MsSocialAnalyticsClient({ posts }: { posts: SocialPost[] }) {
         </div>
       </div>
 
-      {/* Table */}
-      {userRows.length === 0 ? (
+      {/* View toggle */}
+      <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl w-fit">
+        <button
+          onClick={() => setView('member')}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition ${
+            view === 'member' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Users size={13} />
+          By Member
+        </button>
+        <button
+          onClick={() => setView('day')}
+          className={`flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold transition ${
+            view === 'day' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          <Calendar size={13} />
+          By Day
+        </button>
+      </div>
+
+      {/* Tables */}
+      {posts.length === 0 ? (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm py-20 text-center">
           <BarChart2 size={28} className="text-slate-300 mx-auto mb-3" />
           <p className="font-semibold text-slate-500">No posts yet</p>
           <p className="text-sm text-slate-400 mt-1">Posts from team members will appear here</p>
         </div>
-      ) : (
+      ) : view === 'member' ? (
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[600px]">
@@ -224,6 +268,51 @@ export function MsSocialAnalyticsClient({ posts }: { posts: SocialPost[] }) {
                   <Num count={totals.pending}  color="text-amber-700"   title="All Pending"  filtered={posts.filter(p => p.status === 'pending')} />
                   <Num count={totals.rejected} color="text-red-700"     title="All Rejected" filtered={posts.filter(p => p.status === 'rejected')} />
                   <td />
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[540px]">
+              <thead className="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-500 w-8">Sr.</th>
+                  <th className="px-4 py-3 text-left text-[11px] font-bold uppercase tracking-wider text-slate-500">Date</th>
+                  <th className="px-4 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-slate-500">Total</th>
+                  <th className="px-4 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-emerald-600">Approved</th>
+                  <th className="px-4 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-amber-600">Pending</th>
+                  <th className="px-4 py-3 text-center text-[11px] font-bold uppercase tracking-wider text-red-600">Rejected</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {dayRows.map((r, i) => (
+                  <tr key={r.day} className="hover:bg-slate-50/60 transition">
+                    <td className="px-4 py-3.5 text-slate-400 text-[13px]">{i + 1}</td>
+                    <td className="px-4 py-3.5">
+                      <div className="flex items-center gap-2">
+                        <Calendar size={13} className="text-slate-400 shrink-0" />
+                        <span className="font-semibold text-slate-800">{fmtDate(r.day)}</span>
+                      </div>
+                    </td>
+                    <Num count={r.total}           color="text-slate-700"   title={`${fmtDate(r.day)} — All Posts`} filtered={[...r.approved, ...r.pending, ...r.rejected]} />
+                    <Num count={r.approved.length} color="text-emerald-600" title={`${fmtDate(r.day)} — Approved`}  filtered={r.approved} />
+                    <Num count={r.pending.length}  color="text-amber-600"   title={`${fmtDate(r.day)} — Pending`}   filtered={r.pending} />
+                    <Num count={r.rejected.length} color="text-red-600"     title={`${fmtDate(r.day)} — Rejected`}  filtered={r.rejected} />
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot className="border-t-2 border-slate-200 bg-slate-50">
+                <tr>
+                  <td colSpan={2} className="px-4 py-3 text-[12px] font-bold text-slate-600">
+                    Total · {dayRows.length} day{dayRows.length !== 1 ? 's' : ''}
+                  </td>
+                  <Num count={totals.total}    color="text-slate-700"   title="All Posts"    filtered={posts} />
+                  <Num count={totals.approved} color="text-emerald-700" title="All Approved" filtered={posts.filter(p => p.status === 'approved')} />
+                  <Num count={totals.pending}  color="text-amber-700"   title="All Pending"  filtered={posts.filter(p => p.status === 'pending')} />
+                  <Num count={totals.rejected} color="text-red-700"     title="All Rejected" filtered={posts.filter(p => p.status === 'rejected')} />
                 </tr>
               </tfoot>
             </table>
