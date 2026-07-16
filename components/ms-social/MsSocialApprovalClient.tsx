@@ -4,12 +4,15 @@ import { useState } from 'react'
 import {
   Loader2, CheckCircle, XCircle, PenLine,
   ChevronDown, ChevronUp, CheckCircle2, AlertCircle,
+  X, Maximize2, Check,
 } from 'lucide-react'
 
 type SocialPost = {
   id: string
   description: string
   image_url: string | null
+  image_options: string[]
+  selected_images: string[]
   publish_date: string
   platform: string
   status: 'pending' | 'approved' | 'rejected'
@@ -30,6 +33,14 @@ function toEmbedUrl(url: string | null): string | null {
   if (match) return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800`
   const idMatch = url.match(/[?&]id=([^&]+)/)
   if (idMatch && url.includes('drive.google.com')) return `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w800`
+  return url
+}
+
+function toLightboxUrl(url: string): string {
+  const match = url.match(/\/file\/d\/([^/?]+)/)
+  if (match) return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1600`
+  const idMatch = url.match(/[?&]id=([^&]+)/)
+  if (idMatch && url.includes('drive.google.com')) return `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w1600`
   return url
 }
 
@@ -73,14 +84,124 @@ function PostText({ text }: { text: string }) {
   )
 }
 
-function PostImage({ url, linkUrl }: { url: string; linkUrl: string }) {
-  const [failed, setFailed] = useState(false)
-  if (failed) return null
+// ── Lightbox ──────────────────────────────────────────────────────────────────
+
+function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
   return (
-    <a href={linkUrl} target="_blank" rel="noopener noreferrer"
-      className="block w-full overflow-hidden bg-slate-100">
-      <img src={url} alt="" className="w-full" onError={() => setFailed(true)} />
-    </a>
+    <>
+      <div className="fixed inset-0 bg-black/85 z-[60]" onClick={onClose} />
+      <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+        <button onClick={onClose}
+          className="absolute top-4 right-4 p-2 bg-white/15 hover:bg-white/25 rounded-full text-white transition">
+          <X size={20} />
+        </button>
+        <img src={toLightboxUrl(url)} alt=""
+          className="max-h-[88vh] max-w-[92vw] object-contain rounded-xl shadow-2xl"
+          onClick={e => e.stopPropagation()} />
+      </div>
+    </>
+  )
+}
+
+// ── Image options grid ────────────────────────────────────────────────────────
+
+function ImageOptionsGrid({
+  options,
+  checked,
+  onToggle,
+  onLightbox,
+  readOnly,
+}: {
+  options: string[]
+  checked: Set<string>
+  onToggle: (url: string) => void
+  onLightbox: (url: string) => void
+  readOnly?: boolean
+}) {
+  const valid = options.filter(Boolean)
+  if (valid.length === 0) return null
+
+  return (
+    <div className="px-4 sm:px-5 pb-4">
+      {!readOnly && (
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+          Image Options · tap to select for posting
+        </p>
+      )}
+      {readOnly && checked.size > 0 && (
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+          Selected images · {checked.size} of {valid.length}
+        </p>
+      )}
+      <div className={`grid gap-2 ${valid.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+        {valid.map((url, i) => {
+          const embed     = toEmbedUrl(url)
+          const isChecked = checked.has(url)
+          return (
+            <div key={i} className="relative">
+              <button
+                type="button"
+                onClick={() => !readOnly && onToggle(url)}
+                className={`w-full rounded-xl overflow-hidden border-2 transition block ${
+                  isChecked
+                    ? 'border-indigo-500 ring-2 ring-indigo-300/50'
+                    : readOnly
+                      ? 'border-slate-200'
+                      : 'border-slate-200 active:border-indigo-300'
+                }`}
+                style={{ cursor: readOnly ? 'default' : 'pointer' }}
+              >
+                <div className="aspect-video bg-slate-100 relative">
+                  {embed ? (
+                    <img src={embed} alt={`Option ${i + 1}`} className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center p-2 text-[10px] text-slate-400 text-center break-all">
+                      {url}
+                    </div>
+                  )}
+                </div>
+              </button>
+
+              {/* checkbox */}
+              {!readOnly && (
+                <button
+                  type="button"
+                  onClick={() => onToggle(url)}
+                  className={`absolute top-2 left-2 w-7 h-7 rounded-md border-2 flex items-center justify-center transition shadow-sm ${
+                    isChecked
+                      ? 'bg-indigo-500 border-indigo-500'
+                      : 'bg-white/90 border-slate-400 active:border-indigo-400'
+                  }`}
+                >
+                  {isChecked && <Check size={14} className="text-white" strokeWidth={3} />}
+                </button>
+              )}
+              {readOnly && isChecked && (
+                <div className="absolute top-2 left-2 w-7 h-7 rounded-md bg-indigo-500 border-2 border-indigo-500 flex items-center justify-center shadow-sm">
+                  <Check size={14} className="text-white" strokeWidth={3} />
+                </div>
+              )}
+
+              {/* expand button — always visible for mobile */}
+              <button
+                type="button"
+                onClick={() => onLightbox(url)}
+                className="absolute top-2 right-2 p-2 bg-black/40 hover:bg-black/60 active:bg-black/70 rounded-lg text-white transition"
+                title="View full size"
+              >
+                <Maximize2 size={14} />
+              </button>
+
+              {valid.length > 1 && (
+                <p className="text-[10px] text-center text-slate-400 mt-1">
+                  {isChecked ? '✓ Selected' : `Option ${i + 1}`}
+                </p>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
   )
 }
 
@@ -96,18 +217,37 @@ export function MsSocialApprovalClient({
   const [post,       setPost]       = useState(initialPost)
   const [panel,      setPanel]      = useState<PanelState>('idle')
   const [notes,      setNotes]      = useState('')
-  const [editForm,   setEditForm]   = useState({
-    description: initialPost.description,
-    image_url: initialPost.image_url ?? '',
-    publish_date: initialPost.publish_date,
-    platform: initialPost.platform,
-  })
   const [submitting, setSubmitting] = useState(false)
   const [error,      setError]      = useState('')
   const [done,       setDone]       = useState<'approved' | 'rejected' | 'saved' | null>(null)
+  const [lightbox,   setLightbox]   = useState<string | null>(null)
 
-  const embedUrl = toEmbedUrl(post.image_url)
-  const name     = post.creator_name ?? 'Unknown'
+  // Image selection state
+  const imageOptions = post.image_options?.filter(Boolean) ?? []
+  const hasOptions   = imageOptions.length > 0
+
+  const [selectedImages, setSelectedImages] = useState<Set<string>>(
+    () => new Set(post.selected_images?.filter(Boolean) ?? [])
+  )
+
+  function toggleImage(url: string) {
+    setSelectedImages(prev => {
+      const next = new Set(prev)
+      if (next.has(url)) next.delete(url)
+      else next.add(url)
+      return next
+    })
+  }
+
+  // Edit form — tracks image_options array
+  const [editForm, setEditForm] = useState({
+    description:   initialPost.description,
+    image_options: initialPost.image_options?.length > 0 ? initialPost.image_options : [''],
+    publish_date:  initialPost.publish_date,
+    platform:      initialPost.platform,
+  })
+
+  const name = post.creator_name ?? 'Unknown'
 
   async function callApi(body: Record<string, unknown>) {
     setSubmitting(true); setError('')
@@ -123,7 +263,11 @@ export function MsSocialApprovalClient({
   }
 
   async function handleApprove() {
-    const ok = await callApi({ action: 'approve', reviewer_notes: notes })
+    const ok = await callApi({
+      action:          'approve',
+      reviewer_notes:  notes,
+      selected_images: Array.from(selectedImages),
+    })
     if (ok) setDone('approved')
   }
 
@@ -136,15 +280,21 @@ export function MsSocialApprovalClient({
   async function handleEditAndApprove() {
     if (!editForm.description.trim()) { setError('Description is required'); return }
     if (!editForm.publish_date) { setError('Publish date is required'); return }
+    const cleanOptions = editForm.image_options.filter(u => u.trim())
     const ok = await callApi({
-      action: 'edit-and-approve',
-      description: editForm.description,
-      image_url: editForm.image_url,
-      publish_date: editForm.publish_date,
-      platform: editForm.platform,
+      action:          'edit-and-approve',
+      description:     editForm.description,
+      image_options:   cleanOptions,
+      image_url:       cleanOptions[0] || null,
+      selected_images: Array.from(selectedImages),
+      publish_date:    editForm.publish_date,
+      platform:        editForm.platform,
     })
     if (ok) { setDone('approved'); setPanel('idle') }
   }
+
+  // Legacy single image (old posts without image_options)
+  const legacyEmbedUrl = !hasOptions ? toEmbedUrl(post.image_url) : null
 
   return (
     <div className="min-h-screen bg-[#F5F5F7]">
@@ -164,7 +314,7 @@ export function MsSocialApprovalClient({
 
       <div className="max-w-2xl mx-auto px-4 py-6 space-y-4">
 
-        {/* ── Success banner ── */}
+        {/* ── Success / status banners ── */}
         {done === 'approved' && (
           <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-2xl px-5 py-4">
             <CheckCircle2 size={22} className="text-emerald-500 flex-shrink-0" />
@@ -197,7 +347,6 @@ export function MsSocialApprovalClient({
           </div>
         )}
 
-        {/* ── Already reviewed notice (when not done in this session) ── */}
         {!done && post.status !== 'pending' && (
           <div className={`flex items-center gap-3 rounded-2xl px-5 py-4 border ${
             post.status === 'approved'
@@ -210,7 +359,7 @@ export function MsSocialApprovalClient({
             }
             <p className="text-sm font-medium text-slate-700">
               This post was previously <strong>{post.status}</strong>.
-              {post.reviewer_notes && <> Note: "{post.reviewer_notes}"</>}
+              {post.reviewer_notes && <> Note: &ldquo;{post.reviewer_notes}&rdquo;</>}
               {' '}You can still change the decision below.
             </p>
           </div>
@@ -220,12 +369,12 @@ export function MsSocialApprovalClient({
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
 
           {/* Header */}
-          <div className="flex items-start gap-3 px-5 pt-4 pb-3">
+          <div className="flex items-start gap-3 px-4 sm:px-5 pt-4 pb-3">
             <div className="w-11 h-11 min-w-[44px] rounded-full bg-gradient-to-br from-slate-500 to-slate-700 flex items-center justify-center shadow-sm">
               <span className="text-white font-bold text-[15px]">{initials(name)}</span>
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <span className="font-semibold text-slate-900 text-[15px]">{name}</span>
                 <span className="text-[11px] text-slate-400 border border-slate-300 rounded px-1 leading-4">1st</span>
               </div>
@@ -240,28 +389,51 @@ export function MsSocialApprovalClient({
           </div>
 
           {/* Text */}
-          <div className="px-5 pb-3">
+          <div className="px-4 sm:px-5 pb-3">
             <PostText text={post.description} />
           </div>
 
-          {/* Image */}
-          {embedUrl && panel === 'idle' && (
-            <PostImage url={embedUrl} linkUrl={post.image_url!} />
+          {/* Multi-image options */}
+          {hasOptions && panel === 'idle' && (
+            <ImageOptionsGrid
+              options={imageOptions}
+              checked={selectedImages}
+              onToggle={toggleImage}
+              onLightbox={setLightbox}
+              readOnly={post.status !== 'pending'}
+            />
+          )}
+
+          {/* Legacy single image */}
+          {!hasOptions && legacyEmbedUrl && panel === 'idle' && (
+            <div className="relative mx-4 sm:mx-5 mb-4 rounded-xl overflow-hidden border border-slate-200">
+              <img src={legacyEmbedUrl} alt="" className="w-full" />
+              <button
+                onClick={() => setLightbox(post.image_url!)}
+                className="absolute top-2 right-2 p-2 bg-black/40 hover:bg-black/60 rounded-lg text-white transition">
+                <Maximize2 size={14} />
+              </button>
+            </div>
           )}
 
           {/* ── Action bar ── */}
           {panel === 'idle' && (
-            <div className="flex items-center gap-3 px-5 py-3 border-t border-slate-100">
+            <div className="flex flex-wrap items-center gap-2 px-4 sm:px-5 py-3 border-t border-slate-100">
               <button onClick={() => { setPanel('approve'); setNotes(''); setError('') }}
-                className="flex-1 flex items-center justify-center gap-2 text-sm font-semibold py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 transition shadow-sm">
+                className="flex-1 min-w-[100px] flex items-center justify-center gap-2 text-sm font-semibold py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 active:bg-emerald-800 transition shadow-sm">
                 <CheckCircle size={15} /> Approve
               </button>
               <button onClick={() => { setPanel('reject'); setNotes(''); setError('') }}
-                className="flex-1 flex items-center justify-center gap-2 text-sm font-semibold py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 transition shadow-sm">
+                className="flex-1 min-w-[100px] flex items-center justify-center gap-2 text-sm font-semibold py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 active:bg-red-800 transition shadow-sm">
                 <XCircle size={15} /> Reject
               </button>
               <button onClick={() => {
-                setEditForm({ description: post.description, image_url: post.image_url ?? '', publish_date: post.publish_date, platform: post.platform })
+                setEditForm({
+                  description:   post.description,
+                  image_options: post.image_options?.length > 0 ? post.image_options : [''],
+                  publish_date:  post.publish_date,
+                  platform:      post.platform,
+                })
                 setPanel('edit'); setError('')
               }}
                 className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition">
@@ -272,14 +444,20 @@ export function MsSocialApprovalClient({
 
           {/* ── Approve panel ── */}
           {panel === 'approve' && (
-            <div className="border-t border-emerald-100 bg-emerald-50 px-5 py-4 space-y-3">
+            <div className="border-t border-emerald-100 bg-emerald-50 px-4 sm:px-5 py-4 space-y-3">
+              {hasOptions && (
+                <p className="text-[11px] font-bold text-emerald-700 uppercase tracking-wider">
+                  {selectedImages.size} image{selectedImages.size !== 1 ? 's' : ''} selected
+                  <span className="normal-case font-normal text-emerald-600 ml-1">— tick images above to include</span>
+                </p>
+              )}
               <label className="block text-[11px] font-bold text-emerald-700 uppercase tracking-wider">
                 Approval Notes <span className="normal-case font-normal text-emerald-600">(optional)</span>
               </label>
               <textarea className={inputCls} rows={2} placeholder="Any notes for the employee…"
                 value={notes} onChange={e => setNotes(e.target.value)} />
               {error && <p className="text-sm text-red-600">{error}</p>}
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <button onClick={handleApprove} disabled={submitting}
                   className="flex items-center gap-2 text-sm font-semibold px-6 py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 transition shadow-sm">
                   {submitting && <Loader2 size={14} className="animate-spin" />}
@@ -295,14 +473,14 @@ export function MsSocialApprovalClient({
 
           {/* ── Reject panel ── */}
           {panel === 'reject' && (
-            <div className="border-t border-red-100 bg-red-50 px-5 py-4 space-y-3">
+            <div className="border-t border-red-100 bg-red-50 px-4 sm:px-5 py-4 space-y-3">
               <label className="block text-[11px] font-bold text-red-700 uppercase tracking-wider">
                 Rejection Notes <span className="normal-case font-normal text-red-600">* required</span>
               </label>
               <textarea className={inputCls} rows={2} placeholder="Explain what needs to change…"
                 value={notes} onChange={e => setNotes(e.target.value)} />
               {error && <p className="text-sm text-red-600">{error}</p>}
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <button onClick={handleReject} disabled={submitting}
                   className="flex items-center gap-2 text-sm font-semibold px-6 py-2.5 rounded-xl bg-red-600 text-white hover:bg-red-700 disabled:opacity-60 transition shadow-sm">
                   {submitting && <Loader2 size={14} className="animate-spin" />}
@@ -318,7 +496,7 @@ export function MsSocialApprovalClient({
 
           {/* ── Edit panel ── */}
           {panel === 'edit' && (
-            <div className="border-t border-slate-100 bg-slate-50 px-5 py-5 space-y-4">
+            <div className="border-t border-slate-100 bg-slate-50 px-4 sm:px-5 py-5 space-y-4">
               <p className="text-[11px] font-bold text-slate-400 uppercase tracking-widest">Edit Post</p>
               <textarea className={`${inputCls} resize-none`} rows={8} value={editForm.description}
                 onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} />
@@ -338,15 +516,39 @@ export function MsSocialApprovalClient({
                   </select>
                 </div>
               </div>
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-                  Image URL <span className="normal-case font-normal text-slate-400">(Google Drive link or image URL)</span>
-                </label>
-                <input className={inputCls} placeholder="https://drive.google.com/file/d/…" value={editForm.image_url}
-                  onChange={e => setEditForm(f => ({ ...f, image_url: e.target.value }))} />
+              {/* Image options */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Image Options</label>
+                  {editForm.image_options.length < 5 && (
+                    <button type="button"
+                      onClick={() => setEditForm(f => ({ ...f, image_options: [...f.image_options, ''] }))}
+                      className="text-[11px] font-semibold text-pink-600 hover:text-pink-700 transition">
+                      + Add
+                    </button>
+                  )}
+                </div>
+                {editForm.image_options.map((url, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input className={inputCls}
+                      placeholder={`Image ${i + 1} URL`}
+                      value={url}
+                      onChange={e => {
+                        const v = e.target.value
+                        setEditForm(f => ({ ...f, image_options: f.image_options.map((u, j) => j === i ? v : u) }))
+                      }} />
+                    {editForm.image_options.length > 1 && (
+                      <button type="button"
+                        onClick={() => setEditForm(f => ({ ...f, image_options: f.image_options.filter((_, j) => j !== i) }))}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition flex-shrink-0">
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
               {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-4 py-2.5 rounded-xl">{error}</p>}
-              <div className="flex items-center gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 <button onClick={handleEditAndApprove} disabled={submitting}
                   className="flex items-center gap-2 text-sm font-semibold px-6 py-2.5 rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 disabled:opacity-60 transition shadow-sm">
                   {submitting && <Loader2 size={14} className="animate-spin" />}
@@ -365,6 +567,8 @@ export function MsSocialApprovalClient({
           Finsmart MMS · This link was shared by {name} for approval
         </p>
       </div>
+
+      {lightbox && <Lightbox url={lightbox} onClose={() => setLightbox(null)} />}
     </div>
   )
 }

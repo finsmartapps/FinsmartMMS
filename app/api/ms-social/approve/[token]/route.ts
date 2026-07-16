@@ -38,7 +38,10 @@ export async function PATCH(
   if (!existing) return NextResponse.json({ error: 'Post not found' }, { status: 404 })
 
   const body = await req.json()
-  const { action, reviewer_notes, description, image_url, publish_date, platform } = body
+  const { action, reviewer_notes, description, image_options, image_url, publish_date, platform, selected_images } = body
+
+  const cleanOptions = Array.isArray(image_options) ? image_options.filter((u: string) => u?.trim()) : undefined
+  const cleanSelected = Array.isArray(selected_images) ? selected_images.filter((u: string) => u?.trim()) : []
 
   let updateData: Record<string, unknown> = {}
 
@@ -47,6 +50,7 @@ export async function PATCH(
       status: 'approved',
       reviewer_notes: reviewer_notes?.trim() || null,
       reviewed_at: new Date().toISOString(),
+      selected_images: cleanSelected,
     }
   } else if (action === 'reject') {
     if (!reviewer_notes?.trim()) {
@@ -62,7 +66,8 @@ export async function PATCH(
     if (!publish_date) return NextResponse.json({ error: 'Publish date is required' }, { status: 400 })
     updateData = {
       description,
-      image_url: image_url || null,
+      image_options: cleanOptions ?? [],
+      image_url: cleanOptions?.[0] ?? image_url ?? null,
       publish_date,
       platform: platform || 'LinkedIn',
     }
@@ -71,12 +76,14 @@ export async function PATCH(
     if (!publish_date) return NextResponse.json({ error: 'Publish date is required' }, { status: 400 })
     updateData = {
       description,
-      image_url: image_url || null,
+      image_options: cleanOptions ?? [],
+      image_url: cleanOptions?.[0] ?? image_url ?? null,
       publish_date,
       platform: platform || 'LinkedIn',
       status: 'approved',
       reviewer_notes: null,
       reviewed_at: new Date().toISOString(),
+      selected_images: cleanSelected,
     }
   } else {
     return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
