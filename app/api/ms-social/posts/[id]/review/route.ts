@@ -21,7 +21,7 @@ export async function PATCH(
 
   const { id } = await params
   const body = await req.json()
-  const { action, reviewer_notes } = body
+  const { action, reviewer_notes, selected_images } = body
 
   if (action !== 'approve' && action !== 'reject') {
     return NextResponse.json({ error: 'Action must be "approve" or "reject"' }, { status: 400 })
@@ -31,14 +31,23 @@ export async function PATCH(
     return NextResponse.json({ error: 'Reviewer notes are required when rejecting' }, { status: 400 })
   }
 
+  const updateFields: Record<string, unknown> = {
+    status: action === 'approve' ? 'approved' : 'rejected',
+    reviewer_notes: reviewer_notes?.trim() || null,
+    reviewed_by: user.id,
+    reviewed_at: new Date().toISOString(),
+  }
+
+  if (action === 'approve') {
+    const clean = Array.isArray(selected_images)
+      ? selected_images.filter((u: string) => u?.trim())
+      : []
+    updateFields.selected_images = clean
+  }
+
   const { data, error } = await supabase
     .from('ms_social_posts')
-    .update({
-      status: action === 'approve' ? 'approved' : 'rejected',
-      reviewer_notes: reviewer_notes?.trim() || null,
-      reviewed_by: user.id,
-      reviewed_at: new Date().toISOString(),
-    })
+    .update(updateFields)
     .eq('id', id)
     .select()
     .single()

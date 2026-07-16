@@ -38,13 +38,19 @@ export async function PATCH(
   }
 
   const body = await req.json()
-  const { description, image_url, publish_date, platform } = body
+  const { description, image_options, publish_date, platform } = body
 
   const updateData: Record<string, unknown> = {}
   if (description !== undefined) updateData.description = description
-  if (image_url !== undefined) updateData.image_url = image_url || null
   if (publish_date !== undefined) updateData.publish_date = publish_date
   if (platform !== undefined) updateData.platform = platform
+  if (image_options !== undefined) {
+    const clean = Array.isArray(image_options)
+      ? image_options.filter((u: string) => u?.trim())
+      : []
+    updateData.image_options = clean
+    updateData.image_url = clean[0] || null
+  }
 
   // Employee resubmitting a rejected post — reset back to pending
   if (!isManagerOrAdmin && existing.status === 'rejected') {
@@ -52,6 +58,7 @@ export async function PATCH(
     updateData.reviewer_notes = null
     updateData.reviewed_by = null
     updateData.reviewed_at = null
+    updateData.selected_images = []
   }
 
   const { data, error } = await supabase

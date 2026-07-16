@@ -52,16 +52,21 @@ export async function POST(req: NextRequest) {
   if (!profile?.has_ms_social) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const body = await req.json()
-  const { description, image_url, publish_date, platform } = body
+  const { description, image_options, publish_date, platform } = body
 
   if (!description?.trim()) return NextResponse.json({ error: 'Description is required' }, { status: 400 })
   if (!publish_date) return NextResponse.json({ error: 'Publish date is required' }, { status: 400 })
+
+  const cleanOptions = Array.isArray(image_options)
+    ? image_options.filter((u: string) => u?.trim())
+    : []
 
   const { data, error } = await supabase
     .from('ms_social_posts')
     .insert({
       description,
-      image_url: image_url || null,
+      image_url: cleanOptions[0] || null,
+      image_options: cleanOptions,
       publish_date,
       platform: platform || 'LinkedIn',
       status: 'pending',

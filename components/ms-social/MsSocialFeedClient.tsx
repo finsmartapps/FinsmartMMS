@@ -4,13 +4,15 @@ import { useState } from 'react'
 import {
   Plus, Loader2, X, PenLine, Trash2, RotateCcw,
   CheckCircle2, AlertCircle, ChevronDown, ChevronUp,
-  MoreHorizontal, Link2, Check,
+  MoreHorizontal, Link2, Check, Maximize2, ImagePlus,
 } from 'lucide-react'
 
 type SocialPost = {
   id: string
   description: string
   image_url: string | null
+  image_options: string[]
+  selected_images: string[]
   publish_date: string
   platform: string
   status: 'pending' | 'approved' | 'rejected'
@@ -27,12 +29,22 @@ const inputCls =
   'focus:outline-none focus:border-pink-400 focus:ring-2 focus:ring-pink-400/10 ' +
   'transition bg-white placeholder-slate-400'
 
+const MAX_IMAGES = 5
+
 function toEmbedUrl(url: string | null): string | null {
   if (!url) return null
   const match = url.match(/\/file\/d\/([^/?]+)/)
   if (match) return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w800`
   const idMatch = url.match(/[?&]id=([^&]+)/)
   if (idMatch && url.includes('drive.google.com')) return `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w800`
+  return url
+}
+
+function toLightboxUrl(url: string): string {
+  const match = url.match(/\/file\/d\/([^/?]+)/)
+  if (match) return `https://drive.google.com/thumbnail?id=${match[1]}&sz=w1600`
+  const idMatch = url.match(/[?&]id=([^&]+)/)
+  if (idMatch && url.includes('drive.google.com')) return `https://drive.google.com/thumbnail?id=${idMatch[1]}&sz=w1600`
   return url
 }
 
@@ -69,7 +81,26 @@ const STATUS_CONFIG = {
   rejected: { label: 'Changes Needed', badgeCls: 'bg-red-50 text-red-700 border-red-200',             dot: 'bg-red-400'     },
 }
 
-const BLANK_FORM = { description: '', image_url: '', publish_date: '', platform: 'LinkedIn' }
+const BLANK_FORM = { description: '', image_options: [''], publish_date: '', platform: 'LinkedIn' }
+
+// ── Lightbox ──────────────────────────────────────────────────────────────────
+
+function Lightbox({ url, onClose }: { url: string; onClose: () => void }) {
+  return (
+    <>
+      <div className="fixed inset-0 bg-black/85 z-[60]" onClick={onClose} />
+      <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+        <button onClick={onClose}
+          className="absolute top-4 right-4 p-2 bg-white/15 hover:bg-white/25 rounded-full text-white transition">
+          <X size={20} />
+        </button>
+        <img src={toLightboxUrl(url)} alt=""
+          className="max-h-[88vh] max-w-[92vw] object-contain rounded-xl shadow-2xl"
+          onClick={e => e.stopPropagation()} />
+      </div>
+    </>
+  )
+}
 
 // ── Avatar ────────────────────────────────────────────────────────────────────
 
@@ -104,16 +135,94 @@ function PostText({ text }: { text: string }) {
   )
 }
 
-// ── Image block ───────────────────────────────────────────────────────────────
+// ── Image thumbnails strip (read-only) ───────────────────────────────────────
 
-function PostImage({ url, linkUrl }: { url: string; linkUrl: string }) {
-  const [failed, setFailed] = useState(false)
-  if (failed) return null
+function ImageStrip({ urls, label }: { urls: string[]; label?: string }) {
+  const [lightbox, setLightbox] = useState<string | null>(null)
+  const valid = urls.filter(Boolean)
+  if (valid.length === 0) return null
   return (
-    <a href={linkUrl} target="_blank" rel="noopener noreferrer"
-      className="block w-full overflow-hidden bg-slate-100">
-      <img src={url} alt="" className="w-full" onError={() => setFailed(true)} />
-    </a>
+    <>
+      {label && (
+        <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-5 pb-1">{label}</p>
+      )}
+      <div className={`px-5 pb-3 grid gap-2 ${valid.length === 1 ? 'grid-cols-1' : 'grid-cols-2 sm:grid-cols-3'}`}>
+        {valid.map((url, i) => {
+          const embed = toEmbedUrl(url)
+          return (
+            <div key={i} className="relative group">
+              <div className="rounded-xl overflow-hidden border border-slate-200 bg-slate-100 aspect-video">
+                {embed ? (
+                  <img src={embed} alt={`Image ${i + 1}`} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-[11px] text-slate-400 px-2 text-center break-all">
+                    {url}
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setLightbox(url)}
+                className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/30 rounded-xl transition">
+                <Maximize2 size={18} className="text-white opacity-0 group-hover:opacity-100 transition drop-shadow" />
+              </button>
+              {valid.length > 1 && (
+                <p className="text-[10px] text-center text-slate-400 mt-1">Option {i + 1}</p>
+              )}
+            </div>
+          )
+        })}
+      </div>
+      {lightbox && <Lightbox url={lightbox} onClose={() => setLightbox(null)} />}
+    </>
+  )
+}
+
+// ── Image options inputs ──────────────────────────────────────────────────────
+
+function ImageOptionsInput({ values, onChange }: {
+  values: string[]
+  onChange: (v: string[]) => void
+}) {
+  function set(i: number, val: string) {
+    onChange(values.map((u, j) => j === i ? val : u))
+  }
+  function add() {
+    if (values.length < MAX_IMAGES) onChange([...values, ''])
+  }
+  function remove(i: number) {
+    onChange(values.filter((_, j) => j !== i))
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <label className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+          Image Options <span className="normal-case font-normal text-slate-400">(up to {MAX_IMAGES}, Google Drive or direct URL)</span>
+        </label>
+        {values.length < MAX_IMAGES && (
+          <button type="button" onClick={add}
+            className="flex items-center gap-1 text-[11px] font-semibold text-pink-600 hover:text-pink-700 transition">
+            <ImagePlus size={12} /> Add
+          </button>
+        )}
+      </div>
+      {values.map((url, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <input
+            className={inputCls}
+            placeholder={`Image ${i + 1} — https://drive.google.com/file/d/…`}
+            value={url}
+            onChange={e => set(i, e.target.value)}
+          />
+          {values.length > 1 && (
+            <button type="button" onClick={() => remove(i)}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition flex-shrink-0">
+              <X size={14} />
+            </button>
+          )}
+        </div>
+      ))}
+    </div>
   )
 }
 
@@ -121,7 +230,7 @@ function PostImage({ url, linkUrl }: { url: string; linkUrl: string }) {
 
 function EditForm({ postId, initial, isResubmit, onSave, onCancel }: {
   postId: string
-  initial: { description: string; image_url: string; publish_date: string; platform: string }
+  initial: { description: string; image_options: string[]; publish_date: string; platform: string }
   isResubmit: boolean
   onSave: (updated: SocialPost) => void
   onCancel: () => void
@@ -137,7 +246,12 @@ function EditForm({ postId, initial, isResubmit, onSave, onCancel }: {
     setSaving(true)
     const res = await fetch(`/api/ms-social/posts/${postId}`, {
       method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ description: form.description, image_url: form.image_url || null, publish_date: form.publish_date, platform: form.platform }),
+      body: JSON.stringify({
+        description:   form.description,
+        image_options: form.image_options.filter(u => u.trim()),
+        publish_date:  form.publish_date,
+        platform:      form.platform,
+      }),
     })
     const data = await res.json()
     setSaving(false)
@@ -166,13 +280,10 @@ function EditForm({ postId, initial, isResubmit, onSave, onCancel }: {
           </select>
         </div>
       </div>
-      <div>
-        <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-          Image URL <span className="normal-case font-normal text-slate-400">(Google Drive link or direct image URL)</span>
-        </label>
-        <input className={inputCls} placeholder="https://drive.google.com/file/d/…"
-          value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} />
-      </div>
+      <ImageOptionsInput
+        values={form.image_options.length > 0 ? form.image_options : ['']}
+        onChange={v => setForm(f => ({ ...f, image_options: v }))}
+      />
       {error && <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-4 py-2.5 rounded-xl">{error}</p>}
       <div className="flex items-center gap-3">
         <button onClick={handleSave} disabled={saving}
@@ -206,9 +317,21 @@ function PostCard({ post, userName, onDelete, onUpdate }: {
     navigator.clipboard.writeText(url).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
   }
 
-  const cfg      = STATUS_CONFIG[post.status]
-  const embedUrl = toEmbedUrl(post.image_url)
-  const canEdit  = post.status === 'pending' || post.status === 'rejected'
+  const cfg     = STATUS_CONFIG[post.status]
+  const canEdit = post.status === 'pending' || post.status === 'rejected'
+
+  // Images to display: admin's selections when approved, submitted options otherwise
+  const displayImages = post.status === 'approved' && post.selected_images?.length > 0
+    ? post.selected_images
+    : post.image_options?.length > 0
+      ? post.image_options
+      : post.image_url ? [post.image_url] : []
+
+  const imageLabel = post.status === 'approved' && post.selected_images?.length > 0
+    ? 'Selected by reviewer'
+    : post.image_options?.length > 1
+      ? 'Your image options'
+      : undefined
 
   async function handleDelete() {
     if (!confirm('Delete this post?')) return
@@ -274,9 +397,11 @@ function PostCard({ post, userName, onDelete, onUpdate }: {
           )}
         </div>
       </div>
+
       <div className="px-5 pb-3">
         <PostText text={post.description} />
       </div>
+
       {post.status === 'rejected' && post.reviewer_notes && !editing && (
         <div className="mx-5 mb-3 flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
           <AlertCircle size={15} className="text-red-400 flex-shrink-0 mt-0.5" />
@@ -295,7 +420,11 @@ function PostCard({ post, userName, onDelete, onUpdate }: {
           </div>
         </div>
       )}
-      {embedUrl && !editing && <PostImage url={embedUrl} linkUrl={post.image_url!} />}
+
+      {!editing && displayImages.length > 0 && (
+        <ImageStrip urls={displayImages} label={imageLabel} />
+      )}
+
       {post.status === 'rejected' && !editing && (
         <div className="px-5 py-3 border-t border-slate-100 flex items-center gap-3">
           <button onClick={() => setEditing(true)}
@@ -307,7 +436,12 @@ function PostCard({ post, userName, onDelete, onUpdate }: {
       {editing && (
         <EditForm
           postId={post.id}
-          initial={{ description: post.description, image_url: post.image_url ?? '', publish_date: post.publish_date, platform: post.platform }}
+          initial={{
+            description:   post.description,
+            image_options: post.image_options?.length > 0 ? post.image_options : [''],
+            publish_date:  post.publish_date,
+            platform:      post.platform,
+          }}
           isResubmit={post.status === 'rejected'}
           onSave={updated => { onUpdate(updated); setEditing(false) }}
           onCancel={() => setEditing(false)}
@@ -342,7 +476,12 @@ export function MsSocialFeedClient({
     setCreating(true)
     const res = await fetch('/api/ms-social/posts', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ description: form.description, image_url: form.image_url || null, publish_date: form.publish_date, platform: form.platform }),
+      body: JSON.stringify({
+        description:   form.description,
+        image_options: form.image_options.filter(u => u.trim()),
+        publish_date:  form.publish_date,
+        platform:      form.platform,
+      }),
     })
     const data = await res.json()
     setCreating(false)
@@ -369,7 +508,6 @@ export function MsSocialFeedClient({
             <p className="text-slate-500 text-sm mt-0.5">Hi {userName} — submit LinkedIn posts for manager approval</p>
           </div>
           <div className="flex items-center gap-3 flex-wrap">
-            {/* Stats summary chips */}
             <div className="flex items-center gap-1.5 bg-white border border-slate-200 rounded-xl px-4 py-2 shadow-sm text-sm">
               <span className="font-bold text-amber-600">{counts.pending}</span>
               <span className="text-slate-400 text-[11px]">Pending</span>
@@ -384,7 +522,6 @@ export function MsSocialFeedClient({
                 </>
               )}
             </div>
-            {/* New Post */}
             <button
               onClick={() => { setShowNew(true); setFormError(''); setForm(BLANK_FORM) }}
               className="flex items-center gap-1.5 bg-pink-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-pink-700 transition shadow-sm">
@@ -458,13 +595,10 @@ export function MsSocialFeedClient({
                     </select>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-                    Image URL <span className="normal-case font-normal text-slate-400">(Google Drive link or any image URL)</span>
-                  </label>
-                  <input className={inputCls} placeholder="https://drive.google.com/file/d/…"
-                    value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} />
-                </div>
+                <ImageOptionsInput
+                  values={form.image_options}
+                  onChange={v => setForm(f => ({ ...f, image_options: v }))}
+                />
                 {formError && <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-4 py-2.5 rounded-xl">{formError}</p>}
               </div>
               <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100">
