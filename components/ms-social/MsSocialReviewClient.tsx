@@ -129,7 +129,7 @@ function ReviewCard({ post, onUpdate, highlighted, cardRef }: {
   post: SocialPost
   onUpdate: (updated: SocialPost) => void
   highlighted?: boolean
-  cardRef?: React.RefObject<HTMLDivElement>
+  cardRef?: React.RefObject<HTMLDivElement | null>
 }) {
   const [action,     setAction]     = useState<CardAction>({ type: 'idle' })
   const [submitting, setSubmitting] = useState(false)
