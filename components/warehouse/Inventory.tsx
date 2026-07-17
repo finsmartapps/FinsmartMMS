@@ -3,7 +3,7 @@ import { useState, useMemo, useRef } from 'react'
 import {
   Package, Plus, Search, Edit2, Trash2, X, AlertTriangle, CheckCircle2,
   Tag, MapPin, Send, ImagePlus, Image as ImageIcon, Loader2, ZoomIn, FileDown,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, PackageX,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { downloadXls } from '@/lib/warehouse/exportXls'
@@ -19,13 +19,17 @@ function computeItemsOut(shipments: WmsData['shipments']): Record<string, number
     .forEach(s => s.items.forEach(({ itemId, quantity }) => {
       out[itemId] = (out[itemId] || 0) + quantity
     }))
-  // Subtract units returned via inbound shipments
+  return out
+}
+
+function computeItemsReturned(shipments: WmsData['shipments']): Record<string, number> {
+  const returned: Record<string, number> = {}
   shipments
     .filter(s => s.type === 'inbound' && RETURNED_STATUSES.has(s.status))
     .forEach(s => s.items.forEach(({ itemId, quantity }) => {
-      out[itemId] = (out[itemId] || 0) - quantity
+      returned[itemId] = (returned[itemId] || 0) + quantity
     }))
-  return out
+  return returned
 }
 
 const EMPTY_ITEM: WmsItem = {
@@ -137,15 +141,19 @@ function ImageUploader({ existingUrls, pendingFiles, onAddFiles, onRemoveExistin
   )
 }
 
-function ItemDetailModal({ item, out, onEdit, onClose, onLightbox }: {
-  item: WmsItem; out: number
+function ItemDetailModal({ item, out, returned, onEdit, onClose, onLightbox }: {
+  item: WmsItem; out: number; returned: number
   onEdit: () => void; onClose: () => void; onLightbox: (url: string) => void
 }) {
   const [imgIdx, setImgIdx] = useState(0)
-  const available = Math.max(0, item.quantity - out)
-  const allOut = out >= item.quantity && out > 0
-  const partialOut = out > 0 && !allOut
-  const low = available <= item.minStock && !allOut
+  const consumed = Math.max(0, out - returned)
+  const available = Math.max(0, item.quantity - consumed)
+  const hasReturns = returned > 0
+  const allConsumed = hasReturns && consumed >= item.quantity
+  const someConsumed = hasReturns && consumed > 0
+  const allOut = !hasReturns && out >= item.quantity && out > 0
+  const partialOut = !hasReturns && out > 0 && !allOut
+  const low = available <= item.minStock && !allOut && !allConsumed
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
@@ -235,7 +243,7 @@ function ItemDetailModal({ item, out, onEdit, onClose, onLightbox }: {
                 <p className="text-[10px] text-slate-400 mt-0.5">{item.unit} total</p>
               </div>
               <div className="bg-slate-50 rounded-xl px-3 py-3 text-center">
-                <p className={`text-xl font-bold ${allOut ? 'text-rose-500' : low ? 'text-amber-600' : 'text-emerald-600'}`}>{available}</p>
+                <p className={`text-xl font-bold ${(allOut || allConsumed) ? 'text-rose-500' : low ? 'text-amber-600' : 'text-emerald-600'}`}>{available}</p>
                 <p className="text-[10px] text-slate-400 mt-0.5">available</p>
               </div>
               <div className="bg-slate-50 rounded-xl px-3 py-3 text-center">
@@ -246,13 +254,17 @@ function ItemDetailModal({ item, out, onEdit, onClose, onLightbox }: {
 
             {/* Status */}
             <div className="flex items-center gap-2">
-              {allOut
-                ? <div className="flex items-center gap-1.5"><Send size={12} className="text-rose-500" /><span className="text-xs font-medium text-rose-500">All out at event</span></div>
-                : partialOut
-                  ? <div className="flex items-center gap-1.5"><Send size={12} className="text-amber-600" /><span className="text-xs font-medium text-amber-600">Partial out ({out} {item.unit} at event)</span></div>
-                  : low
-                    ? <div className="flex items-center gap-1.5"><AlertTriangle size={12} className="text-amber-600" /><span className="text-xs font-medium text-amber-600">Low stock</span></div>
-                    : <div className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-600" /><span className="text-xs font-medium text-emerald-600">In stock</span></div>}
+              {allConsumed
+                ? <div className="flex items-center gap-1.5"><PackageX size={12} className="text-orange-600" /><span className="text-xs font-medium text-orange-600">All consumed at event</span></div>
+                : someConsumed
+                  ? <div className="flex items-center gap-1.5"><PackageX size={12} className="text-orange-600" /><span className="text-xs font-medium text-orange-600">{consumed} {item.unit} consumed · {returned} returned</span></div>
+                  : allOut
+                    ? <div className="flex items-center gap-1.5"><Send size={12} className="text-rose-500" /><span className="text-xs font-medium text-rose-500">All out at event</span></div>
+                    : partialOut
+                      ? <div className="flex items-center gap-1.5"><Send size={12} className="text-amber-600" /><span className="text-xs font-medium text-amber-600">Partial out ({out} {item.unit} at event)</span></div>
+                      : low
+                        ? <div className="flex items-center gap-1.5"><AlertTriangle size={12} className="text-amber-600" /><span className="text-xs font-medium text-amber-600">Low stock</span></div>
+                        : <div className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-600" /><span className="text-xs font-medium text-emerald-600">In stock</span></div>}
             </div>
 
             {/* Location */}
@@ -415,6 +427,7 @@ export default function Inventory({ data, addItem, updateItem, deleteItem }: {
   const [lightbox, setLightbox] = useState<string | null>(null)
 
   const itemsOut = useMemo(() => computeItemsOut(shipments), [shipments])
+  const itemsReturned = useMemo(() => computeItemsReturned(shipments), [shipments])
 
   const filtered = items.filter(item => {
     const q = search.toLowerCase()
@@ -433,11 +446,16 @@ export default function Inventory({ data, addItem, updateItem, deleteItem }: {
     const invHeaders = ['Label', 'Name', 'Category', 'Total Qty', 'Available', 'Unit', 'Location', 'Min Stock', 'Notes', 'Status']
     const invRows = items.map(item => {
       const out = itemsOut[item.id] || 0
-      const available = Math.max(0, item.quantity - out)
-      const allOut = out >= item.quantity && out > 0
-      const partialOut = out > 0 && !allOut
-      const low = available <= item.minStock && !allOut
-      const status = allOut ? 'At Event' : partialOut ? 'Partial Out' : low ? 'Low Stock' : 'In Stock'
+      const returned = itemsReturned[item.id] || 0
+      const consumed = Math.max(0, out - returned)
+      const available = Math.max(0, item.quantity - consumed)
+      const hasReturns = returned > 0
+      const allConsumed = hasReturns && consumed >= item.quantity
+      const someConsumed = hasReturns && consumed > 0
+      const allOut = !hasReturns && out >= item.quantity && out > 0
+      const partialOut = !hasReturns && out > 0 && !allOut
+      const low = available <= item.minStock && !allOut && !allConsumed
+      const status = allConsumed ? 'Consumed' : someConsumed ? 'Partial Consumed' : allOut ? 'At Event' : partialOut ? 'Partial Out' : low ? 'Low Stock' : 'In Stock'
       return [item.label, item.name, item.category, item.quantity, available, item.unit, item.location || '', item.minStock, item.notes || '', status]
     })
     const QUEUE_STATUSES = new Set(['pending', 'in_transit'])
@@ -467,6 +485,7 @@ export default function Inventory({ data, addItem, updateItem, deleteItem }: {
         <ItemDetailModal
           item={detailItem}
           out={itemsOut[detailItem.id] || 0}
+          returned={itemsReturned[detailItem.id] || 0}
           onEdit={() => { setModal({ ...detailItem }); setDetailItem(null) }}
           onClose={() => setDetailItem(null)}
           onLightbox={url => setLightbox(url)}
@@ -495,8 +514,13 @@ export default function Inventory({ data, addItem, updateItem, deleteItem }: {
         <div>
           <h2 className="text-xl font-bold text-slate-900">Inventory</h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            {items.length} items · {items.reduce((a, b) => a + Math.max(0, b.quantity - (itemsOut[b.id] || 0)), 0)} available
-            {Object.values(itemsOut).some(v => v > 0) && <span className="ml-2 text-amber-600">· {Object.values(itemsOut).reduce((a, b) => a + b, 0)} out at event</span>}
+            {items.length} items · {items.reduce((a, b) => {
+              const consumed = Math.max(0, (itemsOut[b.id] || 0) - (itemsReturned[b.id] || 0))
+              return a + Math.max(0, b.quantity - consumed)
+            }, 0)} available
+            {Object.entries(itemsOut).some(([id, v]) => v - (itemsReturned[id] || 0) > 0) && (
+              <span className="ml-2 text-amber-600">· {Object.entries(itemsOut).reduce((a, [id, v]) => a + Math.max(0, v - (itemsReturned[id] || 0)), 0)} out / consumed</span>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -540,10 +564,15 @@ export default function Inventory({ data, addItem, updateItem, deleteItem }: {
             )}
             {filtered.map(item => {
               const out = itemsOut[item.id] || 0
-              const available = Math.max(0, item.quantity - out)
-              const allOut = out >= item.quantity && out > 0
-              const partialOut = out > 0 && !allOut
-              const low = available <= item.minStock && !allOut
+              const returned = itemsReturned[item.id] || 0
+              const consumed = Math.max(0, out - returned)
+              const available = Math.max(0, item.quantity - consumed)
+              const hasReturns = returned > 0
+              const allConsumed = hasReturns && consumed >= item.quantity
+              const someConsumed = hasReturns && consumed > 0
+              const allOut = !hasReturns && out >= item.quantity && out > 0
+              const partialOut = !hasReturns && out > 0 && !allOut
+              const low = available <= item.minStock && !allOut && !allConsumed
               return (
                 <tr key={item.id} className="border-b border-slate-200 last:border-0 hover:bg-slate-100/50 transition-colors group">
                   <td className="px-5 py-3.5">
@@ -577,9 +606,11 @@ export default function Inventory({ data, addItem, updateItem, deleteItem }: {
                     <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full ${CAT_COLORS[item.category] || 'bg-slate-100 text-slate-600'}`}>{item.category}</span>
                   </td>
                   <td className="px-5 py-3.5 text-right">
-                    <span className={`text-sm font-bold ${allOut ? 'text-rose-500' : low ? 'text-amber-600' : 'text-slate-700'}`}>{available}</span>
+                    <span className={`text-sm font-bold ${(allOut || allConsumed) ? 'text-rose-500' : low ? 'text-amber-600' : 'text-slate-700'}`}>{available}</span>
                     <span className="text-[10px] text-slate-400 ml-1">{item.unit}</span>
-                    {out > 0 && <p className="text-[10px] text-slate-400 mt-0.5">{out} out · {item.quantity} total</p>}
+                    {someConsumed && <p className="text-[10px] text-slate-400 mt-0.5">{consumed} consumed · {item.quantity} total</p>}
+                    {allConsumed && <p className="text-[10px] text-slate-400 mt-0.5">{consumed} consumed · {item.quantity} total</p>}
+                    {(allOut || partialOut) && <p className="text-[10px] text-slate-400 mt-0.5">{out} out · {item.quantity} total</p>}
                   </td>
                   <td className="px-5 py-3.5">
                     {item.location
@@ -587,13 +618,17 @@ export default function Inventory({ data, addItem, updateItem, deleteItem }: {
                       : <span className="text-xs text-slate-300">—</span>}
                   </td>
                   <td className="px-5 py-3.5">
-                    {allOut
-                      ? <div className="flex items-center gap-1.5"><Send size={11} className="text-rose-500" /><span className="text-[10px] text-rose-500">At Event</span></div>
-                      : partialOut
-                        ? <div className="flex items-center gap-1.5"><Send size={11} className="text-amber-600" /><span className="text-[10px] text-amber-600">Partial Out</span></div>
-                        : low
-                          ? <div className="flex items-center gap-1.5"><AlertTriangle size={12} className="text-amber-600" /><span className="text-[10px] text-amber-600">Low stock</span></div>
-                          : <div className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-600" /><span className="text-[10px] text-emerald-600">In stock</span></div>}
+                    {allConsumed
+                      ? <div className="flex items-center gap-1.5"><PackageX size={11} className="text-orange-600" /><span className="text-[10px] text-orange-600">Consumed</span></div>
+                      : someConsumed
+                        ? <div className="flex items-center gap-1.5"><PackageX size={11} className="text-orange-600" /><span className="text-[10px] text-orange-600">Partial Consumed</span></div>
+                        : allOut
+                          ? <div className="flex items-center gap-1.5"><Send size={11} className="text-rose-500" /><span className="text-[10px] text-rose-500">At Event</span></div>
+                          : partialOut
+                            ? <div className="flex items-center gap-1.5"><Send size={11} className="text-amber-600" /><span className="text-[10px] text-amber-600">Partial Out</span></div>
+                            : low
+                              ? <div className="flex items-center gap-1.5"><AlertTriangle size={12} className="text-amber-600" /><span className="text-[10px] text-amber-600">Low stock</span></div>
+                              : <div className="flex items-center gap-1.5"><CheckCircle2 size={12} className="text-emerald-600" /><span className="text-[10px] text-emerald-600">In stock</span></div>}
                   </td>
                   <td className="px-5 py-3.5"><span className="text-xs text-slate-400 truncate max-w-[120px] block">{item.notes || '—'}</span></td>
                   <td className="px-5 py-3.5">
