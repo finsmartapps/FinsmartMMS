@@ -10,6 +10,7 @@ import { downloadXls } from '@/lib/warehouse/exportXls'
 import { CATEGORIES, getNextLabel, type WmsItem, type WmsData } from './useWarehouseStore'
 
 const OUT_STATUSES = new Set(['in_transit', 'delivered', 'at_event', 'return_pending'])
+const RETURNED_STATUSES = new Set(['delivered', 'received'])
 
 function computeItemsOut(shipments: WmsData['shipments']): Record<string, number> {
   const out: Record<string, number> = {}
@@ -17,6 +18,12 @@ function computeItemsOut(shipments: WmsData['shipments']): Record<string, number
     .filter(s => s.type === 'outbound' && OUT_STATUSES.has(s.status))
     .forEach(s => s.items.forEach(({ itemId, quantity }) => {
       out[itemId] = (out[itemId] || 0) + quantity
+    }))
+  // Subtract units returned via inbound shipments
+  shipments
+    .filter(s => s.type === 'inbound' && RETURNED_STATUSES.has(s.status))
+    .forEach(s => s.items.forEach(({ itemId, quantity }) => {
+      out[itemId] = (out[itemId] || 0) - quantity
     }))
   return out
 }
