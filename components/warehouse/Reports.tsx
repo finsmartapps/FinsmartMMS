@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, Legend
 } from 'recharts'
-import { Package, Truck, CalendarDays, Download, TrendingUp } from 'lucide-react'
+import { Package, Truck, CalendarDays, Download, TrendingUp, PackageX } from 'lucide-react'
 import type { WmsData } from './useWarehouseStore'
 
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#a855f7', '#ec4899', '#06b6d4']
@@ -69,6 +69,45 @@ export default function Reports({ data }: { data: WmsData }) {
       return { name: ev.name.split(' ').slice(0, 2).join(' '), Outbound: outQty, Returned: inQty }
     }), [events, shipments]
   )
+
+  const consumedByEvent = useMemo(() => {
+    const SENT_STATUSES = new Set(['in_transit', 'delivered', 'at_event', 'return_pending', 'received', 'consumed'])
+    const RETURNED_STATUSES = new Set(['delivered', 'received'])
+
+    const evData: Record<string, Record<string, { sent: number; returned: number }>> = {}
+    events.forEach(ev => { evData[ev.id] = {} })
+
+    shipments.forEach(s => {
+      if (!evData[s.eventId]) return
+      const evItems = evData[s.eventId]
+      if (s.type === 'outbound' && SENT_STATUSES.has(s.status)) {
+        s.items.forEach(({ itemId, quantity }) => {
+          if (!evItems[itemId]) evItems[itemId] = { sent: 0, returned: 0 }
+          evItems[itemId].sent += quantity
+        })
+      } else if (s.type === 'inbound' && RETURNED_STATUSES.has(s.status)) {
+        s.items.forEach(({ itemId, quantity }) => {
+          if (!evItems[itemId]) evItems[itemId] = { sent: 0, returned: 0 }
+          evItems[itemId].returned += quantity
+        })
+      }
+    })
+
+    const rows: { eventName: string; eventDate: string; label: string; name: string; unit: string; sent: number; returned: number; consumed: number }[] = []
+
+    events.forEach(ev => {
+      Object.entries(evData[ev.id] || {}).forEach(([itemId, { sent, returned }]) => {
+        const consumed = Math.max(0, sent - returned)
+        if (consumed === 0) return
+        const item = items.find(i => i.id === itemId)
+        if (!item) return
+        rows.push({ eventName: ev.name, eventDate: ev.startDate, label: item.label, name: item.name, unit: item.unit, sent, returned, consumed })
+      })
+    })
+
+    rows.sort((a, b) => b.eventDate.localeCompare(a.eventDate) || b.consumed - a.consumed)
+    return rows
+  }, [events, items, shipments])
 
   const topItems = useMemo(() => {
     const usage: Record<string, number> = {}
@@ -176,6 +215,65 @@ export default function Reports({ data }: { data: WmsData }) {
           </div>
         </div>
       )}
+
+      <div className="rounded-xl border border-slate-200 bg-white p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-sm font-semibold text-slate-700 flex items-center gap-2"><PackageX size={14} className="text-orange-500" /> Consumed by Event</h3>
+            <p className="text-[10px] text-slate-400 mt-0.5">Items sent to events that were not returned</p>
+          </div>
+          <span className="text-[10px] text-slate-400">{consumedByEvent.length} item{consumedByEvent.length !== 1 ? 's' : ''}</span>
+        </div>
+        {consumedByEvent.length === 0
+          ? <p className="text-xs text-slate-400 py-8 text-center">No consumed items yet — returns cover all outbound shipments</p>
+          : (
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-slate-200">
+                    {['Event', 'Label', 'Item', 'Sent', 'Returned', 'Consumed'].map(h => (
+                      <th key={h} className="text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider px-3 py-2">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {consumedByEvent.map((row, i) => {
+                    const showEvent = i === 0 || row.eventName !== consumedByEvent[i - 1].eventName
+                    return (
+                      <tr key={`${row.eventName}-${row.label}`} className={`border-b border-slate-100 last:border-0 ${showEvent && i > 0 ? 'border-t border-slate-200' : ''}`}>
+                        <td className="px-3 py-2.5">
+                          {showEvent
+                            ? <span className="text-xs font-semibold text-slate-700">{row.eventName}</span>
+                            : <span className="text-xs text-slate-300">↳</span>}
+                        </td>
+                        <td className="px-3 py-2.5 text-xs font-mono font-bold text-blue-600">{row.label}</td>
+                        <td className="px-3 py-2.5 text-xs text-slate-600">{row.name}</td>
+                        <td className="px-3 py-2.5 text-xs text-slate-500">{row.sent} {row.unit}</td>
+                        <td className="px-3 py-2.5 text-xs text-emerald-600 font-medium">{row.returned} {row.unit}</td>
+                        <td className="px-3 py-2.5">
+                          <span className="inline-flex items-center gap-1 text-xs font-bold text-orange-600 bg-orange-500/10 px-2 py-0.5 rounded-full">
+                            {row.consumed} {row.unit}
+                          </span>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t-2 border-slate-200 bg-slate-50">
+                    <td colSpan={5} className="px-3 py-2.5 text-xs font-semibold text-slate-500">Total Consumed</td>
+                    <td className="px-3 py-2.5">
+                      <span className="text-xs font-bold text-orange-600">
+                        {consumedByEvent.reduce((a, r) => a + r.consumed, 0)} units
+                      </span>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )
+        }
+      </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-5">
         <div className="flex items-center justify-between mb-4">
