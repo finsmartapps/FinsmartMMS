@@ -150,8 +150,28 @@ function ShipmentModal({ shipment, data, onSave, onClose }: {
   shipment: WmsShipment; data: WmsData; onSave: (s: WmsShipment) => void; onClose: () => void
 }) {
   const isNew = !shipment.id
-  const { events, items } = data
+  const { events, items, shipments: allShipments } = data
   const [form, setForm] = useState({ ...shipment, items: [...(shipment.items || [])], images: [...(shipment.images || [])] })
+
+  const availableMap = useMemo(() => {
+    const OUT_STATUSES = new Set(['in_transit', 'delivered', 'at_event', 'return_pending'])
+    const RETURNED_STATUSES = new Set(['delivered', 'received'])
+    const out: Record<string, number> = {}
+    const returned: Record<string, number> = {}
+    allShipments.forEach(s => {
+      if (s.id === shipment.id) return // exclude self when editing
+      if (s.type === 'outbound' && OUT_STATUSES.has(s.status))
+        s.items.forEach(({ itemId, quantity }) => { out[itemId] = (out[itemId] || 0) + quantity })
+      else if (s.type === 'inbound' && RETURNED_STATUSES.has(s.status))
+        s.items.forEach(({ itemId, quantity }) => { returned[itemId] = (returned[itemId] || 0) + quantity })
+    })
+    const map: Record<string, number> = {}
+    items.forEach(item => {
+      const consumed = Math.max(0, (out[item.id] || 0) - (returned[item.id] || 0))
+      map[item.id] = Math.max(0, item.quantity - consumed)
+    })
+    return map
+  }, [allShipments, items, shipment.id])
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
@@ -253,18 +273,32 @@ function ShipmentModal({ shipment, data, onSave, onClose }: {
                   <button type="button" onClick={addLine} className="mt-1 text-[11px] text-blue-600 hover:text-blue-500 transition-colors">+ Add item</button>
                 </div>
               )}
-              {form.items.map((line, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <select value={line.itemId} onChange={e => setLine(i, 'itemId', e.target.value)}
-                    className="flex-1 bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-blue-500 transition-colors">
-                    <option value="">Select item...</option>
-                    {items.map(it => <option key={it.id} value={it.id}>{it.label} · {it.name}</option>)}
-                  </select>
-                  <input type="number" min={1} value={line.quantity} onChange={e => setLine(i, 'quantity', e.target.value)}
-                    className="w-20 bg-slate-100 border border-slate-200 rounded-lg px-2 py-2 text-xs text-slate-900 outline-none focus:border-blue-500 transition-colors text-center" />
-                  <button type="button" onClick={() => removeLine(i)} className="w-7 h-7 rounded-lg bg-slate-200 flex items-center justify-center text-slate-500 hover:text-rose-500 transition-all flex-shrink-0"><X size={12} /></button>
-                </div>
-              ))}
+              {form.items.map((line, i) => {
+                const selectedItem = items.find(it => it.id === line.itemId)
+                const avail = line.itemId ? (availableMap[line.itemId] ?? 0) : null
+                return (
+                  <div key={i} className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <select value={line.itemId} onChange={e => setLine(i, 'itemId', e.target.value)}
+                        className="flex-1 bg-slate-100 border border-slate-200 rounded-lg px-3 py-2 text-xs text-slate-900 outline-none focus:border-blue-500 transition-colors">
+                        <option value="">Select item...</option>
+                        {items.map(it => {
+                          const a = availableMap[it.id] ?? 0
+                          return <option key={it.id} value={it.id}>{it.label} · {it.name} ({a} {it.unit} avail)</option>
+                        })}
+                      </select>
+                      <input type="number" min={1} value={line.quantity} onChange={e => setLine(i, 'quantity', e.target.value)}
+                        className="w-20 bg-slate-100 border border-slate-200 rounded-lg px-2 py-2 text-xs text-slate-900 outline-none focus:border-blue-500 transition-colors text-center" />
+                      <button type="button" onClick={() => removeLine(i)} className="w-7 h-7 rounded-lg bg-slate-200 flex items-center justify-center text-slate-500 hover:text-rose-500 transition-all flex-shrink-0"><X size={12} /></button>
+                    </div>
+                    {selectedItem && avail !== null && (
+                      <p className={`text-[10px] pl-1 ${avail === 0 ? 'text-rose-500' : avail < (selectedItem.minStock ?? 0) ? 'text-amber-500' : 'text-slate-400'}`}>
+                        {avail} {selectedItem.unit} available in stock
+                      </p>
+                    )}
+                  </div>
+                )
+              })}
             </div>
           </div>
           <ImageUploader
