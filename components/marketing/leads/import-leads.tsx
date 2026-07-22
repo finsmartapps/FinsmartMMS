@@ -308,7 +308,7 @@ export default function ImportLeads({ existingEmails = [] }: { existingEmails?: 
             <div className="p-6 space-y-4">
               {/* column order hint */}
               <div className="text-[11px] text-slate-500 bg-slate-50 rounded-lg px-3 py-2 ring-1 ring-slate-100 leading-relaxed">
-                <span className="font-bold text-slate-600">Expected column order:</span> Sr · Date · Name · Email · Phone · Website · Company · Industry · Service · Data Source · Lead From · Lead Source · State · Country · Comment · Assigned · Lead Status · Lead Stage · Customer Type · <span className="text-emerald-700 font-bold">Closed Date · Seats Closed · MRR Value · One-time Revenue · Seat Type · Successful Meetings</span> · <span className="text-orange-600 font-bold">Loss Reason</span>
+                <span className="font-bold text-slate-600">Expected column order:</span> Sr · Date · Name · Email · Phone · Website · Company · Industry · Service · Data Source · Lead From · Lead Source · State · Country · Comment · Assigned · Lead Status · Lead Stage · Customer Type · <span className="text-emerald-700 font-bold">Closed Date · Seats Closed · MRR Value · One-time Revenue · Seat Type · Successful Meetings</span> · <span className="text-orange-600 font-bold">Reason</span>
               </div>
 
               {/* paste */}
