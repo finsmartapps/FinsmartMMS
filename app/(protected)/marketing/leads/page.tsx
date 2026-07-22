@@ -251,9 +251,9 @@ export default async function LeadsPage() {
         },
         {
           id: 'loss-reasons',
-          label: 'Loss Reason Breakdown',
+          label: 'Outcome Reason Breakdown',
           content: byLossReason.length > 0 ? (
-            <Panel icon={TrendingDown} title="Why We Lost Leads" accent="rose"
+            <Panel icon={TrendingDown} title="Lead Outcome Reasons" accent="rose"
               caption={`${leadsWithReason.length} lead${leadsWithReason.length !== 1 ? 's' : ''} with a recorded reason`}>
               <div className="pt-2">
                 <HBarChart data={byLossReason} unit="leads" />
