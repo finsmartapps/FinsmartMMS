@@ -156,7 +156,8 @@ export const IMPORT_COLUMNS = [
   'sr', 'lead_date', 'name', 'email', 'phone', 'website_url', 'company_name',
   'industry', 'service_required', 'data_source', 'lead_from', 'lead_source',
   'state', 'country', 'comment', 'assigned_to', 'lead_status', 'became_sql_date',
-  'lead_stage', 'customer_type',
+  'lead_stage', 'customer_type', 'closed_date', 'closed_hours', 'mrr_value',
+  'one_time_revenue', 'seat_type', 'successful_meetings', 'loss_reason',
 ]
 
 export function parseSheetDate(raw: string): string | null {

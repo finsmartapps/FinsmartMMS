@@ -156,6 +156,7 @@ function buildLeads(text: string, hasHeader: boolean): { rows: ParsedLead[]; ski
       one_time_revenue: parseNum(c(22)),
       seat_type: c(23),
       successful_meetings: c(24).toLowerCase() === 'yes',
+      loss_reason: c(25) || null,
       category: classifyLeadSource(lead_source),
       updated_at: new Date().toISOString(),
     }
@@ -307,7 +308,7 @@ export default function ImportLeads({ existingEmails = [] }: { existingEmails?: 
             <div className="p-6 space-y-4">
               {/* column order hint */}
               <div className="text-[11px] text-slate-500 bg-slate-50 rounded-lg px-3 py-2 ring-1 ring-slate-100 leading-relaxed">
-                <span className="font-bold text-slate-600">Expected column order:</span> Sr · Date · Name · Email · Phone · Website · Company · Industry · Service · Data Source · Lead From · Lead Source · State · Country · Comment · Assigned · Lead Status · Lead Stage · Customer Type · <span className="text-emerald-700 font-bold">Closed Date · Seats Closed · MRR Value · One-time Revenue</span>
+                <span className="font-bold text-slate-600">Expected column order:</span> Sr · Date · Name · Email · Phone · Website · Company · Industry · Service · Data Source · Lead From · Lead Source · State · Country · Comment · Assigned · Lead Status · Lead Stage · Customer Type · <span className="text-emerald-700 font-bold">Closed Date · Seats Closed · MRR Value · One-time Revenue · Seat Type · Successful Meetings</span> · <span className="text-orange-600 font-bold">Loss Reason</span>
               </div>
 
               {/* paste */}

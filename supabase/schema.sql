@@ -502,6 +502,7 @@ create table public.leads (
   one_time_revenue    numeric default 0,
   seat_type           text    default '',
   successful_meetings boolean default false,
+  loss_reason         text    default '',
   closed_date         date,
   created_at       timestamptz default now(),
   updated_at       timestamptz default now()

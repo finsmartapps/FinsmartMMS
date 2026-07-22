@@ -182,6 +182,7 @@ export interface Lead {
   one_time_revenue: number | null
   seat_type: string
   successful_meetings: boolean
+  loss_reason: string | null
   closed_date: string | null
   created_at: string
   updated_at: string
