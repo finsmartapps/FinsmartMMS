@@ -56,7 +56,7 @@ export default function LoginPage() {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('role, has_sales, has_marketing, has_expenses, has_warehouse, has_advocacy, has_ms_social, is_active')
+      .select('role, has_sales, has_marketing, has_warehouse, has_advocacy, has_ms_social, is_active')
       .eq('id', data.user.id)
       .single()
 
@@ -71,8 +71,6 @@ export default function LoginPage() {
       router.push(profile.role === 'manager' || profile.role === 'admin' ? '/sales/manager' : '/sales/telecaller')
     } else if (profile.has_marketing) {
       router.push('/marketing')
-    } else if (profile.has_expenses) {
-      router.push('/expenses')
     } else if (profile.has_warehouse) {
       router.push('/warehouse')
     } else if (profile.has_advocacy) {
@@ -127,14 +125,13 @@ export default function LoginPage() {
     if (user) {
       const { data: profile } = await supabase
         .from('profiles')
-        .select('role, has_sales, has_marketing, has_expenses, has_warehouse')
+        .select('role, has_sales, has_marketing, has_warehouse')
         .eq('id', user.id)
         .single()
       if (profile) {
         setTimeout(() => {
           if (profile.has_sales) router.push(profile.role === 'manager' ? '/sales/manager' : '/sales/telecaller')
           else if (profile.has_marketing) router.push('/marketing')
-          else if (profile.has_expenses) router.push('/expenses')
           else if (profile.has_warehouse) router.push('/warehouse')
         }, 1500)
       }

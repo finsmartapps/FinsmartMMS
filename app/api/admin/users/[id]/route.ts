@@ -29,7 +29,7 @@ export async function PATCH(
   const body = await req.json()
   const updates: Record<string, unknown> = {}
 
-  const VALID_ROLES = ['admin', 'manager', 'telecaller', 'finance_manager', 'warehouse_user', 'employee']
+  const VALID_ROLES = ['admin', 'manager', 'telecaller', 'warehouse_user', 'employee']
 
   if ('role' in body) {
     if (!VALID_ROLES.includes(body.role)) {
@@ -40,7 +40,7 @@ export async function PATCH(
 
   if ('is_active' in body) updates.is_active = Boolean(body.is_active)
 
-  for (const col of ['has_sales','has_marketing','has_expenses','has_warehouse','has_advocacy','has_ms_social']) {
+  for (const col of ['has_sales','has_marketing','has_warehouse','has_advocacy','has_ms_social']) {
     if (col in body) updates[col] = Boolean(body[col])
   }
 

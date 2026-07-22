@@ -6,7 +6,6 @@ export interface Profile {
   role: 'manager' | 'telecaller' | null
   has_sales: boolean
   has_marketing: boolean
-  has_expenses: boolean
   is_active: boolean
   created_at: string
   updated_at: string
@@ -15,7 +14,6 @@ export interface Profile {
 export interface UserModules {
   sales: boolean
   marketing: boolean
-  expenses: boolean
 }
 
 // ── Marketing Module Types ────────────────────────────────────────────────────

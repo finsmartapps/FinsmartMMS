@@ -17,18 +17,17 @@ const ROLES: { value: Role; label: string; icon: React.ElementType }[] = [
 interface UserRow {
   id: string; name: string; email: string; role: Role | null
   is_active: boolean
-  has_sales: boolean; has_marketing: boolean; has_expenses: boolean
+  has_sales: boolean; has_marketing: boolean
   has_warehouse: boolean; has_advocacy: boolean; has_ms_social: boolean
   created_at: string
 }
 
-type ModuleKey = 'has_sales' | 'has_marketing' | 'has_expenses' | 'has_warehouse' | 'has_advocacy' | 'has_ms_social'
-type TabKey = 'all' | 'sales' | 'marketing' | 'expenses' | 'warehouse' | 'advocacy' | 'ms_social'
+type ModuleKey = 'has_sales' | 'has_marketing' | 'has_warehouse' | 'has_advocacy' | 'has_ms_social'
+type TabKey = 'all' | 'sales' | 'marketing' | 'warehouse' | 'advocacy' | 'ms_social'
 
 const MODULES_LIST: { key: ModuleKey; label: string; dot: string; tab: TabKey }[] = [
   { key: 'has_sales',     label: 'Sales',     dot: 'bg-[#DC2626]', tab: 'sales'     },
   { key: 'has_marketing', label: 'Marketing', dot: 'bg-[#007AFF]', tab: 'marketing' },
-  { key: 'has_expenses',  label: 'Expenses',  dot: 'bg-[#34C759]', tab: 'expenses'  },
   { key: 'has_warehouse', label: 'Warehouse', dot: 'bg-[#F97316]', tab: 'warehouse' },
   { key: 'has_advocacy',  label: 'Advocacy',  dot: 'bg-[#5856D6]', tab: 'advocacy'  },
   { key: 'has_ms_social', label: 'MS Social', dot: 'bg-pink-500',  tab: 'ms_social' },
@@ -38,7 +37,6 @@ const TABS: { key: TabKey; label: string; color: string }[] = [
   { key: 'all',       label: 'All',       color: 'text-[#1D1D1F]'  },
   { key: 'sales',     label: 'Sales',     color: 'text-[#DC2626]'  },
   { key: 'marketing', label: 'Marketing', color: 'text-[#007AFF]'  },
-  { key: 'expenses',  label: 'Expenses',  color: 'text-[#34C759]'  },
   { key: 'warehouse', label: 'Warehouse', color: 'text-[#F97316]'  },
   { key: 'advocacy',  label: 'Advocacy',  color: 'text-[#5856D6]'  },
   { key: 'ms_social', label: 'MS Social', color: 'text-pink-600'   },
@@ -46,7 +44,7 @@ const TABS: { key: TabKey; label: string; color: string }[] = [
 
 const BLANK_FORM = {
   name: '', email: '', password: '', role: 'telecaller' as Role,
-  has_sales: false, has_marketing: false, has_expenses: false,
+  has_sales: false, has_marketing: false,
   has_warehouse: false, has_advocacy: false, has_ms_social: false,
 }
 
@@ -100,7 +98,7 @@ export default function SettingsPage() {
   // Edit access modal
   const [editUser, setEditUser] = useState<UserRow | null>(null)
   const [editAccess, setEditAccess] = useState({
-    has_sales: false, has_marketing: false, has_expenses: false,
+    has_sales: false, has_marketing: false,
     has_warehouse: false, has_advocacy: false, has_ms_social: false, role: 'telecaller' as Role,
   })
   const [accessError, setAccessError] = useState('')
@@ -148,7 +146,7 @@ export default function SettingsPage() {
     setEditUser(u)
     setEditAccess({
       has_sales: u.has_sales, has_marketing: u.has_marketing,
-      has_expenses: u.has_expenses, has_warehouse: u.has_warehouse,
+      has_warehouse: u.has_warehouse,
       has_advocacy: u.has_advocacy, has_ms_social: u.has_ms_social, role: u.role ?? 'telecaller',
     })
     setAccessError('')
@@ -180,7 +178,7 @@ export default function SettingsPage() {
       body: JSON.stringify({
         id: editUser.id,
         has_sales: editAccess.has_sales, has_marketing: editAccess.has_marketing,
-        has_expenses: editAccess.has_expenses, has_warehouse: editAccess.has_warehouse,
+        has_warehouse: editAccess.has_warehouse,
         has_advocacy: editAccess.has_advocacy, has_ms_social: editAccess.has_ms_social,
         role: editAccess.role,
       }),
@@ -421,7 +419,7 @@ export default function SettingsPage() {
                             onChange={() => setForm(f => ({
                               ...f,
                               role: r.value,
-                              ...(r.value === 'warehouse_user' ? { has_sales: false, has_marketing: false, has_expenses: false, has_warehouse: true, has_advocacy: false, has_ms_social: false } : {}),
+                              ...(r.value === 'warehouse_user' ? { has_sales: false, has_marketing: false, has_warehouse: true, has_advocacy: false, has_ms_social: false } : {}),
                             }))} />
                           <Icon size={13} />
                           <span className="text-[12px] font-medium">{r.label}</span>
@@ -483,7 +481,7 @@ export default function SettingsPage() {
                             onChange={() => setEditAccess(a => ({
                               ...a,
                               role: r.value,
-                              ...(r.value === 'warehouse_user' ? { has_sales: false, has_marketing: false, has_expenses: false, has_warehouse: true, has_advocacy: false, has_ms_social: false } : {}),
+                              ...(r.value === 'warehouse_user' ? { has_sales: false, has_marketing: false, has_warehouse: true, has_advocacy: false, has_ms_social: false } : {}),
                             }))} />
                           <Icon size={13} />
                           <span className="text-[12px] font-medium">{r.label}</span>

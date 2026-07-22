@@ -1,24 +1,23 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Plus, Loader2, Pencil, Trash2, Shield, ShieldCheck, ShieldAlert, BadgeDollarSign, Star, Info, AlertTriangle } from 'lucide-react'
+import { Plus, Loader2, Pencil, Trash2, Shield, ShieldCheck, ShieldAlert, Star, Info, AlertTriangle } from 'lucide-react'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type Role = 'admin' | 'manager' | 'telecaller' | 'finance_manager' | 'warehouse_user' | 'employee'
+type Role = 'admin' | 'manager' | 'telecaller' | 'warehouse_user' | 'employee'
 
 interface UserRow {
   id: string; name: string; email: string; role: Role | null; is_active: boolean
-  has_sales: boolean; has_marketing: boolean; has_expenses: boolean
+  has_sales: boolean; has_marketing: boolean
   has_warehouse: boolean; has_advocacy: boolean; has_ms_social: boolean; created_at: string
 }
 
-type ModuleKey = 'has_sales' | 'has_marketing' | 'has_expenses' | 'has_warehouse' | 'has_advocacy' | 'has_ms_social'
-type TabKey    = 'all' | 'sales' | 'marketing' | 'expenses' | 'warehouse' | 'advocacy' | 'ms_social'
+type ModuleKey = 'has_sales' | 'has_marketing' | 'has_warehouse' | 'has_advocacy' | 'has_ms_social'
+type TabKey    = 'all' | 'sales' | 'marketing' | 'warehouse' | 'advocacy' | 'ms_social'
 
 const MODULES: { key: ModuleKey; label: string; dot: string; tab: TabKey }[] = [
   { key: 'has_sales',     label: 'Sales',     dot: 'bg-[#DC2626]', tab: 'sales'     },
   { key: 'has_marketing', label: 'Marketing', dot: 'bg-[#007AFF]', tab: 'marketing' },
-  { key: 'has_expenses',  label: 'Expenses',  dot: 'bg-[#34C759]', tab: 'expenses'  },
   { key: 'has_warehouse', label: 'Warehouse', dot: 'bg-[#F97316]', tab: 'warehouse' },
   { key: 'has_advocacy',  label: 'Advocacy',  dot: 'bg-[#5856D6]', tab: 'advocacy'  },
   { key: 'has_ms_social', label: 'MS Social', dot: 'bg-pink-500',  tab: 'ms_social' },
@@ -28,7 +27,6 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'all',       label: 'All'       },
   { key: 'sales',     label: 'Sales'     },
   { key: 'marketing', label: 'Marketing' },
-  { key: 'expenses',  label: 'Expenses'  },
   { key: 'warehouse', label: 'Warehouse' },
   { key: 'advocacy',  label: 'Advocacy'  },
   { key: 'ms_social', label: 'MS Social' },
@@ -38,7 +36,6 @@ const ROLES: { value: Role; label: string; icon: React.ElementType; badge: strin
   { value: 'admin',           label: 'Admin',           icon: ShieldAlert,    badge: 'bg-violet-50 text-violet-700 ring-violet-200' },
   { value: 'manager',         label: 'Manager',         icon: ShieldCheck,    badge: 'bg-blue-50 text-blue-700 ring-blue-200'       },
   { value: 'telecaller',      label: 'Telecaller',      icon: Shield,         badge: 'bg-green-50 text-green-700 ring-green-200'    },
-  { value: 'finance_manager', label: 'Finance Manager', icon: BadgeDollarSign, badge: 'bg-amber-50 text-amber-700 ring-amber-200'  },
   { value: 'warehouse_user',   label: 'Warehouse User',   icon: Star,           badge: 'bg-sky-50 text-sky-700 ring-sky-200'         },
   { value: 'employee',         label: 'Employee',         icon: Star,           badge: 'bg-purple-50 text-purple-700 ring-purple-200'  },
 ]
@@ -46,7 +43,7 @@ const ROLES: { value: Role; label: string; icon: React.ElementType; badge: strin
 const BLANK_FORM = {
   name: '', email: '', password: '',
   role: 'telecaller' as Role,
-  has_sales: false, has_marketing: false, has_expenses: false,
+  has_sales: false, has_marketing: false,
   has_warehouse: false, has_advocacy: false, has_ms_social: false,
 }
 
@@ -93,17 +90,17 @@ function ModuleCheckbox({ label, dot, checked, onChange, disabled }: { label: st
   )
 }
 
-type ModuleState = { has_sales: boolean; has_marketing: boolean; has_expenses: boolean; has_warehouse: boolean; has_advocacy: boolean; has_ms_social: boolean }
+type ModuleState = { has_sales: boolean; has_marketing: boolean; has_warehouse: boolean; has_advocacy: boolean; has_ms_social: boolean }
 
 function getHints(role: Role, m: ModuleState): { type: 'info' | 'warning'; text: string }[] {
   const hints: { type: 'info' | 'warning'; text: string }[] = []
-  const noModules = !m.has_sales && !m.has_marketing && !m.has_expenses && !m.has_warehouse && !m.has_advocacy && !m.has_ms_social
+  const noModules = !m.has_sales && !m.has_marketing && !m.has_warehouse && !m.has_advocacy && !m.has_ms_social
 
   if (role === 'warehouse_user') {
     hints.push({ type: 'info', text: 'Warehouse Users get a simplified shipment queue view with no sidebar — designed for external partners like GTL Delivers.' })
     if (!m.has_warehouse)
       hints.push({ type: 'warning', text: 'Enable the Warehouse module so this user can log in.' })
-    if (m.has_sales || m.has_marketing || m.has_expenses || m.has_advocacy)
+    if (m.has_sales || m.has_marketing || m.has_advocacy)
       hints.push({ type: 'warning', text: 'Modules other than Warehouse won\'t be visible to this user — only the shipment queue is accessible for this role.' })
   }
 
@@ -119,11 +116,6 @@ function getHints(role: Role, m: ModuleState): { type: 'info' | 'warning'; text:
   if (role === 'telecaller') {
     if (!m.has_sales)
       hints.push({ type: 'warning', text: 'Telecaller without Sales module — this user will have no landing page after login.' })
-  }
-
-  if (role === 'finance_manager') {
-    if (!m.has_expenses)
-      hints.push({ type: 'info', text: 'Finance Manager role — consider enabling the Expenses module.' })
   }
 
   if (role === 'manager' || role === 'admin') {
@@ -174,7 +166,7 @@ export default function AdminUsersPage() {
 
   // Edit modal
   const [editUser, setEditUser]       = useState<UserRow | null>(null)
-  const [editForm, setEditForm]       = useState<{ role: Role; has_sales: boolean; has_marketing: boolean; has_expenses: boolean; has_warehouse: boolean; has_advocacy: boolean; has_ms_social: boolean }>({ role: 'telecaller', has_sales: false, has_marketing: false, has_expenses: false, has_warehouse: false, has_advocacy: false, has_ms_social: false })
+  const [editForm, setEditForm]       = useState<{ role: Role; has_sales: boolean; has_marketing: boolean; has_warehouse: boolean; has_advocacy: boolean; has_ms_social: boolean }>({ role: 'telecaller', has_sales: false, has_marketing: false, has_warehouse: false, has_advocacy: false, has_ms_social: false })
   const [editError, setEditError]     = useState('')
   const [savingEdit, setSavingEdit]   = useState(false)
 
@@ -210,7 +202,7 @@ export default function AdminUsersPage() {
 
   function openEdit(u: UserRow) {
     setEditUser(u)
-    setEditForm({ role: u.role ?? 'telecaller', has_sales: u.has_sales, has_marketing: u.has_marketing, has_expenses: u.has_expenses, has_warehouse: u.has_warehouse, has_advocacy: u.has_advocacy, has_ms_social: u.has_ms_social })
+    setEditForm({ role: u.role ?? 'telecaller', has_sales: u.has_sales, has_marketing: u.has_marketing, has_warehouse: u.has_warehouse, has_advocacy: u.has_advocacy, has_ms_social: u.has_ms_social })
     setEditError('')
   }
 
@@ -450,7 +442,7 @@ export default function AdminUsersPage() {
                             onChange={() => setForm(f => ({
                               ...f,
                               role: r.value,
-                              ...(r.value === 'warehouse_user' ? { has_sales: false, has_marketing: false, has_expenses: false, has_warehouse: true, has_advocacy: false, has_ms_social: false } : {}),
+                              ...(r.value === 'warehouse_user' ? { has_sales: false, has_marketing: false, has_warehouse: true, has_advocacy: false, has_ms_social: false } : {}),
                             }))} />
                           <Icon size={13} />
                           <span className="text-[12px] font-medium">{r.label}</span>
@@ -513,7 +505,7 @@ export default function AdminUsersPage() {
                             onChange={() => setEditForm(f => ({
                               ...f,
                               role: r.value,
-                              ...(r.value === 'warehouse_user' ? { has_sales: false, has_marketing: false, has_expenses: false, has_warehouse: true, has_advocacy: false, has_ms_social: false } : {}),
+                              ...(r.value === 'warehouse_user' ? { has_sales: false, has_marketing: false, has_warehouse: true, has_advocacy: false, has_ms_social: false } : {}),
                             }))} />
                           <Icon size={13} />
                           <span className="text-[12px] font-medium">{r.label}</span>

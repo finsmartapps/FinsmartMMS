@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 import {
   LayoutDashboard, CalendarCheck, ListTodo, LogOut, Menu, X,
   Phone, BarChart2, BookUser, ClipboardList,
-  Inbox, Settings, Plane, ChevronDown, ChevronRight,
+  Inbox, Settings, ChevronDown, ChevronRight,
   Package, CalendarDays, Truck, FileBarChart2, Users,
   Megaphone, Trophy, LayoutList, Share2,
 } from 'lucide-react'
@@ -27,10 +27,9 @@ interface NavGroup {
 
 interface Props {
   userName: string
-  salesRole: 'admin' | 'manager' | 'telecaller' | 'finance_manager' | 'warehouse_user' | 'employee' | null
+  salesRole: 'admin' | 'manager' | 'telecaller' | 'warehouse_user' | 'employee' | null
   hasSales: boolean
   hasMarketing: boolean
-  hasExpenses: boolean
   hasWarehouse: boolean
   hasAdvocacy: boolean
   hasMsSocial: boolean
@@ -76,17 +75,6 @@ const marketingGroups: NavGroup[] = [
       { href: '/marketing/leads',        label: 'Leads',        icon: Inbox           },
       { href: '/marketing/weekly',       label: 'Weekly Review',icon: ClipboardList   },
       { href: '/marketing/kpi-scorecard',label: 'KPI Scorecard',icon: BarChart2       },
-    ],
-  },
-]
-
-// ── Expenses nav ─────────────────────────────────────────────────────────────
-
-const expenseGroups: NavGroup[] = [
-  {
-    label: null,
-    links: [
-      { href: '/expenses', label: 'Travel Expenses', icon: Plane },
     ],
   },
 ]
@@ -137,7 +125,7 @@ function filterByModules(groups: NavGroup[], allowedModules: string[]): NavGroup
 // ── Module section ────────────────────────────────────────────────────────────
 
 const exactRoots = [
-  '/sales/manager', '/sales/telecaller', '/marketing', '/expenses', '/warehouse',
+  '/sales/manager', '/sales/telecaller', '/marketing', '/warehouse',
   '/sales/manager/settings', '/settings', '/advocacy', '/admin/users', '/ms-social',
 ]
 
@@ -217,7 +205,6 @@ function ModuleSection({
 interface NavContentProps {
   hasSales: boolean
   hasMarketing: boolean
-  hasExpenses: boolean
   hasWarehouse: boolean
   hasAdvocacy: boolean
   hasMsSocial: boolean
@@ -253,7 +240,7 @@ function getAdvocacyGroups(isAdmin: boolean): NavGroup[] {
 }
 
 function NavContent({
-  hasSales, hasMarketing, hasExpenses, hasWarehouse, hasAdvocacy, hasMsSocial,
+  hasSales, hasMarketing, hasWarehouse, hasAdvocacy, hasMsSocial,
   isManager, isAdmin, salesGroups, pathname, onNav,
 }: NavContentProps) {
   return (
@@ -272,15 +259,6 @@ function NavContent({
           label="Marketing"
           color="bg-[#007AFF]"
           groups={marketingGroups}
-          pathname={pathname}
-          onNav={onNav}
-        />
-      )}
-      {hasExpenses && (
-        <ModuleSection
-          label="Expenses"
-          color="bg-[#34C759]"
-          groups={expenseGroups}
           pathname={pathname}
           onNav={onNav}
         />
@@ -331,14 +309,13 @@ const ROLE_LABELS: Record<string, string> = {
   admin: 'Admin',
   manager: 'Manager',
   telecaller: 'Telecaller',
-  finance_manager: 'Finance Manager',
   warehouse_user: 'Warehouse User',
   employee: 'Employee',
 }
 
 interface FooterProps {
   userName: string
-  salesRole: 'admin' | 'manager' | 'telecaller' | 'finance_manager' | 'warehouse_user' | 'employee' | null
+  salesRole: 'admin' | 'manager' | 'telecaller' | 'warehouse_user' | 'employee' | null
   hasMarketing: boolean
   loggingOut: boolean
   onLogout: () => void
@@ -377,7 +354,6 @@ export function Sidebar({
   salesRole,
   hasSales,
   hasMarketing,
-  hasExpenses,
   hasWarehouse,
   hasAdvocacy,
   hasMsSocial,
@@ -397,7 +373,6 @@ export function Sidebar({
   const homeHref = hasSales && (salesRole === 'manager' || salesRole === 'telecaller')
     ? (salesRole === 'manager' ? '/sales/manager' : '/sales/telecaller')
     : hasMarketing ? '/marketing'
-    : hasExpenses ? '/expenses'
     : hasAdvocacy ? '/advocacy'
     : '/warehouse'
 
@@ -410,7 +385,7 @@ export function Sidebar({
   }
 
   const navProps: NavContentProps = {
-    hasSales, hasMarketing, hasExpenses, hasWarehouse, hasAdvocacy, hasMsSocial,
+    hasSales, hasMarketing, hasWarehouse, hasAdvocacy, hasMsSocial,
     salesGroups, pathname,
     isManager: salesRole === 'manager',
     isAdmin: salesRole === 'admin',

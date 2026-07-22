@@ -831,7 +831,7 @@ export default function ContactsPage() {
                         <div className="flex items-center gap-3">
                           <ContactAvatar name={`${c.first_name} ${c.last_name ?? ''}`} />
                           <div>
-                            <button onClick={() => router.push(`/manager/contacts/${c.id}`)}
+                            <button onClick={() => router.push(`/sales/manager/contacts/${c.id}`)}
                               className="text-[13px] font-semibold text-[#1D1D1F] hover:text-[#DC2626] transition text-left leading-tight">
                               {c.first_name} {c.last_name ?? ''}
                             </button>
@@ -869,7 +869,7 @@ export default function ContactsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={() => router.push(`/manager/contacts/${c.id}`)}
+                          <button onClick={() => router.push(`/sales/manager/contacts/${c.id}`)}
                             className="p-1.5 rounded-lg text-[#AEAEB2] hover:text-[#1D1D1F] hover:bg-[#F5F5F7] transition">
                             <Pencil size={13} />
                           </button>

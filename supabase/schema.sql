@@ -34,10 +34,9 @@ create table public.profiles (
   id            uuid        references auth.users(id) on delete cascade primary key,
   name          text        not null,
   email         text        not null unique,
-  role          text        check (role in ('admin', 'manager', 'telecaller', 'finance_manager', 'warehouse_user', 'employee')),
+  role          text        check (role in ('admin', 'manager', 'telecaller', 'warehouse_user', 'employee')),
   has_sales     boolean     not null default false,
   has_marketing boolean     not null default false,
-  has_expenses  boolean     not null default false,
   has_warehouse boolean     not null default false,
   has_advocacy  boolean     not null default false,
   has_ms_social boolean     not null default false,
@@ -530,42 +529,6 @@ create policy "auth plan_events"        on public.plan_events        for all usi
 create policy "auth weekly_actuals"     on public.weekly_actuals     for all using (auth.role() = 'authenticated');
 create policy "auth monthly_actuals"    on public.monthly_actuals    for all using (auth.role() = 'authenticated');
 create policy "auth leads"              on public.leads              for all using (auth.role() = 'authenticated');
-
--- ============================================================
--- EXPENSES MODULE
--- ============================================================
-
-create table public.travel_expenses (
-  id             uuid        primary key default gen_random_uuid(),
-  description    text        not null,
-  category       text        not null,
-  amount         numeric(10,2) not null check (amount > 0),
-  currency       text        not null check (currency in ('USD', 'INR')),
-  expense_date   date        not null,
-  city           text        not null check (city in ('lv', 'or', 'tx', 'nj')),
-  notes          text        default '',
-  receipt_urls   text[]      default '{}',
-  inr_equivalent numeric(12,2),
-  added_by       text        not null,
-  status         text        not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
-  created_at     timestamptz not null default now()
-);
-
-alter table public.travel_expenses enable row level security;
-create policy "authenticated manage expenses" on public.travel_expenses for all using (auth.role() = 'authenticated');
-
--- ============================================================
--- STORAGE
--- ============================================================
-
-insert into storage.buckets (id, name, public)
-values ('travel-receipts', 'travel-receipts', true)
-on conflict (id) do nothing;
-
-create policy "travel_receipts_select" on storage.objects for select using (bucket_id = 'travel-receipts');
-create policy "travel_receipts_insert" on storage.objects for insert with check (bucket_id = 'travel-receipts');
-create policy "travel_receipts_update" on storage.objects for update using (bucket_id = 'travel-receipts');
-create policy "travel_receipts_delete" on storage.objects for delete using (bucket_id = 'travel-receipts');
 
 -- ============================================================
 -- MS SOCIAL MODULE
