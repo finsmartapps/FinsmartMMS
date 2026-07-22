@@ -19,7 +19,7 @@ import {
 import type { Settings, Lead } from '@/types'
 import {
   Zap, BookOpen, Inbox, ArrowUpRight,
-  Armchair, Database,
+  Armchair, Database, TrendingDown,
 } from 'lucide-react'
 
 export default async function LeadsPage() {
@@ -113,6 +113,16 @@ export default async function LeadsPage() {
   const byDataSource = byDataSourceAll.length > DS_TOP
     ? [...byDataSourceAll.slice(0, DS_TOP), { name: `Other (${byDataSourceAll.length - DS_TOP})`, value: byDataSourceAll.slice(DS_TOP).reduce((s, d) => s + d.value, 0) }]
     : byDataSourceAll
+
+  // ── loss reason breakdown ──
+  const leadsWithReason = leads.filter(l => l.loss_reason?.trim())
+  const byLossReason = Object.entries(
+    leadsWithReason.reduce<Record<string, number>>((acc, l) => {
+      const k = l.loss_reason!.trim()
+      acc[k] = (acc[k] ?? 0) + 1
+      return acc
+    }, {})
+  ).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
 
   const seatsTarget = settings?.annual_seats_target ?? 100
   const won = leads.filter(isClosedBiz)
@@ -237,6 +247,18 @@ export default async function LeadsPage() {
                 <div className="pt-2"><HBarChart data={byStage} /></div>
               </Panel>
             </div>
+          ) : null,
+        },
+        {
+          id: 'loss-reasons',
+          label: 'Loss Reason Breakdown',
+          content: byLossReason.length > 0 ? (
+            <Panel icon={TrendingDown} title="Why We Lost Leads" accent="rose"
+              caption={`${leadsWithReason.length} lead${leadsWithReason.length !== 1 ? 's' : ''} with a recorded reason`}>
+              <div className="pt-2">
+                <HBarChart data={byLossReason} unit="leads" />
+              </div>
+            </Panel>
           ) : null,
         },
         {
