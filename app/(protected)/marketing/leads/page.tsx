@@ -252,14 +252,16 @@ export default async function LeadsPage() {
         {
           id: 'loss-reasons',
           label: 'Outcome Reason Breakdown',
-          content: byLossReason.length > 0 ? (
+          content: (
             <Panel icon={TrendingDown} title="Lead Outcome Reasons" accent="rose"
-              caption={`${leadsWithReason.length} lead${leadsWithReason.length !== 1 ? 's' : ''} with a recorded reason`}>
+              caption={leadsWithReason.length > 0 ? `${leadsWithReason.length} lead${leadsWithReason.length !== 1 ? 's' : ''} with a recorded reason` : 'Import leads with the Reason column to see breakdown'}>
               <div className="pt-2">
-                <HBarChart data={byLossReason} unit="leads" />
+                {byLossReason.length > 0
+                  ? <HBarChart data={byLossReason} unit="leads" />
+                  : <p className="text-sm text-slate-400 text-center py-8">No outcome reasons recorded yet</p>}
               </div>
             </Panel>
-          ) : null,
+          ),
         },
         {
           id: 'source-breakdown',
