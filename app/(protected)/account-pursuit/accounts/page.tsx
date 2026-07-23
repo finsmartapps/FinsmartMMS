@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
-import { Plus, Loader2, Target, Search, Building2, X, Save } from 'lucide-react'
+import { Plus, Loader2, Target, Search, Building2, X, Save, Info } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getViewer, parseRevenue, autoTier, fmtDate, dueLabel } from '@/lib/account-pursuit/helpers'
 import { ACCOUNT_STATUSES, TIERS } from '@/lib/account-pursuit/constants'
@@ -22,7 +22,9 @@ export default function AccountsBoardPage() {
   const [search, setSearch] = useState('')
   const [tierFilter, setTierFilter] = useState<'all' | Tier>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | AccountStatus>('all')
+  const [industryFilter, setIndustryFilter] = useState<string>('all')
   const [showAdd, setShowAdd] = useState(false)
+  const [showTierInfo, setShowTierInfo] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -40,12 +42,19 @@ export default function AccountsBoardPage() {
 
   useEffect(() => { getViewer().then(setViewer); load() }, [load])
 
+  const industries = useMemo(() => {
+    const set = new Set<string>()
+    for (const a of accounts) if (a.targeted_industry?.trim()) set.add(a.targeted_industry.trim())
+    return [...set].sort((x, y) => x.localeCompare(y))
+  }, [accounts])
+
   const filtered = useMemo(() => accounts.filter(a => {
     if (tierFilter !== 'all' && a.tier !== tierFilter) return false
     if (statusFilter !== 'all' && a.status !== statusFilter) return false
+    if (industryFilter !== 'all' && a.targeted_industry?.trim() !== industryFilter) return false
     if (search.trim() && !a.name.toLowerCase().includes(search.toLowerCase())) return false
     return true
-  }), [accounts, tierFilter, statusFilter, search])
+  }), [accounts, tierFilter, statusFilter, industryFilter, search])
 
   const tierCounts = useMemo(() => {
     const c = { A: 0, B: 0, C: 0, none: 0 }
@@ -79,7 +88,24 @@ export default function AccountsBoardPage() {
           <TierChip key={t.value} label={t.label} count={tierCounts[t.value]} active={tierFilter === t.value}
             onClick={() => setTierFilter(t.value)} cls={t.cls} ring={t.value === 'A' ? 'ring-emerald-400' : t.value === 'B' ? 'ring-amber-400' : 'ring-slate-400'} />
         ))}
+        <button onClick={() => setShowTierInfo(v => !v)} title="What do the tiers mean?"
+          className="w-6 h-6 rounded-full flex items-center justify-center text-[#AEAEB2] hover:text-teal-600 hover:bg-teal-50 transition">
+          <Info size={15} />
+        </button>
       </div>
+
+      {showTierInfo && (
+        <div className="mb-4 bg-white border border-[#E5E5EA] rounded-xl px-4 py-3 text-[12px] text-[#6E6E73] leading-relaxed">
+          <p className="font-semibold text-[#1D1D1F] mb-1">What the tiers mean</p>
+          <p>Tier ranks each account by <b>size</b> — set automatically from revenue &amp; headcount, so higher tiers get higher priority:</p>
+          <ul className="mt-1.5 space-y-0.5">
+            <li><span className="inline-block w-14 font-semibold text-emerald-700">Tier A</span> revenue ≥ $25M <b>or</b> ≥ 250 employees — biggest targets, work these first</li>
+            <li><span className="inline-block w-14 font-semibold text-amber-700">Tier B</span> revenue ≥ $10M <b>or</b> ≥ 50 employees — solid mid-size</li>
+            <li><span className="inline-block w-14 font-semibold text-slate-500">Tier C</span> smaller, or size unknown — lower priority</li>
+          </ul>
+          <p className="mt-1.5">You can override any account&apos;s tier on its detail page.</p>
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex items-center gap-3 mb-4 flex-wrap">
@@ -92,6 +118,11 @@ export default function AccountsBoardPage() {
           className="h-9 border border-[#E5E5EA] rounded-lg px-2.5 text-[12px] bg-white text-[#1D1D1F]">
           <option value="all">All statuses</option>
           {ACCOUNT_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+        </select>
+        <select value={industryFilter} onChange={e => setIndustryFilter(e.target.value)}
+          className="h-9 border border-[#E5E5EA] rounded-lg px-2.5 text-[12px] bg-white text-[#1D1D1F] max-w-[180px]">
+          <option value="all">All industries</option>
+          {industries.map(i => <option key={i} value={i}>{i}</option>)}
         </select>
       </div>
 

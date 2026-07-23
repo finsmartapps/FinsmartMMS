@@ -182,6 +182,9 @@ export default function ImportPage() {
               <span><b>{stats.tiers.B}</b> Tier B</span>
               <span><b>{stats.tiers.C}</b> Tier C</span>
             </div>
+            <p className="text-[11px] text-[#AEAEB2] mt-2 leading-relaxed">
+              By size (revenue &amp; headcount): <b>A</b> = $25M+ or 250+ staff · <b>B</b> = $10M+ or 50+ · <b>C</b> = smaller/unknown. Higher tier = higher priority.
+            </p>
           </div>
           <div className="bg-white border border-[#E5E5EA] rounded-2xl overflow-hidden mb-4">
             <p className="px-4 py-2.5 text-[11px] font-semibold text-[#AEAEB2] uppercase tracking-wider border-b border-[#F2F2F7]">Sample (first 6)</p>
