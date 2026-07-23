@@ -88,6 +88,7 @@ const accountPursuitGroups: NavGroup[] = [
     links: [
       { href: '/account-pursuit',          label: 'Follow-ups Due', icon: CalendarCheck },
       { href: '/account-pursuit/accounts',  label: 'Accounts',       icon: Target        },
+      { href: '/account-pursuit/import',    label: 'Import',         icon: FileBarChart2 },
     ],
   },
 ]
