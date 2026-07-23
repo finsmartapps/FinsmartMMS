@@ -10,7 +10,7 @@ import {
   Phone, BarChart2, BookUser, ClipboardList,
   Inbox, Settings, ChevronDown, ChevronRight,
   Package, CalendarDays, Truck, FileBarChart2, Users,
-  Megaphone, Trophy, LayoutList, Share2, Target,
+  Megaphone, Trophy, LayoutList, Share2, Target, Clock,
 } from 'lucide-react'
 
 interface NavLink {
@@ -88,6 +88,7 @@ const accountPursuitGroups: NavGroup[] = [
     links: [
       { href: '/account-pursuit',          label: 'Follow-ups Due', icon: CalendarCheck },
       { href: '/account-pursuit/accounts',  label: 'Accounts',       icon: Target        },
+      { href: '/account-pursuit/awaiting',  label: 'Awaiting',       icon: Clock         },
       { href: '/account-pursuit/import',    label: 'Import',         icon: FileBarChart2 },
     ],
   },
