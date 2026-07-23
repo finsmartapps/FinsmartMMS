@@ -4,7 +4,7 @@ import { useState, useEffect, use, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
-  ArrowLeft, Loader2, ExternalLink, Send, Save, Building2, Clock, CheckCircle2,
+  ArrowLeft, Loader2, ExternalLink, Send, Save, Building2, Clock, CheckCircle2, Sparkles,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getViewer, businessDaysFromToday, fmtDate, dueLabel, fullName } from '@/lib/account-pursuit/helpers'
@@ -36,6 +36,11 @@ export default function ContactThreadPage({ params }: { params: Promise<{ id: st
   const [body, setBody] = useState('')
   const [templateId, setTemplateId] = useState('')
   const [logging, setLogging] = useState(false)
+
+  // AI drafting
+  const [drafting, setDrafting] = useState(false)
+  const [drafts, setDrafts] = useState<string[]>([])
+  const [draftError, setDraftError] = useState('')
 
   // next-step editor
   const [nextAction, setNextAction] = useState('')
@@ -96,6 +101,23 @@ export default function ContactThreadPage({ params }: { params: Promise<{ id: st
     setTemplateId(tid)
     const t = templates.find(x => x.id === tid)
     if (t) { setBody(t.body); if (t.channel) setChannel(t.channel) }
+  }
+
+  async function draftWithAI() {
+    if (!contact) return
+    setDrafting(true); setDraftError(''); setDrafts([])
+    try {
+      const r = await fetch(`/api/account-pursuit/contacts/${contact.id}/draft`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ channel }),
+      })
+      const d = await r.json()
+      if (!r.ok) { setDraftError(d.error || 'Could not generate a draft.'); }
+      else setDrafts(d.drafts ?? [])
+    } catch {
+      setDraftError('Could not reach the AI service.')
+    }
+    setDrafting(false)
   }
 
   async function logMessage() {
@@ -217,7 +239,28 @@ export default function ContactThreadPage({ params }: { params: Promise<{ id: st
                   {templates.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                 </select>
               )}
+              {direction === 'sent' && (
+                <button onClick={draftWithAI} disabled={drafting}
+                  className="flex items-center gap-1.5 h-8 px-2.5 text-[12px] font-medium rounded-lg border border-teal-200 text-teal-700 bg-teal-50 hover:bg-teal-100 disabled:opacity-60 transition ml-auto">
+                  {drafting ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} Draft with AI
+                </button>
+              )}
             </div>
+
+            {draftError && <p className="text-[12px] text-rose-600 bg-rose-50 px-3 py-2 rounded-lg mb-2">{draftError}</p>}
+            {drafts.length > 0 && (
+              <div className="mb-3 space-y-2">
+                <p className="text-[11px] font-semibold text-[#AEAEB2] uppercase tracking-wider">AI suggestions — click to use</p>
+                {drafts.map((d, i) => (
+                  <button key={i} onClick={() => { setBody(d); setDrafts([]) }}
+                    className="block w-full text-left text-[13px] text-[#1D1D1F] bg-teal-50/60 border border-teal-100 rounded-lg px-3 py-2 hover:bg-teal-50 transition">
+                    {d}
+                    <span className="block text-[10px] text-[#AEAEB2] mt-1">{d.length} chars</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
             <textarea value={body} onChange={e => setBody(e.target.value)} rows={3}
               placeholder={direction === 'sent' ? 'Paste or write what you sent…' : 'What did they say back…'}
               className={`w-full border rounded-lg px-3 py-2 text-[13px] resize-none focus:outline-none focus:ring-1 transition ${overLimit ? 'border-rose-400 focus:border-rose-400 focus:ring-rose-400/10' : 'border-[#E5E5EA] focus:border-teal-500 focus:ring-teal-500/10'}`} />
