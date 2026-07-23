@@ -9,7 +9,7 @@ export default async function RootPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('role, has_sales, has_marketing')
+    .select('role, has_sales, has_marketing, has_account_pursuit')
     .eq('id', user.id)
     .single()
 
@@ -20,6 +20,7 @@ export default async function RootPage() {
     else redirect('/sales/telecaller')
   }
   if (profile.has_marketing) redirect('/marketing')
+  if (profile.has_account_pursuit) redirect('/account-pursuit')
 
   redirect('/login')
 }

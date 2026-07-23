@@ -40,7 +40,7 @@ export async function PATCH(
 
   if ('is_active' in body) updates.is_active = Boolean(body.is_active)
 
-  for (const col of ['has_sales','has_marketing','has_warehouse','has_advocacy','has_ms_social']) {
+  for (const col of ['has_sales','has_marketing','has_warehouse','has_advocacy','has_ms_social','has_account_pursuit']) {
     if (col in body) updates[col] = Boolean(body[col])
   }
 

@@ -40,6 +40,7 @@ create table public.profiles (
   has_warehouse boolean     not null default false,
   has_advocacy  boolean     not null default false,
   has_ms_social boolean     not null default false,
+  has_account_pursuit boolean not null default false,
   is_active     boolean     not null default true,
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
@@ -631,4 +632,164 @@ insert into public.plan_events (name, quarter, sql_target_min, sql_target_max, m
   ('NJCPA',                      'Q3',    10, 15, 18, 'CPA Firms',  'Events Lead', 'Smaller but targeted event',      3),
   ('Xerocon',                    'Q3',    15, 20, 25, 'Small Firms','Events Lead', 'SMB / app ecosystem fit',         4),
   ('Intuit Connect / Tax / TR',  'Q3–Q4', 40, 50, 60, 'Mixed',      'Events Lead', 'Tax and ecosystem conferences',   5);
+
+-- ============================================================
+-- ACCOUNT PURSUIT MODULE  (ABM: LinkedIn account-based outreach)
+-- has_account_pursuit flag is declared on the profiles table above.
+-- ============================================================
+
+create table public.abm_accounts (
+  id                    uuid primary key default gen_random_uuid(),
+  name                  text not null,
+  website               text,
+  linkedin_url          text,
+  industry              text,
+  targeted_industry     text,
+  revenue_text          text,
+  revenue_usd           numeric(14,2),
+  employee_size         integer,
+  tier                  text    check (tier in ('A','B','C')),
+  fit_score             integer check (fit_score between 0 and 100),
+  status                text    not null default 'target'
+                          check (status in ('target','engaged','in_conversation','opportunity','won','lost','on_hold')),
+  compelling_event      text,
+  pain_hypothesis       text,
+  state                 text,
+  country               text,
+  address               text,
+  associations          text,
+  software_partnerships text,
+  offshore_presence     text,
+  other_industries      text,
+  next_action           text,
+  next_action_date      date,
+  owner_id              uuid references public.profiles(id) on delete set null,
+  source                text default 'manual',
+  notes                 text,
+  last_activity_at      timestamptz,
+  stage_changed_at      timestamptz,
+  closed_at             timestamptz,
+  loss_reason           text,
+  created_by            uuid references public.profiles(id) on delete set null,
+  created_at            timestamptz not null default now(),
+  updated_at            timestamptz not null default now()
+);
+
+create table public.abm_contacts (
+  id                 uuid primary key default gen_random_uuid(),
+  account_id         uuid not null references public.abm_accounts(id) on delete cascade,
+  first_name         text not null,
+  last_name          text,
+  job_title          text,
+  committee_role     text not null default 'unknown'
+                       check (committee_role in ('decision_maker','champion','influencer','gatekeeper','unknown')),
+  linkedin_url       text,
+  email              text,
+  office_number      text,
+  direct_number      text,
+  mutual_connections text,
+  has_mutuals        boolean not null default false,
+  connection_status  text not null default 'not_sent'
+                       check (connection_status in ('not_sent','request_sent','accepted','no_response','declined')),
+  request_sent_at    timestamptz,
+  connected_at       timestamptz,
+  conversation_stage text not null default 'no_contact'
+                       check (conversation_stage in ('no_contact','opener_sent','replied','in_conversation','meeting_booked','cold')),
+  next_action        text,
+  next_action_date   date,
+  last_touch_at      timestamptz,
+  touch_count        integer not null default 0,
+  do_not_contact     boolean not null default false,
+  owner_id           uuid references public.profiles(id) on delete set null,
+  notes              text,
+  created_by         uuid references public.profiles(id) on delete set null,
+  created_at         timestamptz not null default now(),
+  updated_at         timestamptz not null default now()
+);
+
+create table public.abm_message_templates (
+  id         uuid primary key default gen_random_uuid(),
+  name       text not null,
+  body       text not null,
+  channel    text default 'dm' check (channel in ('connect_note','dm','inmail','email')),
+  is_active  boolean not null default true,
+  created_by uuid references public.profiles(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table public.abm_messages (
+  id           uuid primary key default gen_random_uuid(),
+  contact_id   uuid not null references public.abm_contacts(id) on delete cascade,
+  account_id   uuid references public.abm_accounts(id) on delete cascade,
+  direction    text not null check (direction in ('sent','received')),
+  channel      text not null default 'dm' check (channel in ('connect_note','dm','inmail','email')),
+  body         text not null,
+  template_id  uuid references public.abm_message_templates(id) on delete set null,
+  occurred_at  timestamptz not null default now(),
+  logged_by    uuid references public.profiles(id) on delete set null,
+  created_at   timestamptz not null default now()
+);
+
+create table public.abm_offer_context (
+  id         integer primary key default 1,
+  value_prop text default '',
+  icp        text default '',
+  tone       text default '',
+  updated_by uuid references public.profiles(id) on delete set null,
+  updated_at timestamptz not null default now(),
+  constraint abm_offer_context_singleton check (id = 1)
+);
+
+create index idx_abm_accounts_owner_status on public.abm_accounts(owner_id, status);
+create index idx_abm_accounts_tier         on public.abm_accounts(tier);
+create index idx_abm_contacts_account      on public.abm_contacts(account_id);
+create index idx_abm_contacts_owner_due    on public.abm_contacts(owner_id, next_action_date);
+create index idx_abm_contacts_connection   on public.abm_contacts(connection_status);
+create index idx_abm_contacts_linkedin     on public.abm_contacts(lower(linkedin_url));
+create index idx_abm_messages_contact_time on public.abm_messages(contact_id, occurred_at desc);
+
+create trigger trg_abm_accounts_updated_at
+  before update on public.abm_accounts
+  for each row execute function public.handle_updated_at();
+create trigger trg_abm_contacts_updated_at
+  before update on public.abm_contacts
+  for each row execute function public.handle_updated_at();
+create trigger trg_abm_message_templates_updated_at
+  before update on public.abm_message_templates
+  for each row execute function public.handle_updated_at();
+
+alter table public.abm_accounts          enable row level security;
+alter table public.abm_contacts          enable row level security;
+alter table public.abm_messages          enable row level security;
+alter table public.abm_message_templates enable row level security;
+alter table public.abm_offer_context     enable row level security;
+
+create policy "abm_accounts manager all" on public.abm_accounts
+  for all using (public.is_manager()) with check (public.is_manager());
+create policy "abm_accounts owner" on public.abm_accounts
+  for all using (owner_id = auth.uid()) with check (owner_id = auth.uid());
+
+create policy "abm_contacts manager all" on public.abm_contacts
+  for all using (public.is_manager()) with check (public.is_manager());
+create policy "abm_contacts owner" on public.abm_contacts
+  for all using (owner_id = auth.uid()) with check (owner_id = auth.uid());
+
+create policy "abm_messages manager all" on public.abm_messages
+  for all using (public.is_manager()) with check (public.is_manager());
+create policy "abm_messages owner" on public.abm_messages
+  for all
+  using (exists (select 1 from public.abm_contacts c where c.id = contact_id and c.owner_id = auth.uid()))
+  with check (exists (select 1 from public.abm_contacts c where c.id = contact_id and c.owner_id = auth.uid()));
+
+create policy "abm_templates read" on public.abm_message_templates
+  for select using (auth.uid() is not null);
+create policy "abm_templates manage" on public.abm_message_templates
+  for all using (public.is_manager() or created_by = auth.uid())
+  with check (public.is_manager() or created_by = auth.uid());
+
+create policy "abm_offer read" on public.abm_offer_context
+  for select using (auth.uid() is not null);
+create policy "abm_offer manage" on public.abm_offer_context
+  for all using (public.is_manager()) with check (public.is_manager());
 

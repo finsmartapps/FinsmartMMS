@@ -6,6 +6,7 @@ export interface Profile {
   role: 'manager' | 'telecaller' | null
   has_sales: boolean
   has_marketing: boolean
+  has_account_pursuit: boolean
   is_active: boolean
   created_at: string
   updated_at: string

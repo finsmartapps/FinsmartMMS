@@ -10,7 +10,7 @@ import {
   Phone, BarChart2, BookUser, ClipboardList,
   Inbox, Settings, ChevronDown, ChevronRight,
   Package, CalendarDays, Truck, FileBarChart2, Users,
-  Megaphone, Trophy, LayoutList, Share2,
+  Megaphone, Trophy, LayoutList, Share2, Target,
 } from 'lucide-react'
 
 interface NavLink {
@@ -33,6 +33,7 @@ interface Props {
   hasWarehouse: boolean
   hasAdvocacy: boolean
   hasMsSocial: boolean
+  hasAccountPursuit: boolean
   allowedSalesModules: string[]
 }
 
@@ -75,6 +76,17 @@ const marketingGroups: NavGroup[] = [
       { href: '/marketing/leads',        label: 'Leads',        icon: Inbox           },
       { href: '/marketing/weekly',       label: 'Weekly Review',icon: ClipboardList   },
       { href: '/marketing/kpi-scorecard',label: 'KPI Scorecard',icon: BarChart2       },
+    ],
+  },
+]
+
+// ── Account Pursuit nav ───────────────────────────────────────────────────────
+
+const accountPursuitGroups: NavGroup[] = [
+  {
+    label: null,
+    links: [
+      { href: '/account-pursuit', label: 'Dashboard', icon: Target },
     ],
   },
 ]
@@ -127,6 +139,7 @@ function filterByModules(groups: NavGroup[], allowedModules: string[]): NavGroup
 const exactRoots = [
   '/sales/manager', '/sales/telecaller', '/marketing', '/warehouse',
   '/sales/manager/settings', '/settings', '/advocacy', '/admin/users', '/ms-social',
+  '/account-pursuit',
 ]
 
 function ModuleSection({
@@ -208,6 +221,7 @@ interface NavContentProps {
   hasWarehouse: boolean
   hasAdvocacy: boolean
   hasMsSocial: boolean
+  hasAccountPursuit: boolean
   isManager: boolean
   isAdmin: boolean
   salesGroups: NavGroup[]
@@ -240,7 +254,7 @@ function getAdvocacyGroups(isAdmin: boolean): NavGroup[] {
 }
 
 function NavContent({
-  hasSales, hasMarketing, hasWarehouse, hasAdvocacy, hasMsSocial,
+  hasSales, hasMarketing, hasWarehouse, hasAdvocacy, hasMsSocial, hasAccountPursuit,
   isManager, isAdmin, salesGroups, pathname, onNav,
 }: NavContentProps) {
   return (
@@ -286,6 +300,15 @@ function NavContent({
           label="MS Social"
           color="bg-pink-500"
           groups={getMsSocialGroups(isManager || isAdmin)}
+          pathname={pathname}
+          onNav={onNav}
+        />
+      )}
+      {hasAccountPursuit && (
+        <ModuleSection
+          label="Account Pursuit"
+          color="bg-teal-500"
+          groups={accountPursuitGroups}
           pathname={pathname}
           onNav={onNav}
         />
@@ -357,6 +380,7 @@ export function Sidebar({
   hasWarehouse,
   hasAdvocacy,
   hasMsSocial,
+  hasAccountPursuit,
   allowedSalesModules,
 }: Props) {
   const router = useRouter()
@@ -374,6 +398,7 @@ export function Sidebar({
     ? (salesRole === 'manager' ? '/sales/manager' : '/sales/telecaller')
     : hasMarketing ? '/marketing'
     : hasAdvocacy ? '/advocacy'
+    : hasAccountPursuit ? '/account-pursuit'
     : '/warehouse'
 
   async function handleLogout() {
@@ -385,7 +410,7 @@ export function Sidebar({
   }
 
   const navProps: NavContentProps = {
-    hasSales, hasMarketing, hasWarehouse, hasAdvocacy, hasMsSocial,
+    hasSales, hasMarketing, hasWarehouse, hasAdvocacy, hasMsSocial, hasAccountPursuit,
     salesGroups, pathname,
     isManager: salesRole === 'manager',
     isAdmin: salesRole === 'admin',
