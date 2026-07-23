@@ -82,17 +82,16 @@ const marketingGroups: NavGroup[] = [
 
 // ── Account Pursuit nav ───────────────────────────────────────────────────────
 
-const accountPursuitGroups: NavGroup[] = [
-  {
-    label: null,
-    links: [
-      { href: '/account-pursuit',          label: 'Follow-ups Due', icon: CalendarCheck },
-      { href: '/account-pursuit/accounts',  label: 'Accounts',       icon: Target        },
-      { href: '/account-pursuit/awaiting',  label: 'Awaiting',       icon: Clock         },
-      { href: '/account-pursuit/import',    label: 'Import',         icon: FileBarChart2 },
-    ],
-  },
-]
+function getAccountPursuitGroups(isManagerOrAdmin: boolean): NavGroup[] {
+  const links: NavLink[] = [
+    { href: '/account-pursuit',          label: 'Follow-ups Due', icon: CalendarCheck },
+    { href: '/account-pursuit/accounts',  label: 'Accounts',       icon: Target        },
+    { href: '/account-pursuit/awaiting',  label: 'Awaiting',       icon: Clock         },
+    { href: '/account-pursuit/import',    label: 'Import',         icon: FileBarChart2 },
+  ]
+  if (isManagerOrAdmin) links.push({ href: '/account-pursuit/rollup', label: 'Team Roll-up', icon: BarChart2 })
+  return [{ label: null, links }]
+}
 
 // ── Admin nav ─────────────────────────────────────────────────────────────────
 
@@ -311,7 +310,7 @@ function NavContent({
         <ModuleSection
           label="Account Pursuit"
           color="bg-teal-500"
-          groups={accountPursuitGroups}
+          groups={getAccountPursuitGroups(isManager || isAdmin)}
           pathname={pathname}
           onNav={onNav}
         />
