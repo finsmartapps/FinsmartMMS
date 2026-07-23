@@ -23,6 +23,7 @@ export default function AccountsBoardPage() {
   const [tierFilter, setTierFilter] = useState<'all' | Tier>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | AccountStatus>('all')
   const [industryFilter, setIndustryFilter] = useState<string>('all')
+  const [warmOnly, setWarmOnly] = useState(false)
   const [showAdd, setShowAdd] = useState(false)
   const [showTierInfo, setShowTierInfo] = useState(false)
 
@@ -52,9 +53,12 @@ export default function AccountsBoardPage() {
     if (tierFilter !== 'all' && a.tier !== tierFilter) return false
     if (statusFilter !== 'all' && a.status !== statusFilter) return false
     if (industryFilter !== 'all' && a.targeted_industry?.trim() !== industryFilter) return false
+    if (warmOnly && !(a.warm_connection_count > 0)) return false
     if (search.trim() && !a.name.toLowerCase().includes(search.toLowerCase())) return false
     return true
-  }), [accounts, tierFilter, statusFilter, industryFilter, search])
+  }), [accounts, tierFilter, statusFilter, industryFilter, warmOnly, search])
+
+  const warmTotal = useMemo(() => accounts.filter(a => a.warm_connection_count > 0).length, [accounts])
 
   const tierCounts = useMemo(() => {
     const c = { A: 0, B: 0, C: 0, none: 0 }
@@ -124,6 +128,12 @@ export default function AccountsBoardPage() {
           <option value="all">All industries</option>
           {industries.map(i => <option key={i} value={i}>{i}</option>)}
         </select>
+        {warmTotal > 0 && (
+          <button onClick={() => setWarmOnly(v => !v)}
+            className={`h-9 px-3 rounded-lg text-[12px] font-medium border transition ${warmOnly ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-teal-700 border-teal-200 hover:bg-teal-50'}`}>
+            🤝 Warm paths ({warmTotal})
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -151,7 +161,12 @@ export default function AccountsBoardPage() {
                   <tr key={a.id} onClick={() => router.push(`/account-pursuit/accounts/${a.id}`)}
                     className="hover:bg-[#FAFAFA] cursor-pointer transition">
                     <td className="px-4 py-3">
-                      <div className="text-[13px] font-semibold text-[#1D1D1F]">{a.name}</div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[13px] font-semibold text-[#1D1D1F]">{a.name}</span>
+                        {a.warm_connection_count > 0 && (
+                          <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-teal-700 bg-teal-50 border border-teal-100 rounded-full px-1.5 py-0.5">🤝 {a.warm_connection_count}</span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 text-[11px] text-[#AEAEB2] mt-0.5">
                         {a.targeted_industry && <span>{a.targeted_industry}</span>}
                         {a.revenue_text && <span>· {a.revenue_text}</span>}

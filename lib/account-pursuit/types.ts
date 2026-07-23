@@ -17,6 +17,13 @@ export type ConversationStage =
 export type Channel = 'connect_note' | 'dm' | 'inmail' | 'email'
 export type Direction = 'sent' | 'received'
 
+export interface WarmConnection {
+  first_name: string
+  last_name: string
+  position: string
+  url: string
+}
+
 export interface AbmAccount {
   id: string
   name: string
@@ -48,6 +55,8 @@ export interface AbmAccount {
   stage_changed_at: string | null
   closed_at: string | null
   loss_reason: string | null
+  warm_connection_count: number
+  warm_connections: WarmConnection[]
   created_by: string | null
   created_at: string
   updated_at: string

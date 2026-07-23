@@ -116,6 +116,27 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
         ))}
       </div>
 
+      {/* Warm connections — existing network at this firm */}
+      {account.warm_connection_count > 0 && (
+        <div className="bg-white border border-teal-200 rounded-2xl p-4 mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-[15px]">🤝</span>
+            <h2 className="text-[14px] font-semibold text-[#1D1D1F]">You already know {account.warm_connection_count} {account.warm_connection_count === 1 ? 'person' : 'people'} here</h2>
+          </div>
+          <p className="text-[11px] text-[#6E6E73] mb-3">Warm intro paths from your LinkedIn network — ask one of them to introduce you to the committee.</p>
+          <div className="flex flex-wrap gap-2">
+            {account.warm_connections.map((w, i) => (
+              <a key={i} href={w.url || undefined} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-[12px] bg-teal-50 border border-teal-100 rounded-lg px-2.5 py-1.5 hover:bg-teal-100 transition">
+                <span className="font-medium text-[#1D1D1F]">{`${w.first_name} ${w.last_name}`.trim()}</span>
+                {w.position && <span className="text-[#6E6E73]">· {w.position}</span>}
+                {w.url && <ExternalLink size={10} className="text-teal-600" />}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Committee contacts */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">

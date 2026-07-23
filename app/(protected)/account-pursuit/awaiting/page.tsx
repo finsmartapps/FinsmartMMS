@@ -8,11 +8,11 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { todayISO, businessDaysFromToday, fmtDate, fullName } from '@/lib/account-pursuit/helpers'
-import { parseConnectionRows, normalizeLinkedinUrl, nameCompanyKey } from '@/lib/account-pursuit/connections'
-import type { AbmContact, ConnectionStatus } from '@/lib/account-pursuit/types'
+import { parseConnectionRows, normalizeLinkedinUrl, nameCompanyKey, normCompany } from '@/lib/account-pursuit/connections'
+import type { AbmContact, ConnectionStatus, WarmConnection } from '@/lib/account-pursuit/types'
 
 type Row = AbmContact & { account: { name: string } | null }
-type SyncResult = { flipped: number; alreadyAccepted: number; unmatched: number }
+type SyncResult = { flipped: number; alreadyAccepted: number; unmatched: number; scanned: number; warmFirms: number; warmPeople: number }
 
 export default function AwaitingPage() {
   const router = useRouter()
@@ -100,7 +100,26 @@ export default function AwaitingPage() {
         flipped += Math.min(20, toAccept.length - i)
       }
 
-      setSyncResult({ flipped, alreadyAccepted, unmatched })
+      // Warm connections: company-match every connection to target accounts.
+      const { data: accts } = await supabase.from('abm_accounts').select('id, name')
+      const acctNorms = (accts ?? []).map(a => ({ id: a.id as string, norm: normCompany(a.name) })).filter(a => a.norm.length >= 3)
+      const warmByAccount = new Map<string, WarmConnection[]>()
+      for (const conn of conns) {
+        const cn = normCompany(conn.company)
+        if (cn.length < 3) continue
+        const hit = acctNorms.find(a => a.norm === cn || a.norm.includes(cn) || cn.includes(a.norm))
+        if (!hit) continue
+        if (!warmByAccount.has(hit.id)) warmByAccount.set(hit.id, [])
+        warmByAccount.get(hit.id)!.push({ first_name: conn.first, last_name: conn.last, position: conn.position, url: conn.url })
+      }
+      // Overwrite each matched account's warm list (so re-upload refreshes cleanly).
+      let warmPeople = 0
+      for (const [accountId, people] of warmByAccount) {
+        warmPeople += people.length
+        await supabase.from('abm_accounts').update({ warm_connections: people, warm_connection_count: people.length }).eq('id', accountId)
+      }
+
+      setSyncResult({ flipped, alreadyAccepted, unmatched, scanned: conns.length, warmFirms: warmByAccount.size, warmPeople })
       await load()
     } catch {
       setSyncError('Could not read that file. Export "Connections" from LinkedIn and upload the .csv.')
@@ -138,10 +157,17 @@ export default function AwaitingPage() {
         </label>
         {syncError && <p className="text-[12px] text-rose-600 bg-rose-50 px-3 py-2 rounded-lg mt-3">{syncError}</p>}
         {syncResult && (
-          <div className="mt-3 flex flex-wrap gap-x-5 gap-y-1 text-[12px] text-[#1D1D1F]">
-            <span className="text-emerald-700 font-medium">✓ {syncResult.flipped} flipped to accepted</span>
-            <span className="text-[#6E6E73]">{syncResult.alreadyAccepted} already accepted</span>
-            <span className="text-[#AEAEB2]">{syncResult.unmatched} in export not matched to a target</span>
+          <div className="mt-3 space-y-1.5">
+            <div className="flex flex-wrap gap-x-5 gap-y-1 text-[12px] text-[#1D1D1F]">
+              <span className="text-[#6E6E73]">Scanned {syncResult.scanned.toLocaleString()} connections</span>
+              <span className="text-emerald-700 font-medium">✓ {syncResult.flipped} flipped to accepted</span>
+              <span className="text-[#6E6E73]">{syncResult.alreadyAccepted} already accepted</span>
+            </div>
+            {syncResult.warmPeople > 0 && (
+              <div className="text-[12px] text-teal-700 bg-teal-50 border border-teal-100 rounded-lg px-3 py-2">
+                🤝 Found <b>{syncResult.warmPeople}</b> warm connection{syncResult.warmPeople === 1 ? '' : 's'} across <b>{syncResult.warmFirms}</b> target firm{syncResult.warmFirms === 1 ? '' : 's'} — see the “warm” badge on those accounts for intro paths.
+              </div>
+            )}
           </div>
         )}
       </div>

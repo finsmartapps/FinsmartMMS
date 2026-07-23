@@ -670,6 +670,8 @@ create table public.abm_accounts (
   stage_changed_at      timestamptz,
   closed_at             timestamptz,
   loss_reason           text,
+  warm_connection_count integer     not null default 0,
+  warm_connections      jsonb       not null default '[]'::jsonb,
   created_by            uuid references public.profiles(id) on delete set null,
   created_at            timestamptz not null default now(),
   updated_at            timestamptz not null default now()

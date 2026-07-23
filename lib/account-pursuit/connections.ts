@@ -68,3 +68,15 @@ export function parseConnectionRows(rows: unknown[][]): { rows: ConnectionRow[];
 export function nameCompanyKey(first: string, last: string, company: string): string {
   return `${first} ${last}`.toLowerCase().trim().replace(/\s+/g, ' ') + '|' + company.toLowerCase().trim()
 }
+
+// Normalize a company name for fuzzy firm matching: lowercase, drop punctuation
+// and common firm suffixes so "Grassi & Co., LLP" ≈ "Grassi".
+export function normCompany(c: string | null | undefined): string {
+  return String(c ?? '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9 ]/g, ' ')
+    .replace(/\b(llp|llc|pllc|pc|pa|inc|co|cpas?|advisors?|associates?|group|company|the)\b/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+}
