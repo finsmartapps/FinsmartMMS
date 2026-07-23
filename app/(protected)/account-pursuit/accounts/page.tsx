@@ -47,6 +47,12 @@ export default function AccountsBoardPage() {
     return true
   }), [accounts, tierFilter, statusFilter, search])
 
+  const tierCounts = useMemo(() => {
+    const c = { A: 0, B: 0, C: 0, none: 0 }
+    for (const a of accounts) { if (a.tier) c[a.tier]++; else c.none++ }
+    return c
+  }, [accounts])
+
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
       <div className="flex items-center justify-between mb-6">
@@ -65,6 +71,16 @@ export default function AccountsBoardPage() {
         </button>
       </div>
 
+      {/* Tier bifurcation — clickable */}
+      <div className="flex items-center gap-2 mb-4 flex-wrap">
+        <TierChip label="All" count={accounts.length} active={tierFilter === 'all'} onClick={() => setTierFilter('all')}
+          cls="bg-[#1D1D1F] text-white" ring="ring-[#1D1D1F]" />
+        {TIERS.map(t => (
+          <TierChip key={t.value} label={t.label} count={tierCounts[t.value]} active={tierFilter === t.value}
+            onClick={() => setTierFilter(t.value)} cls={t.cls} ring={t.value === 'A' ? 'ring-emerald-400' : t.value === 'B' ? 'ring-amber-400' : 'ring-slate-400'} />
+        ))}
+      </div>
+
       {/* Filters */}
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-xs">
@@ -72,11 +88,6 @@ export default function AccountsBoardPage() {
           <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search accounts…"
             className="w-full pl-8 pr-3 h-9 border border-[#E5E5EA] rounded-lg text-[13px] focus:outline-none focus:border-teal-500 bg-white" />
         </div>
-        <select value={tierFilter} onChange={e => setTierFilter(e.target.value as 'all' | Tier)}
-          className="h-9 border border-[#E5E5EA] rounded-lg px-2.5 text-[12px] bg-white text-[#1D1D1F]">
-          <option value="all">All tiers</option>
-          {TIERS.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
-        </select>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as 'all' | AccountStatus)}
           className="h-9 border border-[#E5E5EA] rounded-lg px-2.5 text-[12px] bg-white text-[#1D1D1F]">
           <option value="all">All statuses</option>
@@ -139,6 +150,18 @@ export default function AccountsBoardPage() {
         <AddAccountModal viewerId={viewer.id} onClose={() => setShowAdd(false)} onCreated={() => { setShowAdd(false); load() }} />
       )}
     </div>
+  )
+}
+
+function TierChip({ label, count, active, onClick, cls, ring }: {
+  label: string; count: number; active: boolean; onClick: () => void; cls: string; ring: string
+}) {
+  return (
+    <button onClick={onClick}
+      className={`inline-flex items-center gap-1.5 pl-2.5 pr-2 py-1.5 rounded-full text-[12px] font-semibold transition ${cls} ${active ? `ring-2 ring-offset-1 ${ring}` : 'opacity-90 hover:opacity-100'}`}>
+      {label}
+      <span className="inline-flex items-center justify-center min-w-[20px] h-[18px] px-1 rounded-full bg-black/15 text-[11px] font-bold">{count}</span>
+    </button>
   )
 }
 
