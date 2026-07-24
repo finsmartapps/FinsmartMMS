@@ -22,6 +22,7 @@ export interface WarmConnection {
   last_name: string
   position: string
   url: string
+  company: string
 }
 
 export interface AbmAccount {

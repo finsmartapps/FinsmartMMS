@@ -130,6 +130,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                 className="inline-flex items-center gap-1.5 text-[12px] bg-teal-50 border border-teal-100 rounded-lg px-2.5 py-1.5 hover:bg-teal-100 transition">
                 <span className="font-medium text-[#1D1D1F]">{`${w.first_name} ${w.last_name}`.trim()}</span>
                 {w.position && <span className="text-[#6E6E73]">· {w.position}</span>}
+                {w.company && <span className="text-[#AEAEB2]">· {w.company}</span>}
                 {w.url && <ExternalLink size={10} className="text-teal-600" />}
               </a>
             ))}

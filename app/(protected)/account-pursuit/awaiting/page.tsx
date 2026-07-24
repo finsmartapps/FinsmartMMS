@@ -102,15 +102,20 @@ export default function AwaitingPage() {
 
       // Warm connections: company-match every connection to target accounts.
       const { data: accts } = await supabase.from('abm_accounts').select('id, name')
-      const acctNorms = (accts ?? []).map(a => ({ id: a.id as string, norm: normCompany(a.name) })).filter(a => a.norm.length >= 3)
+      // Exact normalized-name match only (substring matching produced false positives).
+      const acctByNorm = new Map<string, string>()
+      for (const a of (accts ?? []) as { id: string; name: string }[]) {
+        const n = normCompany(a.name)
+        if (n.length >= 3 && !acctByNorm.has(n)) acctByNorm.set(n, a.id)
+      }
       const warmByAccount = new Map<string, WarmConnection[]>()
       for (const conn of conns) {
         const cn = normCompany(conn.company)
         if (cn.length < 3) continue
-        const hit = acctNorms.find(a => a.norm === cn || a.norm.includes(cn) || cn.includes(a.norm))
-        if (!hit) continue
-        if (!warmByAccount.has(hit.id)) warmByAccount.set(hit.id, [])
-        warmByAccount.get(hit.id)!.push({ first_name: conn.first, last_name: conn.last, position: conn.position, url: conn.url })
+        const accountId = acctByNorm.get(cn)
+        if (!accountId) continue
+        if (!warmByAccount.has(accountId)) warmByAccount.set(accountId, [])
+        warmByAccount.get(accountId)!.push({ first_name: conn.first, last_name: conn.last, position: conn.position, url: conn.url, company: conn.company })
       }
       // Overwrite each matched account's warm list (so re-upload refreshes cleanly).
       let warmPeople = 0

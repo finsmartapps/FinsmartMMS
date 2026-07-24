@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Loader2, ExternalLink, Send, Save, Building2, Clock, CheckCircle2, Sparkles,
+  Mail, Phone, Copy, Check,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getViewer, businessDaysFromToday, fmtDate, dueLabel, fullName } from '@/lib/account-pursuit/helpers'
@@ -46,6 +47,12 @@ export default function ContactThreadPage({ params }: { params: Promise<{ id: st
   const [nextAction, setNextAction] = useState('')
   const [nextDate, setNextDate] = useState('')
   const [savingStep, setSavingStep] = useState(false)
+  const [copied, setCopied] = useState<string | null>(null)
+
+  function copy(text: string, key: string) {
+    navigator.clipboard.writeText(text)
+    setCopied(key); setTimeout(() => setCopied(null), 1500)
+  }
 
   const loadMessages = useCallback(async (contactId: string) => {
     const supabase = createClient()
@@ -279,6 +286,52 @@ export default function ContactThreadPage({ params }: { params: Promise<{ id: st
 
         {/* RIGHT: lifecycle + next step */}
         <div className="space-y-4">
+          {/* Contact info */}
+          <div className="bg-white border border-[#E5E5EA] rounded-2xl p-4">
+            <p className="text-[11px] font-bold text-[#1D1D1F] uppercase tracking-wider mb-2">Contact info</p>
+            {(contact.email || contact.direct_number || contact.office_number || contact.linkedin_url) ? (
+              <div className="space-y-2">
+                {contact.email && (
+                  <div className="flex items-center gap-2 text-[12px] min-w-0">
+                    <Mail size={13} className="text-[#AEAEB2] flex-shrink-0" />
+                    <a href={`mailto:${contact.email}`} className="text-teal-700 hover:underline truncate">{contact.email}</a>
+                    <button onClick={() => copy(contact.email!, 'email')} className="text-[#AEAEB2] hover:text-[#1D1D1F] flex-shrink-0">
+                      {copied === 'email' ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                    </button>
+                  </div>
+                )}
+                {contact.direct_number && (
+                  <div className="flex items-center gap-2 text-[12px]">
+                    <Phone size={13} className="text-[#AEAEB2] flex-shrink-0" />
+                    <a href={`tel:${contact.direct_number}`} className="text-[#1D1D1F] hover:underline">{contact.direct_number}</a>
+                    <span className="text-[10px] text-[#AEAEB2]">direct</span>
+                    <button onClick={() => copy(contact.direct_number!, 'direct')} className="text-[#AEAEB2] hover:text-[#1D1D1F]">
+                      {copied === 'direct' ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                    </button>
+                  </div>
+                )}
+                {contact.office_number && (
+                  <div className="flex items-center gap-2 text-[12px]">
+                    <Phone size={13} className="text-[#AEAEB2] flex-shrink-0" />
+                    <a href={`tel:${contact.office_number}`} className="text-[#1D1D1F] hover:underline">{contact.office_number}</a>
+                    <span className="text-[10px] text-[#AEAEB2]">office</span>
+                    <button onClick={() => copy(contact.office_number!, 'office')} className="text-[#AEAEB2] hover:text-[#1D1D1F]">
+                      {copied === 'office' ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                    </button>
+                  </div>
+                )}
+                {contact.linkedin_url && (
+                  <a href={contact.linkedin_url.trim()} target="_blank" rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-[12px] text-teal-700 hover:underline">
+                    <ExternalLink size={13} className="text-[#AEAEB2] flex-shrink-0" /> LinkedIn profile
+                  </a>
+                )}
+              </div>
+            ) : (
+              <p className="text-[12px] text-[#AEAEB2]">No email or phone on file.</p>
+            )}
+          </div>
+
           {/* Connection lifecycle */}
           <div className="bg-white border border-[#E5E5EA] rounded-2xl p-4">
             <p className="text-[11px] font-bold text-[#1D1D1F] uppercase tracking-wider mb-2">Connection</p>
