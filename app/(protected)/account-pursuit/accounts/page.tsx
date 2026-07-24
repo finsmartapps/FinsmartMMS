@@ -4,10 +4,12 @@ import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { Plus, Loader2, Target, Search, Building2, X, Save, Info } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { getViewer, parseRevenue, autoTier, fmtDate, dueLabel } from '@/lib/account-pursuit/helpers'
+import { getViewer, parseRevenue, autoTier, fmtDate, dueLabel, fullName } from '@/lib/account-pursuit/helpers'
 import { ACCOUNT_STATUSES, TIERS } from '@/lib/account-pursuit/constants'
-import { StatusBadge, TierBadge } from '@/components/account-pursuit/badges'
-import type { AbmAccount, Tier, AccountStatus } from '@/lib/account-pursuit/types'
+import { StatusBadge, TierBadge, ConnectionBadge } from '@/components/account-pursuit/badges'
+import type { AbmAccount, Tier, AccountStatus, ConnectionStatus } from '@/lib/account-pursuit/types'
+
+type PersonRow = { id: string; first_name: string; last_name: string | null; job_title: string | null; account_id: string; connection_status: ConnectionStatus }
 
 const input = 'w-full border border-[#E5E5EA] rounded-lg px-3 py-2 text-[13px] text-[#1D1D1F] focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/10 transition bg-white'
 const label = 'text-[10px] font-semibold text-[#AEAEB2] uppercase tracking-wider mb-1 block'
@@ -15,6 +17,7 @@ const label = 'text-[10px] font-semibold text-[#AEAEB2] uppercase tracking-wider
 export default function AccountsBoardPage() {
   const router = useRouter()
   const [accounts, setAccounts] = useState<AbmAccount[]>([])
+  const [people, setPeople] = useState<PersonRow[]>([])
   const [stats, setStats] = useState<Record<string, { total: number; pending: number; connected: number; replied: number }>>({})
   const [loading, setLoading] = useState(true)
   const [viewer, setViewer] = useState<{ id: string; isManager: boolean } | null>(null)
@@ -32,11 +35,13 @@ export default function AccountsBoardPage() {
     const supabase = createClient()
     const [{ data: accts }, { data: contacts }] = await Promise.all([
       supabase.from('abm_accounts').select('*').order('tier', { ascending: true }).order('name'),
-      supabase.from('abm_contacts').select('account_id, connection_status, conversation_stage'),
+      supabase.from('abm_contacts').select('id, account_id, first_name, last_name, job_title, connection_status, conversation_stage'),
     ])
     setAccounts((accts as AbmAccount[]) ?? [])
+    const rows = (contacts ?? []) as (PersonRow & { conversation_stage: string })[]
+    setPeople(rows.map(r => ({ id: r.id, account_id: r.account_id, first_name: r.first_name, last_name: r.last_name, job_title: r.job_title, connection_status: r.connection_status })))
     const st: Record<string, { total: number; pending: number; connected: number; replied: number }> = {}
-    for (const row of (contacts ?? []) as { account_id: string; connection_status: string; conversation_stage: string }[]) {
+    for (const row of rows) {
       const s = st[row.account_id] ?? (st[row.account_id] = { total: 0, pending: 0, connected: 0, replied: 0 })
       s.total++
       if (row.connection_status === 'request_sent') s.pending++
@@ -65,6 +70,20 @@ export default function AccountsBoardPage() {
   }), [accounts, tierFilter, statusFilter, industryFilter, warmOnly, search])
 
   const warmTotal = useMemo(() => accounts.filter(a => a.warm_connection_count > 0).length, [accounts])
+
+  const accountName = useMemo(() => {
+    const m: Record<string, string> = {}
+    for (const a of accounts) m[a.id] = a.name
+    return m
+  }, [accounts])
+
+  const peopleMatches = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return []
+    return people
+      .filter(p => fullName(p).toLowerCase().includes(q))
+      .slice(0, 25)
+  }, [people, search])
 
   const tierCounts = useMemo(() => {
     const c = { A: 0, B: 0, C: 0, none: 0 }
@@ -121,7 +140,7 @@ export default function AccountsBoardPage() {
       <div className="flex items-center gap-3 mb-4 flex-wrap">
         <div className="relative flex-1 min-w-[200px] max-w-xs">
           <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#AEAEB2]" />
-          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search accounts…"
+          <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search accounts or people…"
             className="w-full pl-8 pr-3 h-9 border border-[#E5E5EA] rounded-lg text-[13px] focus:outline-none focus:border-teal-500 bg-white" />
         </div>
         <select value={statusFilter} onChange={e => setStatusFilter(e.target.value as 'all' | AccountStatus)}
@@ -142,14 +161,36 @@ export default function AccountsBoardPage() {
         )}
       </div>
 
+      {/* People search results */}
+      {peopleMatches.length > 0 && (
+        <div className="mb-5">
+          <p className="text-[11px] font-semibold text-[#AEAEB2] uppercase tracking-wider mb-2">People matching “{search.trim()}” ({peopleMatches.length})</p>
+          <div className="bg-white border border-[#E5E5EA] rounded-2xl overflow-hidden divide-y divide-[#F2F2F7]">
+            {peopleMatches.map(p => (
+              <div key={p.id} onClick={() => router.push(`/account-pursuit/contacts/${p.id}`)}
+                className="flex items-center gap-3 px-4 py-2.5 hover:bg-[#FAFAFA] cursor-pointer transition">
+                <div className="flex-1 min-w-0">
+                  <span className="text-[13px] font-semibold text-[#1D1D1F]">{fullName(p)}</span>
+                  {p.job_title && <span className="text-[11px] text-[#AEAEB2] ml-2">{p.job_title}</span>}
+                </div>
+                <span className="text-[12px] text-[#6E6E73] truncate max-w-[200px]">{accountName[p.account_id] ?? '—'}</span>
+                <ConnectionBadge value={p.connection_status} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <div className="flex items-center justify-center h-64"><Loader2 size={22} className="animate-spin text-teal-600" /></div>
       ) : filtered.length === 0 ? (
-        <div className="bg-white border border-[#E5E5EA] rounded-2xl py-16 text-center">
-          <Building2 size={26} className="text-[#AEAEB2] mx-auto mb-3" />
-          <p className="text-[14px] font-semibold text-[#1D1D1F]">{accounts.length === 0 ? 'No accounts yet' : 'No matches'}</p>
-          <p className="text-[12px] text-[#AEAEB2] mt-1">{accounts.length === 0 ? 'Add your first target account, or import your aggregator list.' : 'Adjust the filters above.'}</p>
-        </div>
+        peopleMatches.length > 0 ? null : (
+          <div className="bg-white border border-[#E5E5EA] rounded-2xl py-16 text-center">
+            <Building2 size={26} className="text-[#AEAEB2] mx-auto mb-3" />
+            <p className="text-[14px] font-semibold text-[#1D1D1F]">{accounts.length === 0 ? 'No accounts yet' : 'No matches'}</p>
+            <p className="text-[12px] text-[#AEAEB2] mt-1">{accounts.length === 0 ? 'Add your first target account, or import your aggregator list.' : 'Adjust the filters above.'}</p>
+          </div>
+        )
       ) : (
         <div className="bg-white border border-[#E5E5EA] rounded-2xl overflow-hidden">
           <table className="w-full">
