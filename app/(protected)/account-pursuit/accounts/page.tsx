@@ -15,7 +15,7 @@ const label = 'text-[10px] font-semibold text-[#AEAEB2] uppercase tracking-wider
 export default function AccountsBoardPage() {
   const router = useRouter()
   const [accounts, setAccounts] = useState<AbmAccount[]>([])
-  const [counts, setCounts] = useState<Record<string, number>>({})
+  const [stats, setStats] = useState<Record<string, { total: number; pending: number; connected: number; replied: number }>>({})
   const [loading, setLoading] = useState(true)
   const [viewer, setViewer] = useState<{ id: string; isManager: boolean } | null>(null)
 
@@ -32,12 +32,18 @@ export default function AccountsBoardPage() {
     const supabase = createClient()
     const [{ data: accts }, { data: contacts }] = await Promise.all([
       supabase.from('abm_accounts').select('*').order('tier', { ascending: true }).order('name'),
-      supabase.from('abm_contacts').select('id, account_id'),
+      supabase.from('abm_contacts').select('account_id, connection_status, conversation_stage'),
     ])
     setAccounts((accts as AbmAccount[]) ?? [])
-    const c: Record<string, number> = {}
-    for (const row of (contacts ?? []) as { account_id: string }[]) c[row.account_id] = (c[row.account_id] ?? 0) + 1
-    setCounts(c)
+    const st: Record<string, { total: number; pending: number; connected: number; replied: number }> = {}
+    for (const row of (contacts ?? []) as { account_id: string; connection_status: string; conversation_stage: string }[]) {
+      const s = st[row.account_id] ?? (st[row.account_id] = { total: 0, pending: 0, connected: 0, replied: 0 })
+      s.total++
+      if (row.connection_status === 'request_sent') s.pending++
+      if (row.connection_status === 'accepted') s.connected++
+      if (['replied', 'in_conversation', 'meeting_booked'].includes(row.conversation_stage)) s.replied++
+    }
+    setStats(st)
     setLoading(false)
   }, [])
 
@@ -175,7 +181,23 @@ export default function AccountsBoardPage() {
                     </td>
                     <td className="px-4 py-3"><TierBadge value={a.tier} /></td>
                     <td className="px-4 py-3"><StatusBadge value={a.status} /></td>
-                    <td className="px-4 py-3 text-[13px] text-[#1D1D1F]">{counts[a.id] ?? 0}</td>
+                    <td className="px-4 py-3">
+                      {(() => {
+                        const s = stats[a.id] ?? { total: 0, pending: 0, connected: 0, replied: 0 }
+                        return (
+                          <div>
+                            <span className="text-[13px] text-[#1D1D1F]">{s.total}</span>
+                            {(s.pending > 0 || s.connected > 0 || s.replied > 0) && (
+                              <div className="flex items-center gap-1 mt-1 flex-wrap">
+                                {s.pending > 0 && <span className="text-[10px] font-semibold text-amber-700 bg-amber-50 rounded px-1.5 py-0.5">🕓 {s.pending} sent</span>}
+                                {s.connected > 0 && <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 rounded px-1.5 py-0.5">✓ {s.connected} connected</span>}
+                                {s.replied > 0 && <span className="text-[10px] font-semibold text-blue-700 bg-blue-50 rounded px-1.5 py-0.5">💬 {s.replied} replied</span>}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })()}
+                    </td>
                     <td className="px-4 py-3">
                       {a.next_action
                         ? <div>
