@@ -251,7 +251,7 @@ export default async function LeadsPage() {
               caption={leadsWithReason.length > 0 ? `${leadsWithReason.length} lead${leadsWithReason.length !== 1 ? 's' : ''} with a recorded reason` : 'Import leads with the Reason column to see breakdown'}>
               <LossReasonBreakdown leads={leadsWithReason.map(l => ({
                 name: l.name, company_name: l.company_name, lead_source: l.lead_source,
-                lead_stage: l.lead_stage, loss_reason: l.loss_reason!,
+                email: l.email, phone: l.phone, loss_reason: l.loss_reason!,
               }))} />
             </Panel>
           ),

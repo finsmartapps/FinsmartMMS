@@ -6,7 +6,8 @@ type L = {
   name: string
   company_name: string
   lead_source: string
-  lead_stage: string
+  email: string
+  phone: string
   loss_reason: string
 }
 
@@ -68,7 +69,8 @@ export default function LossReasonBreakdown({ leads }: { leads: L[] }) {
                   <th className="px-3 py-1.5 font-medium">Name</th>
                   <th className="px-3 py-1.5 font-medium">Company</th>
                   <th className="px-3 py-1.5 font-medium">Lead Source</th>
-                  <th className="px-3 py-1.5 font-medium">Stage</th>
+                  <th className="px-3 py-1.5 font-medium">Email</th>
+                  <th className="px-3 py-1.5 font-medium">Phone</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -77,7 +79,12 @@ export default function LossReasonBreakdown({ leads }: { leads: L[] }) {
                     <td className="px-3 py-1.5 text-slate-800 font-medium whitespace-nowrap">{l.name || '—'}</td>
                     <td className="px-3 py-1.5 text-slate-600">{l.company_name || '—'}</td>
                     <td className="px-3 py-1.5 text-slate-600 whitespace-nowrap">{l.lead_source || '—'}</td>
-                    <td className="px-3 py-1.5 text-slate-600 whitespace-nowrap">{l.lead_stage || '—'}</td>
+                    <td className="px-3 py-1.5 text-slate-600 whitespace-nowrap">
+                      {l.email ? <a href={`mailto:${l.email}`} className="text-rose-600 hover:underline">{l.email}</a> : '—'}
+                    </td>
+                    <td className="px-3 py-1.5 text-slate-600 whitespace-nowrap">
+                      {l.phone ? <a href={`tel:${l.phone}`} className="hover:underline">{l.phone}</a> : '—'}
+                    </td>
                   </tr>
                 ))}
               </tbody>
