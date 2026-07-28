@@ -11,6 +11,7 @@ import PageSortableLayout from '@/components/marketing/leads/page-sortable-layou
 import SeatsSection from '@/components/marketing/leads/seats-section'
 import LeadsFunnelSection from '@/components/marketing/leads/leads-funnel-section'
 import ClosedWonBySource from '@/components/marketing/leads/closed-won-by-source'
+import LossReasonBreakdown from '@/components/marketing/leads/loss-reason-breakdown'
 import {
   classifyLeadSource, CATEGORY_STYLES,
   DIGITAL_MQL_SOURCES, EVENT_SQL_SOURCES, DIRECT_SQL_SOURCES, LEAD_STAGES,
@@ -116,13 +117,6 @@ export default async function LeadsPage() {
 
   // ── loss reason breakdown ──
   const leadsWithReason = leads.filter(l => l.loss_reason?.trim())
-  const byLossReason = Object.entries(
-    leadsWithReason.reduce<Record<string, number>>((acc, l) => {
-      const k = l.loss_reason!.trim()
-      acc[k] = (acc[k] ?? 0) + 1
-      return acc
-    }, {})
-  ).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value)
 
   const seatsTarget = settings?.annual_seats_target ?? 100
   const won = leads.filter(isClosedBiz)
@@ -255,11 +249,10 @@ export default async function LeadsPage() {
           content: (
             <Panel icon={TrendingDown} title="Lead Outcome Reasons" accent="rose"
               caption={leadsWithReason.length > 0 ? `${leadsWithReason.length} lead${leadsWithReason.length !== 1 ? 's' : ''} with a recorded reason` : 'Import leads with the Reason column to see breakdown'}>
-              <div className="pt-2">
-                {byLossReason.length > 0
-                  ? <HBarChart data={byLossReason} unit="leads" />
-                  : <p className="text-sm text-slate-400 text-center py-8">No outcome reasons recorded yet</p>}
-              </div>
+              <LossReasonBreakdown leads={leadsWithReason.map(l => ({
+                name: l.name, company_name: l.company_name, lead_source: l.lead_source,
+                lead_stage: l.lead_stage, loss_reason: l.loss_reason!,
+              }))} />
             </Panel>
           ),
         },
