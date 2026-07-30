@@ -168,7 +168,15 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                     <RoleBadge value={c.committee_role} />
                     {c.has_mutuals && <span className="text-[10px] text-emerald-600 font-medium">warm</span>}
                   </div>
-                  {c.job_title && <p className="text-[11px] text-[#AEAEB2] mt-0.5 truncate">{c.job_title}</p>}
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {c.job_title && <span className="text-[11px] text-[#AEAEB2] truncate">{c.job_title}</span>}
+                    {c.linkedin_url && (
+                      <a href={c.linkedin_url.trim()} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                        className="inline-flex items-center gap-0.5 text-[11px] text-teal-600 hover:underline flex-shrink-0">
+                        LinkedIn <ExternalLink size={9} />
+                      </a>
+                    )}
+                  </div>
                 </div>
                 <ConnectionBadge value={c.connection_status} />
                 <StageBadge value={c.conversation_stage} />
