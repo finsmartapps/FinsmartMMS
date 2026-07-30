@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Loader2, ExternalLink, Send, Save, Building2, Clock, CheckCircle2, Sparkles,
-  Mail, Phone, Copy, Check,
+  Mail, Phone, Copy, Check, Pencil,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { getViewer, businessDaysFromToday, fmtDate, dueLabel, fullName } from '@/lib/account-pursuit/helpers'
@@ -52,6 +52,36 @@ export default function ContactThreadPage({ params }: { params: Promise<{ id: st
   function copy(text: string, key: string) {
     navigator.clipboard.writeText(text)
     setCopied(key); setTimeout(() => setCopied(null), 1500)
+  }
+
+  // Contact-info editing
+  const [editInfo, setEditInfo] = useState(false)
+  const [savingInfo, setSavingInfo] = useState(false)
+  const [infoForm, setInfoForm] = useState({ first_name: '', last_name: '', job_title: '', email: '', direct_number: '', office_number: '', linkedin_url: '' })
+
+  function openInfoEdit() {
+    if (!contact) return
+    setInfoForm({
+      first_name: contact.first_name ?? '', last_name: contact.last_name ?? '', job_title: contact.job_title ?? '',
+      email: contact.email ?? '', direct_number: contact.direct_number ?? '', office_number: contact.office_number ?? '',
+      linkedin_url: contact.linkedin_url ?? '',
+    })
+    setEditInfo(true)
+  }
+
+  async function saveInfo() {
+    if (!infoForm.first_name.trim()) return
+    setSavingInfo(true)
+    await patchContact({
+      first_name: infoForm.first_name.trim(),
+      last_name: infoForm.last_name.trim() || null,
+      job_title: infoForm.job_title.trim() || null,
+      email: infoForm.email.trim() || null,
+      direct_number: infoForm.direct_number.trim() || null,
+      office_number: infoForm.office_number.trim() || null,
+      linkedin_url: infoForm.linkedin_url.trim() || null,
+    })
+    setSavingInfo(false); setEditInfo(false)
   }
 
   const loadMessages = useCallback(async (contactId: string) => {
@@ -288,8 +318,30 @@ export default function ContactThreadPage({ params }: { params: Promise<{ id: st
         <div className="space-y-4">
           {/* Contact info */}
           <div className="bg-white border border-[#E5E5EA] rounded-2xl p-4">
-            <p className="text-[11px] font-bold text-[#1D1D1F] uppercase tracking-wider mb-2">Contact info</p>
-            {(contact.email || contact.direct_number || contact.office_number || contact.linkedin_url) ? (
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[11px] font-bold text-[#1D1D1F] uppercase tracking-wider">Contact info</p>
+              {!editInfo && <button onClick={openInfoEdit} title="Edit contact info" className="text-[#AEAEB2] hover:text-teal-600 transition"><Pencil size={13} /></button>}
+            </div>
+            {editInfo ? (
+              <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <input value={infoForm.first_name} onChange={e => setInfoForm(f => ({ ...f, first_name: e.target.value }))} placeholder="First name" className={input} />
+                  <input value={infoForm.last_name} onChange={e => setInfoForm(f => ({ ...f, last_name: e.target.value }))} placeholder="Last name" className={input} />
+                </div>
+                <input value={infoForm.job_title} onChange={e => setInfoForm(f => ({ ...f, job_title: e.target.value }))} placeholder="Job title" className={input} />
+                <input value={infoForm.email} onChange={e => setInfoForm(f => ({ ...f, email: e.target.value }))} placeholder="Email" className={input} />
+                <input value={infoForm.direct_number} onChange={e => setInfoForm(f => ({ ...f, direct_number: e.target.value }))} placeholder="Direct phone" className={input} />
+                <input value={infoForm.office_number} onChange={e => setInfoForm(f => ({ ...f, office_number: e.target.value }))} placeholder="Office phone" className={input} />
+                <input value={infoForm.linkedin_url} onChange={e => setInfoForm(f => ({ ...f, linkedin_url: e.target.value }))} placeholder="LinkedIn URL" className={input} />
+                <div className="flex items-center gap-2 pt-1">
+                  <button onClick={saveInfo} disabled={savingInfo || !infoForm.first_name.trim()}
+                    className="flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-lg bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-60 transition">
+                    {savingInfo ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Save
+                  </button>
+                  <button onClick={() => setEditInfo(false)} className="text-[12px] px-3 py-1.5 rounded-lg border border-[#E5E5EA] text-[#6E6E73] hover:bg-[#F5F5F7] transition">Cancel</button>
+                </div>
+              </div>
+            ) : (contact.email || contact.direct_number || contact.office_number || contact.linkedin_url) ? (
               <div className="space-y-2">
                 {contact.email && (
                   <div className="flex items-center gap-2 text-[12px] min-w-0">
