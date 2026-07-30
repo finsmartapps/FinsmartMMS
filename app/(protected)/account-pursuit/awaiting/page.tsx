@@ -127,7 +127,7 @@ export default function AwaitingPage() {
       setSyncResult({ flipped, alreadyAccepted, unmatched, scanned: conns.length, warmFirms: warmByAccount.size, warmPeople })
       await load()
     } catch {
-      setSyncError('Could not read that file. Export "Connections" from LinkedIn and upload the .csv.')
+      setSyncError('Could not read that file. Export "Connections" from LinkedIn and upload the .csv or .xlsx.')
     }
     setSyncing(false)
     e.target.value = ''
@@ -153,12 +153,12 @@ export default function AwaitingPage() {
         </div>
         <p className="text-[12px] text-[#6E6E73] leading-relaxed mb-3">
           Export <b>Connections</b> from LinkedIn (Settings → Data Privacy → Get a copy of your data → Connections),
-          then upload the CSV here. Anyone who accepted flips to <b>Accepted</b> automatically and gets an opener queued.
+          then upload the file here (.csv or .xlsx). Anyone who accepted flips to <b>Accepted</b> automatically and gets an opener queued.
         </p>
         <label className="inline-flex items-center gap-2 text-[13px] font-semibold px-4 py-2 rounded-xl bg-teal-600 text-white hover:bg-teal-700 cursor-pointer transition">
-          <input type="file" accept=".csv" className="hidden" onChange={onCsv} disabled={syncing} />
+          <input type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={onCsv} disabled={syncing} />
           {syncing ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
-          {syncing ? 'Matching…' : 'Upload Connections.csv'}
+          {syncing ? 'Matching…' : 'Upload Connections file (.csv or .xlsx)'}
         </label>
         {syncError && <p className="text-[12px] text-rose-600 bg-rose-50 px-3 py-2 rounded-lg mt-3">{syncError}</p>}
         {syncResult && (
