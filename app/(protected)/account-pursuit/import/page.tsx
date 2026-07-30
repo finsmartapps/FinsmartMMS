@@ -44,6 +44,16 @@ export default function ImportPage() {
     const ws = book.Sheets[name]
     const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, blankrows: false, raw: false })
     if (rows.length < 2) { setParsed(null); setParseError('That sheet looks empty.'); return }
+
+    // Guard: a LinkedIn Connections export must NOT be imported here (it would
+    // create an account per connection). Send the user to the sync screen instead.
+    const headerNorm = (rows[0] ?? []).map(h => String(h ?? '').toLowerCase().replace(/[^a-z]/g, ''))
+    if (headerNorm.includes('connectedon')) {
+      setParsed(null)
+      setParseError('This looks like a LinkedIn Connections export. Don\'t import it here — it would create an account for every connection. Instead go to Awaiting → “Sync LinkedIn Connections” to match it against your existing target accounts.')
+      return
+    }
+
     const map = buildHeaderMap(rows[0])
     if (!('company_name' in map)) {
       setParsed(null)
