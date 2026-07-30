@@ -160,9 +160,10 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
           {contacts.map(c => {
             const due = dueLabel(c.next_action_date)
             return (
-              <div key={c.id} onClick={() => router.push(`/account-pursuit/contacts/${c.id}`)}
-                className="flex items-center gap-4 px-4 py-3 hover:bg-[#FAFAFA] cursor-pointer transition">
-                <div className="flex-1 min-w-0">
+              <div key={c.id} className="relative flex items-center gap-4 px-4 py-3 hover:bg-[#FAFAFA] transition">
+                {/* Full-row link — real anchor so right-click / ctrl-click / middle-click open a new tab */}
+                <Link href={`/account-pursuit/contacts/${c.id}`} aria-label={`Open ${fullName(c)}`} className="absolute inset-0 z-0" />
+                <div className="flex-1 min-w-0 relative z-10 pointer-events-none">
                   <div className="flex items-center gap-2">
                     <span className="text-[13px] font-semibold text-[#1D1D1F]">{fullName(c)}</span>
                     <RoleBadge value={c.committee_role} />
@@ -172,20 +173,22 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                     {c.job_title && <span className="text-[11px] text-[#AEAEB2] truncate">{c.job_title}</span>}
                     {c.linkedin_url && (
                       <a href={c.linkedin_url.trim()} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
-                        className="inline-flex items-center gap-0.5 text-[11px] text-teal-600 hover:underline flex-shrink-0">
+                        className="inline-flex items-center gap-0.5 text-[11px] text-teal-600 hover:underline flex-shrink-0 pointer-events-auto">
                         LinkedIn <ExternalLink size={9} />
                       </a>
                     )}
                   </div>
                 </div>
-                <ConnectionBadge value={c.connection_status} />
-                <StageBadge value={c.conversation_stage} />
-                <div className="w-32 text-right">
-                  {c.next_action
-                    ? <span className={`text-[11px] ${due.tone === 'overdue' ? 'text-rose-600 font-medium' : due.tone === 'today' ? 'text-amber-600 font-medium' : 'text-[#AEAEB2]'}`}>{due.text}</span>
-                    : <span className="text-[11px] text-[#AEAEB2]">no next step</span>}
+                <div className="relative z-10 pointer-events-none flex items-center gap-4">
+                  <ConnectionBadge value={c.connection_status} />
+                  <StageBadge value={c.conversation_stage} />
+                  <div className="w-32 text-right">
+                    {c.next_action
+                      ? <span className={`text-[11px] ${due.tone === 'overdue' ? 'text-rose-600 font-medium' : due.tone === 'today' ? 'text-amber-600 font-medium' : 'text-[#AEAEB2]'}`}>{due.text}</span>
+                      : <span className="text-[11px] text-[#AEAEB2]">no next step</span>}
+                  </div>
+                  <ChevronRight size={15} className="text-[#D1D1D6] flex-shrink-0" />
                 </div>
-                <ChevronRight size={15} className="text-[#D1D1D6] flex-shrink-0" />
               </div>
             )
           })}
