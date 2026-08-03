@@ -1,10 +1,10 @@
 'use client'
-import { useMemo } from 'react'
+import { useMemo, useState, Fragment } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Package, Truck, CalendarDays, AlertTriangle,
   TrendingUp, ArrowUpRight, ArrowDownRight, Activity,
-  CheckCircle2, Clock, Send
+  CheckCircle2, Clock, Send, ChevronRight
 } from 'lucide-react'
 import type { WmsData } from './useWarehouseStore'
 
@@ -193,9 +193,14 @@ function CategoryBreakdown({ data }: { data: WmsData }) {
   )
 }
 
+type EvItemRow = { label: string; name: string; unit: string; sent: number; returned: number; consumed: number }
+type EvRow = { id: string; name: string; date: string; location: string; sent: number; returned: number; consumed: number; items: EvItemRow[] }
+
 function ConsumedByEvent({ data }: { data: WmsData }) {
-  const { events, shipments } = data
-  const rows = useMemo(() => {
+  const { events, items, shipments } = data
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+
+  const rows = useMemo<EvRow[]>(() => {
     const SENT_STATUSES = new Set(['in_transit', 'delivered', 'at_event', 'return_pending', 'received', 'consumed'])
     const RETURNED_STATUSES = new Set(['delivered', 'received'])
 
@@ -212,56 +217,94 @@ function ConsumedByEvent({ data }: { data: WmsData }) {
       else if (s.type === 'inbound' && RETURNED_STATUSES.has(s.status)) s.items.forEach(({ itemId, quantity }) => add(itemId, quantity, 'returned'))
     })
 
-    const out: { name: string; date: string; units: number; types: number }[] = []
+    const out: EvRow[] = []
     events.forEach(ev => {
-      let units = 0, types = 0
-      Object.values(perEvent[ev.id] || {}).forEach(({ sent, returned }) => {
-        const c = Math.max(0, sent - returned)
-        if (c > 0) { units += c; types++ }
+      const itemRows: EvItemRow[] = []
+      let sent = 0, returned = 0, consumed = 0
+      Object.entries(perEvent[ev.id] || {}).forEach(([itemId, v]) => {
+        const c = Math.max(0, v.sent - v.returned)
+        if (c <= 0) return
+        const item = items.find(i => i.id === itemId)
+        if (!item) return
+        itemRows.push({ label: item.label, name: item.name, unit: item.unit, sent: v.sent, returned: v.returned, consumed: c })
+        sent += v.sent; returned += v.returned; consumed += c
       })
-      if (units > 0) out.push({ name: ev.name, date: ev.startDate, units, types })
+      if (consumed > 0) {
+        itemRows.sort((a, b) => b.consumed - a.consumed)
+        out.push({ id: ev.id, name: ev.name, date: ev.startDate, location: ev.location, sent, returned, consumed, items: itemRows })
+      }
     })
     out.sort((a, b) => b.date.localeCompare(a.date))
     return out
-  }, [events, shipments])
+  }, [events, items, shipments])
 
-  const total = rows.reduce((a, r) => a + r.units, 0)
+  const totals = rows.reduce((a, r) => ({ sent: a.sent + r.sent, returned: a.returned + r.returned, consumed: a.consumed + r.consumed }), { sent: 0, returned: 0, consumed: 0 })
+  const toggle = (id: string) => setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n })
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-slate-700">Consumed by Event</h3>
-        <span className="text-[10px] text-slate-400">sent − returned</span>
+        <span className="text-[10px] text-slate-400">consumed = sent − returned · click a row for item detail</span>
       </div>
       {rows.length === 0 ? (
         <p className="text-xs text-slate-400 py-6 text-center">Nothing consumed yet — returns cover all outbound shipments.</p>
       ) : (
-        <table className="w-full">
-          <thead>
-            <tr className="text-left text-[10px] text-slate-400 uppercase tracking-wider border-b border-slate-200">
-              <th className="pb-2 font-medium">Event</th>
-              <th className="pb-2 font-medium">Date</th>
-              <th className="pb-2 font-medium text-center">Items</th>
-              <th className="pb-2 font-medium text-right">Units consumed</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(r => (
-              <tr key={r.name + r.date} className="border-b border-slate-100 last:border-0">
-                <td className="py-2 text-xs font-medium text-slate-700">{r.name}</td>
-                <td className="py-2 text-xs text-slate-500">{r.date}</td>
-                <td className="py-2 text-xs text-slate-500 text-center">{r.types}</td>
-                <td className="py-2 text-right"><span className="text-xs font-bold text-amber-600">{r.units}</span></td>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[520px]">
+            <thead>
+              <tr className="text-left text-[10px] text-slate-400 uppercase tracking-wider border-b border-slate-200">
+                <th className="pb-2 font-medium">Event</th>
+                <th className="pb-2 font-medium">Date</th>
+                <th className="pb-2 font-medium text-center">Items</th>
+                <th className="pb-2 font-medium text-right">Sent</th>
+                <th className="pb-2 font-medium text-right">Returned</th>
+                <th className="pb-2 font-medium text-right">Consumed</th>
               </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colSpan={3} className="pt-2 text-[10px] text-slate-400 uppercase tracking-wider">Total consumed</td>
-              <td className="pt-2 text-right text-xs font-bold text-slate-700">{total} units</td>
-            </tr>
-          </tfoot>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map(r => {
+                const open = expanded.has(r.id)
+                return (
+                  <Fragment key={r.id}>
+                    <tr onClick={() => toggle(r.id)} className="border-b border-slate-100 cursor-pointer hover:bg-slate-50">
+                      <td className="py-2 text-xs font-medium text-slate-700">
+                        <span className="inline-flex items-center gap-1">
+                          <ChevronRight size={12} className={`text-slate-400 transition-transform ${open ? 'rotate-90' : ''}`} />
+                          {r.name}
+                        </span>
+                      </td>
+                      <td className="py-2 text-xs text-slate-500">{r.date}</td>
+                      <td className="py-2 text-xs text-slate-500 text-center">{r.items.length}</td>
+                      <td className="py-2 text-xs text-slate-500 text-right">{r.sent}</td>
+                      <td className="py-2 text-xs text-slate-500 text-right">{r.returned}</td>
+                      <td className="py-2 text-right"><span className="text-xs font-bold text-amber-600">{r.consumed}</span></td>
+                    </tr>
+                    {open && r.items.map((it, j) => (
+                      <tr key={r.id + '-' + j} className="border-b border-slate-100 bg-slate-50/50">
+                        <td className="py-1.5 pl-6 text-[11px] text-slate-600" colSpan={2}>
+                          <span className="font-medium text-slate-700">{it.label}</span> · {it.name}
+                        </td>
+                        <td className="py-1.5 text-[11px] text-slate-400 text-center">{it.unit}</td>
+                        <td className="py-1.5 text-[11px] text-slate-500 text-right">{it.sent}</td>
+                        <td className="py-1.5 text-[11px] text-slate-500 text-right">{it.returned}</td>
+                        <td className="py-1.5 text-[11px] font-semibold text-amber-600 text-right">{it.consumed}</td>
+                      </tr>
+                    ))}
+                  </Fragment>
+                )
+              })}
+            </tbody>
+            <tfoot>
+              <tr className="border-t border-slate-200">
+                <td colSpan={3} className="pt-2 text-[10px] text-slate-400 uppercase tracking-wider">Total across {rows.length} event{rows.length !== 1 ? 's' : ''}</td>
+                <td className="pt-2 text-right text-xs text-slate-500">{totals.sent}</td>
+                <td className="pt-2 text-right text-xs text-slate-500">{totals.returned}</td>
+                <td className="pt-2 text-right text-xs font-bold text-slate-700">{totals.consumed}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
       )}
     </div>
   )
