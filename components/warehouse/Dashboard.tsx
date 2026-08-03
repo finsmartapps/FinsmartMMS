@@ -193,6 +193,80 @@ function CategoryBreakdown({ data }: { data: WmsData }) {
   )
 }
 
+function ConsumedByEvent({ data }: { data: WmsData }) {
+  const { events, shipments } = data
+  const rows = useMemo(() => {
+    const SENT_STATUSES = new Set(['in_transit', 'delivered', 'at_event', 'return_pending', 'received', 'consumed'])
+    const RETURNED_STATUSES = new Set(['delivered', 'received'])
+
+    const perEvent: Record<string, Record<string, { sent: number; returned: number }>> = {}
+    events.forEach(ev => { perEvent[ev.id] = {} })
+    shipments.forEach(s => {
+      const m = perEvent[s.eventId]
+      if (!m) return
+      const add = (itemId: string, qty: number, key: 'sent' | 'returned') => {
+        if (!m[itemId]) m[itemId] = { sent: 0, returned: 0 }
+        m[itemId][key] += qty
+      }
+      if (s.type === 'outbound' && SENT_STATUSES.has(s.status)) s.items.forEach(({ itemId, quantity }) => add(itemId, quantity, 'sent'))
+      else if (s.type === 'inbound' && RETURNED_STATUSES.has(s.status)) s.items.forEach(({ itemId, quantity }) => add(itemId, quantity, 'returned'))
+    })
+
+    const out: { name: string; date: string; units: number; types: number }[] = []
+    events.forEach(ev => {
+      let units = 0, types = 0
+      Object.values(perEvent[ev.id] || {}).forEach(({ sent, returned }) => {
+        const c = Math.max(0, sent - returned)
+        if (c > 0) { units += c; types++ }
+      })
+      if (units > 0) out.push({ name: ev.name, date: ev.startDate, units, types })
+    })
+    out.sort((a, b) => b.date.localeCompare(a.date))
+    return out
+  }, [events, shipments])
+
+  const total = rows.reduce((a, r) => a + r.units, 0)
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-sm font-semibold text-slate-700">Consumed by Event</h3>
+        <span className="text-[10px] text-slate-400">sent − returned</span>
+      </div>
+      {rows.length === 0 ? (
+        <p className="text-xs text-slate-400 py-6 text-center">Nothing consumed yet — returns cover all outbound shipments.</p>
+      ) : (
+        <table className="w-full">
+          <thead>
+            <tr className="text-left text-[10px] text-slate-400 uppercase tracking-wider border-b border-slate-200">
+              <th className="pb-2 font-medium">Event</th>
+              <th className="pb-2 font-medium">Date</th>
+              <th className="pb-2 font-medium text-center">Items</th>
+              <th className="pb-2 font-medium text-right">Units consumed</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(r => (
+              <tr key={r.name + r.date} className="border-b border-slate-100 last:border-0">
+                <td className="py-2 text-xs font-medium text-slate-700">{r.name}</td>
+                <td className="py-2 text-xs text-slate-500">{r.date}</td>
+                <td className="py-2 text-xs text-slate-500 text-center">{r.types}</td>
+                <td className="py-2 text-right"><span className="text-xs font-bold text-amber-600">{r.units}</span></td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td colSpan={3} className="pt-2 text-[10px] text-slate-400 uppercase tracking-wider">Total consumed</td>
+              <td className="pt-2 text-right text-xs font-bold text-slate-700">{total} units</td>
+            </tr>
+          </tfoot>
+        </table>
+      )}
+    </div>
+  )
+}
+
 export default function Dashboard({ data }: { data: WmsData }) {
   const router = useRouter()
   const { items, events, shipments } = data
@@ -239,6 +313,8 @@ export default function Dashboard({ data }: { data: WmsData }) {
           <LowStockAlert data={data} />
         </div>
       </div>
+
+      <ConsumedByEvent data={data} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <CategoryBreakdown data={data} />
