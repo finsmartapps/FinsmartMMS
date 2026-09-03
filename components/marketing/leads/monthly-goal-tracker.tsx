@@ -60,7 +60,9 @@ export default function MonthlyGoalTracker({ leads }: { leads: Lead[] }) {
   })
 
   const elapsed = rows.filter(r => r.ym <= todayYm)
-  const ytd = (k: MetricKey) => elapsed.reduce((s, r) => s + r.actual[k], 0)
+  // Seats = booked deals (Closed Won) — count all in the year, even future-dated
+  // prepaid ones. MQL/SQL are volume by lead_date, so only elapsed months count.
+  const ytd = (k: MetricKey) => (k === 'seats' ? rows : elapsed).reduce((s, r) => s + r.actual[k], 0)
   const toDate = (k: MetricKey) => MONTHLY[k] * elapsed.length
 
   const cards: MetricKey[] = ['totMql', 'digSql', 'evSql', 'ssgSql', 'totSql', 'seats']
@@ -115,9 +117,11 @@ export default function MonthlyGoalTracker({ leads }: { leads: Lead[] }) {
                 <td className="py-2.5 pl-1 font-semibold text-slate-700">{r.name}{r.ym === todayYm ? ' •' : ''}</td>
                 {METRICS.map(m => {
                   const a = r.actual[m.key], tg = MONTHLY[m.key]
+                  // future months are blank, EXCEPT already-booked seats (prepaid deals)
+                  const blank = r.future && !(m.key === 'seats' && a > 0)
                   return (
                     <td key={m.key} className="py-2.5 px-2.5 text-right tabular-nums">
-                      <span className={`font-bold ${tone(a, tg, r.future)}`}>{r.future ? '—' : (m.key === 'seats' ? formatSeats(a) : a)}</span>
+                      <span className={`font-bold ${blank ? 'text-slate-300' : tone(a, tg, false)}`}>{blank ? '—' : (m.key === 'seats' ? formatSeats(a) : a)}</span>
                       <span className="text-slate-300"> / {num(tg)}</span>
                     </td>
                   )
