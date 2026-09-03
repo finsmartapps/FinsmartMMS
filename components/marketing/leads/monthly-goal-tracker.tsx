@@ -1,22 +1,21 @@
-import type { Settings, Lead } from '@/types'
+import type { Settings, Lead, PlanEvent } from '@/types'
 import { deriveTargets } from '@/lib/calculations'
 import {
   classifyLeadSource, hoursToSeats, formatSeats,
-  FISCAL_MONTHS, fiscalYearStart, fiscalYearLabel,
+  FISCAL_MONTHS, FISCAL_QUARTERS, fiscalYearStart, fiscalYearLabel,
 } from '@/lib/leads'
 import { Target } from 'lucide-react'
 
 type MetricKey = 'mql' | 'sql' | 'direct' | 'event' | 'seats'
 
-const METRICS: { key: MetricKey; label: string; annual: (t: ReturnType<typeof deriveTargets>, s: Settings) => number }[] = [
-  { key: 'mql',    label: 'MQL',        annual: t => t.digital_mqls },
-  { key: 'sql',    label: 'SQL',        annual: t => t.annual_sqls },
-  { key: 'direct', label: 'Direct SQL', annual: t => t.digital_sqls },
-  { key: 'event',  label: 'Event SQL',  annual: t => t.event_sqls },
-  { key: 'seats',  label: 'Seats',      annual: (_t, s) => s.annual_seats_target },
+const METRICS: { key: MetricKey; label: string }[] = [
+  { key: 'mql',    label: 'MQL'        },
+  { key: 'sql',    label: 'SQL'        },
+  { key: 'direct', label: 'Direct SQL' },
+  { key: 'event',  label: 'Event SQL'  },
+  { key: 'seats',  label: 'Seats'      },
 ]
 
-// green >=100%, amber 60-99%, red <60%, grey future/no target
 function tone(actual: number, target: number, future: boolean) {
   if (future) return 'text-slate-300'
   if (target <= 0) return 'text-slate-400'
@@ -26,48 +25,75 @@ function tone(actual: number, target: number, future: boolean) {
   return 'text-rose-600'
 }
 function pct(actual: number, target: number) {
-  if (target <= 0) return '—'
-  return `${Math.round((actual / target) * 100)}%`
+  return target <= 0 ? '—' : `${Math.round((actual / target) * 100)}%`
+}
+const num = (v: number) => (Number.isInteger(v) ? v.toString() : v.toFixed(1).replace(/\.0$/, ''))
+
+// months (mm) a plan-event quarter covers; handles "Q3–Q4" / "Q3-Q4"
+function quarterMonths(quarter: string): string[] {
+  const parts = String(quarter).split(/[–-]/).map(p => p.trim())
+  const months: string[] = []
+  for (const p of parts) {
+    const q = FISCAL_QUARTERS.find(fq => fq.label === p)
+    if (q) months.push(...q.months)
+  }
+  return months
 }
 
-export default function MonthlyGoalTracker({ leads, settings }: { leads: Lead[]; settings: Settings }) {
+export default function MonthlyGoalTracker({ leads, settings, events }: { leads: Lead[]; settings: Settings; events: PlanEvent[] }) {
   const t = deriveTargets(settings)
   const today = new Date()
   const fyStart = fiscalYearStart(today)
   const todayYm = today.toISOString().slice(0, 7)
 
-  const monthlyTarget: Record<MetricKey, number> = {
-    mql: t.digital_mqls / 12,
-    sql: t.annual_sqls / 12,
-    direct: t.digital_sqls / 12,
-    event: t.event_sqls / 12,
-    seats: settings.annual_seats_target / 12,
+  // Flat monthly targets for steady channels
+  const MQL_M = t.digital_mqls / 12
+  const DIR_M = t.digital_sqls / 12
+  const SEATS_M = settings.annual_seats_target / 12
+
+  // Event-SQL target weighted onto the months its events actually run.
+  const eventByMm: Record<string, number> = {}
+  for (const ev of events) {
+    const months = quarterMonths(ev.quarter)
+    if (!months.length) continue
+    const goal = ((ev.sql_target_min ?? 0) + (ev.sql_target_max ?? 0)) / 2
+    const per = goal / months.length
+    months.forEach(mm => { eventByMm[mm] = (eventByMm[mm] ?? 0) + per })
   }
+
+  const targetFor = (key: MetricKey, mm: string): number => {
+    const ev = eventByMm[mm] ?? 0
+    switch (key) {
+      case 'mql':    return MQL_M
+      case 'direct': return DIR_M
+      case 'event':  return ev
+      case 'sql':    return DIR_M + ev
+      case 'seats':  return SEATS_M
+    }
+  }
+
   const annualTarget: Record<MetricKey, number> = {
     mql: t.digital_mqls, sql: t.annual_sqls, direct: t.digital_sqls, event: t.event_sqls, seats: settings.annual_seats_target,
   }
 
-  // Actuals per fiscal month
   const rows = FISCAL_MONTHS.map(fm => {
     const year = ['01', '02', '03'].includes(fm.mm) ? fyStart + 1 : fyStart
     const ym = `${year}-${fm.mm}`
-    const monthLeads = leads.filter(l => (l.lead_date ?? '').startsWith(ym))
+    const ml = leads.filter(l => (l.lead_date ?? '').startsWith(ym))
     const cat = (l: Lead) => classifyLeadSource(l.lead_source)
-    const direct = monthLeads.filter(l => cat(l) === 'Direct SQL').length
-    const event = monthLeads.filter(l => cat(l) === 'Event SQL').length
-    const mql = monthLeads.filter(l => cat(l) === 'Digital MQL').length
+    const direct = ml.filter(l => cat(l) === 'Direct SQL').length
+    const event = ml.filter(l => cat(l) === 'Event SQL').length
+    const mql = ml.filter(l => cat(l) === 'Digital MQL').length
     const seats = leads
       .filter(l => l.lead_stage === 'Closed Won' && (l.closed_date ?? '').startsWith(ym))
       .reduce((s, l) => s + hoursToSeats(l.closed_hours ?? 0), 0)
     const actual: Record<MetricKey, number> = { mql, sql: direct + event, direct, event, seats }
-    return { ym, name: fm.name, future: ym > todayYm, actual }
+    return { ym, mm: fm.mm, name: fm.name, future: ym > todayYm, actual }
   })
 
-  const elapsed = rows.filter(r => r.ym <= todayYm).length
-  const ytd = (k: MetricKey) => rows.filter(r => r.ym <= todayYm).reduce((s, r) => s + r.actual[k], 0)
-  const targetToDate = (k: MetricKey) => monthlyTarget[k] * elapsed
-
-  const num = (v: number) => (Number.isInteger(v) ? v.toString() : v.toFixed(2).replace(/\.?0+$/, ''))
+  const elapsed = rows.filter(r => r.ym <= todayYm)
+  const ytd = (k: MetricKey) => elapsed.reduce((s, r) => s + r.actual[k], 0)
+  const targetToDate = (k: MetricKey) => elapsed.reduce((s, r) => s + targetFor(k, r.mm), 0)
 
   return (
     <div className="rounded-2xl bg-white ring-1 ring-slate-100 p-5 md:p-6">
@@ -76,7 +102,8 @@ export default function MonthlyGoalTracker({ leads, settings }: { leads: Lead[];
         <h2 className="text-base font-extrabold text-slate-800">Goal vs Achievement — {fiscalYearLabel(fyStart)}</h2>
       </div>
       <p className="text-xs text-slate-500 mb-5">
-        Annual goal: <b>{settings.annual_seats_target} seats</b> · <b>{t.digital_mqls} MQL</b> · <b>{t.annual_sqls} SQL</b> ({t.digital_sqls} Direct + {t.event_sqls} Event) · month-by-month achievement
+        Annual goal: <b>{settings.annual_seats_target} seats</b> · <b>{t.digital_mqls} MQL</b> · <b>{t.annual_sqls} SQL</b> ({t.digital_sqls} Direct + {t.event_sqls} Event).
+        MQL &amp; Direct SQL split evenly; <b>Event SQL weighted to event months</b> from the event plan.
       </p>
 
       {/* YTD summary cards */}
@@ -117,7 +144,7 @@ export default function MonthlyGoalTracker({ leads, settings }: { leads: Lead[];
               <tr key={r.ym} className={`${r.ym === todayYm ? 'bg-indigo-50/40' : ''} hover:bg-slate-50/60`}>
                 <td className="py-2.5 pl-1 font-semibold text-slate-700">{r.name}{r.ym === todayYm ? ' •' : ''}</td>
                 {METRICS.map(m => {
-                  const a = r.actual[m.key], tg = monthlyTarget[m.key]
+                  const a = r.actual[m.key], tg = targetFor(m.key, r.mm)
                   return (
                     <td key={m.key} className="py-2.5 px-3 text-right tabular-nums">
                       <span className={`font-bold ${tone(a, tg, r.future)}`}>{r.future ? '—' : (m.key === 'seats' ? formatSeats(a) : a)}</span>
