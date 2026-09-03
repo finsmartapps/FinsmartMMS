@@ -36,7 +36,6 @@ function tone(a: number, t: number, future: boolean) {
   const p = a / t
   return p >= 1 ? 'text-emerald-600' : p >= 0.6 ? 'text-amber-600' : 'text-rose-600'
 }
-const pct = (a: number, t: number) => (t <= 0 ? '—' : `${Math.round((a / t) * 100)}%`)
 const num = (v: number) => (Number.isInteger(v) ? v.toString() : v.toFixed(1).replace(/\.0$/, ''))
 
 export default function MonthlyGoalTracker({ leads }: { leads: Lead[] }) {
@@ -81,8 +80,10 @@ export default function MonthlyGoalTracker({ leads }: { leads: Lead[] }) {
 
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-5">
         {cards.map(k => {
-          const a = ytd(k), td = toDate(k), p = td > 0 ? a / td : 0
-          const badge = p >= 1 ? 'bg-emerald-50 text-emerald-700' : p >= 0.6 ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700'
+          const a = ytd(k), td = toDate(k), ann = ANNUAL[k]
+          const ap = ann > 0 ? a / ann : 0     // achieved, % of annual goal
+          const tp = ann > 0 ? td / ann : 0     // target pace, % of year elapsed
+          const badge = ap >= tp ? 'bg-emerald-50 text-emerald-700' : ap >= tp * 0.6 ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700'
           const label = METRICS.find(m => m.key === k)!.label
           return (
             <div key={k} className="rounded-xl ring-1 ring-slate-100 px-3 py-3">
@@ -90,10 +91,11 @@ export default function MonthlyGoalTracker({ leads }: { leads: Lead[] }) {
               <p className="text-lg font-extrabold text-slate-800 tabular-nums mt-0.5">
                 {k === 'seats' ? formatSeats(a) : a}<span className="text-[11px] text-slate-400 font-bold"> / {num(td)}</span>
               </p>
-              <div className="flex items-center justify-between mt-1">
-                <span className={`text-[9px] font-bold rounded px-1 py-0.5 ${badge}`}>{pct(a, td)}</span>
-                <span className="text-[9px] text-slate-400">{ANNUAL[k]}/yr</span>
+              <div className="flex items-center justify-between mt-1.5">
+                <span className={`text-[9px] font-bold rounded px-1 py-0.5 ${badge}`}>Ach {Math.round(ap * 100)}%</span>
+                <span className="text-[9px] font-bold text-slate-400">Tgt {Math.round(tp * 100)}%</span>
               </div>
+              <p className="text-[9px] text-slate-400 mt-1">goal {ann}/yr</p>
             </div>
           )
         })}
