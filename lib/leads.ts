@@ -55,8 +55,8 @@ export const FUNNEL_PLAN = {
     Event:   { mql: 718, sql: 125, seats: 25 },
     SSG:     { mql: 370, sql: 100, seats: 10 },
   } as Record<Channel3, { mql: number; sql: number; seats: number }>,
-  upgradeSeats: 20,     // existing clients upgrading — no new leads
-  seatsTotal: 100,
+  upgradeSeats: 20,     // existing clients upgrading — tracked separately, not in this system
+  seatsTotal: 80,       // new-business seat goal (100 overall − 20 upgrades)
   meetingsYear: 375,    // = total SQL/yr
   reps: 4,
 }

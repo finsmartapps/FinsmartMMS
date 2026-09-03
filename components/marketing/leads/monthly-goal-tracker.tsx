@@ -74,7 +74,7 @@ export default function MonthlyGoalTracker({ leads }: { leads: Lead[] }) {
         <h2 className="text-base font-extrabold text-slate-800">Goal vs Achievement — {year}</h2>
       </div>
       <p className="text-xs text-slate-500 mb-5">
-        Plan for {FUNNEL_PLAN.seatsTotal} seats ({FUNNEL_PLAN.seatsTotal - FUNNEL_PLAN.upgradeSeats} new + {FUNNEL_PLAN.upgradeSeats} upgrades):
+        Plan for {FUNNEL_PLAN.seatsTotal} new-business seats (+{FUNNEL_PLAN.upgradeSeats} upgrades tracked separately = {FUNNEL_PLAN.seatsTotal + FUNNEL_PLAN.upgradeSeats} total):
         <b> {ANNUAL.totMql} MQL</b> · <b>{ANNUAL.totSql} SQL</b> (Dig {P.Digital.sql} / Event {P.Event.sql} / SSG {P.SSG.sql}) ·
         <b> {FUNNEL_PLAN.meetingsYear} meetings/yr</b> ≈ {Math.round(FUNNEL_PLAN.meetingsYear / 12)}/mo across {FUNNEL_PLAN.reps} reps.
         MQL = every lead · SQL = completed meeting.
