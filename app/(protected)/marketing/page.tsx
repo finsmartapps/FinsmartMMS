@@ -7,6 +7,7 @@ import { ConversionFunnel, DonutChart, HBarChart, RadialGauge } from '@/componen
 import { Panel } from '@/components/marketing/ui/panel'
 import MonthlyGoalTracker from '@/components/marketing/leads/monthly-goal-tracker'
 import WeeklyAchievement from '@/components/marketing/leads/weekly-achievement'
+import CloseRateTracker from '@/components/marketing/leads/close-rate-tracker'
 import LeadsSourceMatrix from '@/components/marketing/leads/leads-source-matrix'
 import { hoursToSeats, formatSeats } from '@/lib/leads'
 import {
@@ -225,6 +226,9 @@ export default async function DashboardPage() {
 
       {/* ══ Weekly cadence ════════════════════════════════════════════════ */}
       <WeeklyAchievement leads={leads} />
+
+      {/* ══ Close rate vs minimum ═════════════════════════════════════════ */}
+      <CloseRateTracker leads={leads} />
 
       {/* ══ Leads by Source × Month ═══════════════════════════════════════ */}
       <LeadsSourceMatrix leads={leads} />
