@@ -6,13 +6,14 @@ import {
 } from '@/lib/leads'
 import { Target } from 'lucide-react'
 
-type MetricKey = 'mql' | 'sql' | 'direct' | 'event' | 'seats'
+type MetricKey = 'mql' | 'sql' | 'direct' | 'event' | 'total' | 'seats'
 
 const METRICS: { key: MetricKey; label: string }[] = [
   { key: 'mql',    label: 'MQL'        },
   { key: 'sql',    label: 'SQL'        },
   { key: 'direct', label: 'Direct SQL' },
   { key: 'event',  label: 'Event SQL'  },
+  { key: 'total',  label: 'Total'      },
   { key: 'seats',  label: 'Seats'      },
 ]
 
@@ -68,12 +69,14 @@ export default function MonthlyGoalTracker({ leads, settings, events }: { leads:
       case 'direct': return DIR_M
       case 'event':  return ev
       case 'sql':    return DIR_M + ev
+      case 'total':  return MQL_M + DIR_M + ev
       case 'seats':  return SEATS_M
     }
   }
 
   const annualTarget: Record<MetricKey, number> = {
-    mql: t.digital_mqls, sql: t.annual_sqls, direct: t.digital_sqls, event: t.event_sqls, seats: settings.annual_seats_target,
+    mql: t.digital_mqls, sql: t.annual_sqls, direct: t.digital_sqls, event: t.event_sqls,
+    total: t.digital_mqls + t.annual_sqls, seats: settings.annual_seats_target,
   }
 
   const rows = FISCAL_MONTHS.map(fm => {
@@ -87,7 +90,7 @@ export default function MonthlyGoalTracker({ leads, settings, events }: { leads:
     const seats = leads
       .filter(l => l.lead_stage === 'Closed Won' && (l.closed_date ?? '').startsWith(ym))
       .reduce((s, l) => s + hoursToSeats(l.closed_hours ?? 0), 0)
-    const actual: Record<MetricKey, number> = { mql, sql: direct + event, direct, event, seats }
+    const actual: Record<MetricKey, number> = { mql, sql: direct + event, direct, event, total: mql + direct + event, seats }
     return { ym, mm: fm.mm, name: fm.name, future: ym > todayYm, actual }
   })
 
