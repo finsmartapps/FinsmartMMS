@@ -1,9 +1,11 @@
 import type { Lead } from '@/types'
-import {
-  leadBucket, isSql, hoursToSeats, formatSeats, FUNNEL_PLAN,
-  FISCAL_MONTHS, fiscalYearStart, fiscalYearLabel,
-} from '@/lib/leads'
+import { leadBucket, isSql, hoursToSeats, formatSeats, FUNNEL_PLAN } from '@/lib/leads'
 import { Target } from 'lucide-react'
+
+const CAL_MONTHS: [string, string][] = [
+  ['01', 'Jan'], ['02', 'Feb'], ['03', 'Mar'], ['04', 'Apr'], ['05', 'May'], ['06', 'Jun'],
+  ['07', 'Jul'], ['08', 'Aug'], ['09', 'Sep'], ['10', 'Oct'], ['11', 'Nov'], ['12', 'Dec'],
+]
 
 type MetricKey = 'digMql' | 'digSql' | 'evMql' | 'evSql' | 'ssgMql' | 'ssgSql' | 'totMql' | 'totSql' | 'seats'
 
@@ -39,12 +41,11 @@ const num = (v: number) => (Number.isInteger(v) ? v.toString() : v.toFixed(1).re
 
 export default function MonthlyGoalTracker({ leads }: { leads: Lead[] }) {
   const today = new Date()
-  const fyStart = fiscalYearStart(today)
+  const year = today.getFullYear()
   const todayYm = today.toISOString().slice(0, 7)
 
-  const rows = FISCAL_MONTHS.map(fm => {
-    const year = ['01', '02', '03'].includes(fm.mm) ? fyStart + 1 : fyStart
-    const ym = `${year}-${fm.mm}`
+  const rows = CAL_MONTHS.map(([mm, name]) => {
+    const ym = `${year}-${mm}`
     const ml = leads.filter(l => (l.lead_date ?? '').startsWith(ym))
     const dig = ml.filter(l => leadBucket(l.lead_source) === 'Digital')
     const evl = ml.filter(l => leadBucket(l.lead_source) === 'Event')
@@ -56,7 +57,7 @@ export default function MonthlyGoalTracker({ leads }: { leads: Lead[] }) {
       digMql: dig.length, digSql, evMql: evl.length, evSql, ssgMql: ssg.length, ssgSql,
       totMql: ml.length, totSql: digSql + evSql + ssgSql, seats,
     }
-    return { ym, name: fm.name, future: ym > todayYm, actual }
+    return { ym, name, future: ym > todayYm, actual }
   })
 
   const elapsed = rows.filter(r => r.ym <= todayYm)
@@ -69,7 +70,7 @@ export default function MonthlyGoalTracker({ leads }: { leads: Lead[] }) {
     <div className="rounded-2xl bg-white ring-1 ring-slate-100 p-5 md:p-6">
       <div className="flex items-center gap-2 mb-1">
         <div className="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center"><Target className="h-4 w-4 text-indigo-600" /></div>
-        <h2 className="text-base font-extrabold text-slate-800">Goal vs Achievement — {fiscalYearLabel(fyStart)}</h2>
+        <h2 className="text-base font-extrabold text-slate-800">Goal vs Achievement — {year}</h2>
       </div>
       <p className="text-xs text-slate-500 mb-5">
         Plan for {FUNNEL_PLAN.seatsTotal} seats ({FUNNEL_PLAN.seatsTotal - FUNNEL_PLAN.upgradeSeats} new + {FUNNEL_PLAN.upgradeSeats} upgrades):
