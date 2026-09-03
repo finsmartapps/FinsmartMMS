@@ -1,7 +1,7 @@
 import type { ElementType } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { deriveTargets, formatCurrency, formatNumber, getStatus } from '@/lib/calculations'
-import type { Settings, Segment, Channel, PlanEvent } from '@/types'
+import type { Settings, Segment, Channel } from '@/types'
 import type { Lead } from '@/types'
 import { ConversionFunnel, DonutChart, HBarChart, RadialGauge } from '@/components/marketing/charts/dashboard-charts'
 import { Panel } from '@/components/marketing/ui/panel'
@@ -21,13 +21,11 @@ export default async function DashboardPage() {
     { data: settingsRows },
     { data: segments },
     { data: channels },
-    { data: events },
     { data: leadRows },
   ] = await Promise.all([
     supabase.from('marketing_settings').select('*').limit(1),
     supabase.from('segments').select('*').order('sort_order'),
     supabase.from('channels').select('*').order('sort_order'),
-    supabase.from('plan_events').select('*').order('sort_order'),
     supabase.from('leads').select('*'),
   ])
 
@@ -39,7 +37,6 @@ export default async function DashboardPage() {
   const targets = deriveTargets(settings)
   const segs    = (segments ?? []) as Segment[]
   const chs     = (channels  ?? []) as Channel[]
-  const evts    = (events    ?? []) as PlanEvent[]
   const leads   = (leadRows  ?? []) as Lead[]
 
   // ── Actuals from leads ───────────────────────────────────────────────────
@@ -224,10 +221,10 @@ export default async function DashboardPage() {
       </div>
 
       {/* ══ Monthly Goal vs Achievement ══════════════════════════════════ */}
-      <MonthlyGoalTracker leads={leads} settings={settings} events={evts} />
+      <MonthlyGoalTracker leads={leads} />
 
       {/* ══ Weekly cadence ════════════════════════════════════════════════ */}
-      <WeeklyAchievement leads={leads} settings={settings} />
+      <WeeklyAchievement leads={leads} />
 
       {/* ══ Leads by Source × Month ═══════════════════════════════════════ */}
       <LeadsSourceMatrix leads={leads} />

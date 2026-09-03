@@ -34,13 +34,31 @@ export const CATEGORY_STYLES: Record<LeadCategory, { badge: string; dot: string 
 }
 
 // ── Funnel buckets (new model): every lead is MQL; SQL = completed meeting ──
-// Event source = Event bucket; everything else = Digital bucket.
-export function leadBucket(source: string): 'Digital' | 'Event' {
-  return (source || '').trim() === 'Event' ? 'Event' : 'Digital'
+// 3 channels: Digital, Event, SSG (Sales Self Generated = Calling + Sales Self Generated).
+export type Channel3 = 'Digital' | 'Event' | 'SSG'
+export function leadBucket(source: string): Channel3 {
+  const s = (source || '').trim()
+  if (s === 'Event') return 'Event'
+  if (s === 'Calling' || s === 'Sales Self Generated') return 'SSG'
+  return 'Digital'
 }
 // SQL = a lead whose meeting reached "Completed".
 export function isSql(l: { meeting_outcome?: string | null }): boolean {
   return (l.meeting_outcome ?? '').trim().toLowerCase() === 'completed'
+}
+
+// Annual plan for 100 seats. MQL = leads, SQL = completed meetings, Seats = closed won.
+// Derived: SQL = seats / (SQL→Seat close rate); MQL = SQL / (MQL→SQL rate from data).
+export const FUNNEL_PLAN = {
+  channels: {
+    Digital: { mql: 661, sql: 150, seats: 45 },
+    Event:   { mql: 575, sql: 100, seats: 20 },
+    SSG:     { mql: 556, sql: 150, seats: 15 },
+  } as Record<Channel3, { mql: number; sql: number; seats: number }>,
+  upgradeSeats: 20,     // existing clients upgrading — no new leads
+  seatsTotal: 100,
+  meetingsYear: 400,    // = total SQL/yr
+  reps: 4,
 }
 
 export const LEAD_FROM = ['Website', 'Cold Calling', 'Sales Email', 'Marketing Email', 'Social Media', 'Landing Page']

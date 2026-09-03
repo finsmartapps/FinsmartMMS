@@ -1,76 +1,46 @@
-import type { Settings, Lead, PlanEvent } from '@/types'
-import { deriveTargets } from '@/lib/calculations'
+import type { Lead } from '@/types'
 import {
-  leadBucket, isSql, hoursToSeats, formatSeats,
-  FISCAL_MONTHS, FISCAL_QUARTERS, fiscalYearStart, fiscalYearLabel,
+  leadBucket, isSql, hoursToSeats, formatSeats, FUNNEL_PLAN,
+  FISCAL_MONTHS, fiscalYearStart, fiscalYearLabel,
 } from '@/lib/leads'
 import { Target } from 'lucide-react'
 
-type MetricKey = 'digMql' | 'digSql' | 'evMql' | 'evSql' | 'totMql' | 'totSql' | 'seats'
+type MetricKey = 'digMql' | 'digSql' | 'evMql' | 'evSql' | 'ssgMql' | 'ssgSql' | 'totMql' | 'totSql' | 'seats'
 
-const METRICS: { key: MetricKey; label: string; targeted: boolean }[] = [
-  { key: 'digMql', label: 'Digital MQL', targeted: false },
-  { key: 'digSql', label: 'Digital SQL', targeted: true },
-  { key: 'evMql',  label: 'Event MQL',   targeted: false },
-  { key: 'evSql',  label: 'Event SQL',   targeted: true },
-  { key: 'totMql', label: 'Total MQL',   targeted: true },
-  { key: 'totSql', label: 'Total SQL',   targeted: true },
-  { key: 'seats',  label: 'Seats',       targeted: true },
+const METRICS: { key: MetricKey; label: string }[] = [
+  { key: 'digMql', label: 'Digital MQL' }, { key: 'digSql', label: 'Digital SQL' },
+  { key: 'evMql',  label: 'Event MQL'   }, { key: 'evSql',  label: 'Event SQL'   },
+  { key: 'ssgMql', label: 'SSG MQL'     }, { key: 'ssgSql', label: 'SSG SQL'     },
+  { key: 'totMql', label: 'Total MQL'   }, { key: 'totSql', label: 'Total SQL'   },
+  { key: 'seats',  label: 'Seats'       },
 ]
 
-function tone(actual: number, target: number, future: boolean) {
+const P = FUNNEL_PLAN.channels
+const ANNUAL: Record<MetricKey, number> = {
+  digMql: P.Digital.mql, digSql: P.Digital.sql,
+  evMql: P.Event.mql,   evSql: P.Event.sql,
+  ssgMql: P.SSG.mql,    ssgSql: P.SSG.sql,
+  totMql: P.Digital.mql + P.Event.mql + P.SSG.mql,
+  totSql: P.Digital.sql + P.Event.sql + P.SSG.sql,
+  seats: FUNNEL_PLAN.seatsTotal,
+}
+const MONTHLY: Record<MetricKey, number> = Object.fromEntries(
+  (Object.keys(ANNUAL) as MetricKey[]).map(k => [k, ANNUAL[k] / 12])
+) as Record<MetricKey, number>
+
+function tone(a: number, t: number, future: boolean) {
   if (future) return 'text-slate-300'
-  if (target <= 0) return 'text-slate-400'
-  const p = actual / target
+  if (t <= 0) return 'text-slate-400'
+  const p = a / t
   return p >= 1 ? 'text-emerald-600' : p >= 0.6 ? 'text-amber-600' : 'text-rose-600'
 }
 const pct = (a: number, t: number) => (t <= 0 ? '—' : `${Math.round((a / t) * 100)}%`)
 const num = (v: number) => (Number.isInteger(v) ? v.toString() : v.toFixed(1).replace(/\.0$/, ''))
 
-function quarterMonths(quarter: string): string[] {
-  const out: string[] = []
-  for (const p of String(quarter).split(/[–-]/).map(x => x.trim())) {
-    const q = FISCAL_QUARTERS.find(fq => fq.label === p)
-    if (q) out.push(...q.months)
-  }
-  return out
-}
-
-export default function MonthlyGoalTracker({ leads, settings, events }: { leads: Lead[]; settings: Settings; events: PlanEvent[] }) {
-  const t = deriveTargets(settings)
+export default function MonthlyGoalTracker({ leads }: { leads: Lead[] }) {
   const today = new Date()
   const fyStart = fiscalYearStart(today)
   const todayYm = today.toISOString().slice(0, 7)
-
-  const MQL_M = t.digital_mqls / 12       // total MQL 834
-  const DIGSQL_M = t.digital_sqls / 12    // Digital SQL 250
-  const SEATS_M = settings.annual_seats_target / 12
-
-  // Event SQL (150) weighted to event months
-  const eventByMm: Record<string, number> = {}
-  for (const ev of events) {
-    const months = quarterMonths(ev.quarter); if (!months.length) continue
-    const goal = ((ev.sql_target_min ?? 0) + (ev.sql_target_max ?? 0)) / 2
-    months.forEach(mm => { eventByMm[mm] = (eventByMm[mm] ?? 0) + goal / months.length })
-  }
-
-  const targetFor = (key: MetricKey, mm: string): number | null => {
-    const ev = eventByMm[mm] ?? 0
-    switch (key) {
-      case 'digMql': return null
-      case 'evMql':  return null
-      case 'digSql': return DIGSQL_M
-      case 'evSql':  return ev
-      case 'totMql': return MQL_M
-      case 'totSql': return DIGSQL_M + ev
-      case 'seats':  return SEATS_M
-    }
-  }
-
-  const annualTarget: Record<MetricKey, number | null> = {
-    digMql: null, evMql: null,
-    digSql: t.digital_sqls, evSql: t.event_sqls, totMql: t.digital_mqls, totSql: t.annual_sqls, seats: settings.annual_seats_target,
-  }
 
   const rows = FISCAL_MONTHS.map(fm => {
     const year = ['01', '02', '03'].includes(fm.mm) ? fyStart + 1 : fyStart
@@ -78,21 +48,22 @@ export default function MonthlyGoalTracker({ leads, settings, events }: { leads:
     const ml = leads.filter(l => (l.lead_date ?? '').startsWith(ym))
     const dig = ml.filter(l => leadBucket(l.lead_source) === 'Digital')
     const evl = ml.filter(l => leadBucket(l.lead_source) === 'Event')
-    const digSql = dig.filter(isSql).length, evSql = evl.filter(isSql).length
+    const ssg = ml.filter(l => leadBucket(l.lead_source) === 'SSG')
+    const digSql = dig.filter(isSql).length, evSql = evl.filter(isSql).length, ssgSql = ssg.filter(isSql).length
     const seats = leads.filter(l => l.lead_stage === 'Closed Won' && (l.closed_date ?? '').startsWith(ym))
       .reduce((s, l) => s + hoursToSeats(l.closed_hours ?? 0), 0)
     const actual: Record<MetricKey, number> = {
-      digMql: dig.length, evMql: evl.length, digSql, evSql,
-      totMql: ml.length, totSql: digSql + evSql, seats,
+      digMql: dig.length, digSql, evMql: evl.length, evSql, ssgMql: ssg.length, ssgSql,
+      totMql: ml.length, totSql: digSql + evSql + ssgSql, seats,
     }
-    return { ym, mm: fm.mm, name: fm.name, future: ym > todayYm, actual }
+    return { ym, name: fm.name, future: ym > todayYm, actual }
   })
 
   const elapsed = rows.filter(r => r.ym <= todayYm)
   const ytd = (k: MetricKey) => elapsed.reduce((s, r) => s + r.actual[k], 0)
-  const targetToDate = (k: MetricKey) => elapsed.reduce((s, r) => s + (targetFor(k, r.mm) ?? 0), 0)
+  const toDate = (k: MetricKey) => MONTHLY[k] * elapsed.length
 
-  const cards = METRICS.filter(m => m.targeted)
+  const cards: MetricKey[] = ['totMql', 'digSql', 'evSql', 'ssgSql', 'totSql', 'seats']
 
   return (
     <div className="rounded-2xl bg-white ring-1 ring-slate-100 p-5 md:p-6">
@@ -101,23 +72,26 @@ export default function MonthlyGoalTracker({ leads, settings, events }: { leads:
         <h2 className="text-base font-extrabold text-slate-800">Goal vs Achievement — {fiscalYearLabel(fyStart)}</h2>
       </div>
       <p className="text-xs text-slate-500 mb-5">
-        <b>MQL = every lead</b> ({t.digital_mqls}/yr). <b>SQL = completed meeting</b> ({t.annual_sqls}/yr: {t.digital_sqls} Digital + {t.event_sqls} Event). Buckets: Digital = all non-Event sources · Event = Event source. Seats goal {settings.annual_seats_target}.
+        Plan for {FUNNEL_PLAN.seatsTotal} seats ({FUNNEL_PLAN.seatsTotal - FUNNEL_PLAN.upgradeSeats} new + {FUNNEL_PLAN.upgradeSeats} upgrades):
+        <b> {ANNUAL.totMql} MQL</b> · <b>{ANNUAL.totSql} SQL</b> (Dig {P.Digital.sql} / Event {P.Event.sql} / SSG {P.SSG.sql}) ·
+        <b> {FUNNEL_PLAN.meetingsYear} meetings/yr</b> ≈ {Math.round(FUNNEL_PLAN.meetingsYear / 12)}/mo across {FUNNEL_PLAN.reps} reps.
+        MQL = every lead · SQL = completed meeting.
       </p>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
-        {cards.map(m => {
-          const a = ytd(m.key), td = targetToDate(m.key)
-          const p = td > 0 ? a / td : 0
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-5">
+        {cards.map(k => {
+          const a = ytd(k), td = toDate(k), p = td > 0 ? a / td : 0
           const badge = p >= 1 ? 'bg-emerald-50 text-emerald-700' : p >= 0.6 ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700'
+          const label = METRICS.find(m => m.key === k)!.label
           return (
-            <div key={m.key} className="rounded-xl ring-1 ring-slate-100 px-4 py-3">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{m.label}</p>
-              <p className="text-xl font-extrabold text-slate-800 tabular-nums mt-0.5">
-                {m.key === 'seats' ? formatSeats(a) : a}<span className="text-xs text-slate-400 font-bold"> / {num(td)}</span>
+            <div key={k} className="rounded-xl ring-1 ring-slate-100 px-3 py-3">
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</p>
+              <p className="text-lg font-extrabold text-slate-800 tabular-nums mt-0.5">
+                {k === 'seats' ? formatSeats(a) : a}<span className="text-[11px] text-slate-400 font-bold"> / {num(td)}</span>
               </p>
               <div className="flex items-center justify-between mt-1">
-                <span className={`text-[10px] font-bold rounded px-1.5 py-0.5 ${badge}`}>{pct(a, td)} to date</span>
-                <span className="text-[10px] text-slate-400">of {annualTarget[m.key]}/yr</span>
+                <span className={`text-[9px] font-bold rounded px-1 py-0.5 ${badge}`}>{pct(a, td)}</span>
+                <span className="text-[9px] text-slate-400">{ANNUAL[k]}/yr</span>
               </div>
             </div>
           )
@@ -125,13 +99,11 @@ export default function MonthlyGoalTracker({ leads, settings, events }: { leads:
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[820px] text-xs">
+        <table className="w-full min-w-[980px] text-xs">
           <thead>
             <tr className="text-slate-400 border-b border-slate-100">
               <th className="text-left font-bold uppercase tracking-wider py-2 pl-1">Month</th>
-              {METRICS.map(m => (
-                <th key={m.key} className="text-right font-bold uppercase tracking-wider py-2 px-3">{m.label}<span className="block text-[9px] font-medium text-slate-300 normal-case">{m.targeted ? 'act / tgt' : 'act'}</span></th>
-              ))}
+              {METRICS.map(m => <th key={m.key} className="text-right font-bold uppercase tracking-wider py-2 px-2.5">{m.label}<span className="block text-[9px] font-medium text-slate-300 normal-case">act / tgt</span></th>)}
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-50">
@@ -139,13 +111,11 @@ export default function MonthlyGoalTracker({ leads, settings, events }: { leads:
               <tr key={r.ym} className={`${r.ym === todayYm ? 'bg-indigo-50/40' : ''} hover:bg-slate-50/60`}>
                 <td className="py-2.5 pl-1 font-semibold text-slate-700">{r.name}{r.ym === todayYm ? ' •' : ''}</td>
                 {METRICS.map(m => {
-                  const a = r.actual[m.key], tg = targetFor(m.key, r.mm)
-                  const disp = r.future ? '—' : (m.key === 'seats' ? formatSeats(a) : a)
+                  const a = r.actual[m.key], tg = MONTHLY[m.key]
                   return (
-                    <td key={m.key} className="py-2.5 px-3 text-right tabular-nums">
-                      {m.targeted
-                        ? <><span className={`font-bold ${tone(a, tg ?? 0, r.future)}`}>{disp}</span><span className="text-slate-300"> / {num(tg ?? 0)}</span></>
-                        : <span className={`font-semibold ${r.future ? 'text-slate-300' : 'text-slate-600'}`}>{disp}</span>}
+                    <td key={m.key} className="py-2.5 px-2.5 text-right tabular-nums">
+                      <span className={`font-bold ${tone(a, tg, r.future)}`}>{r.future ? '—' : (m.key === 'seats' ? formatSeats(a) : a)}</span>
+                      <span className="text-slate-300"> / {num(tg)}</span>
                     </td>
                   )
                 })}
@@ -156,19 +126,18 @@ export default function MonthlyGoalTracker({ leads, settings, events }: { leads:
             <tr className="border-t-2 border-slate-200 font-extrabold">
               <td className="py-2.5 pl-1 text-slate-800">YTD</td>
               {METRICS.map(m => {
-                const a = ytd(m.key), td = targetToDate(m.key)
+                const a = ytd(m.key), td = toDate(m.key)
                 return (
-                  <td key={m.key} className="py-2.5 px-3 text-right tabular-nums">
-                    {m.targeted
-                      ? <><span className={tone(a, td, false)}>{m.key === 'seats' ? formatSeats(a) : a}</span><span className="text-slate-300"> / {num(td)}</span></>
-                      : <span className="text-slate-600">{a}</span>}
+                  <td key={m.key} className="py-2.5 px-2.5 text-right tabular-nums">
+                    <span className={tone(a, td, false)}>{m.key === 'seats' ? formatSeats(a) : a}</span>
+                    <span className="text-slate-300"> / {num(td)}</span>
                   </td>
                 )
               })}
             </tr>
             <tr className="text-slate-400">
               <td className="py-1.5 pl-1 text-[10px] uppercase tracking-wider">Annual goal</td>
-              {METRICS.map(m => <td key={m.key} className="py-1.5 px-3 text-right tabular-nums text-slate-500 font-bold">{annualTarget[m.key] ?? '—'}</td>)}
+              {METRICS.map(m => <td key={m.key} className="py-1.5 px-2.5 text-right tabular-nums text-slate-500 font-bold">{ANNUAL[m.key]}</td>)}
             </tr>
           </tfoot>
         </table>
