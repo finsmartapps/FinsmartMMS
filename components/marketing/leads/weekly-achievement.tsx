@@ -3,10 +3,11 @@ import { deriveTargets } from '@/lib/calculations'
 import { classifyLeadSource, hoursToSeats, formatSeats } from '@/lib/leads'
 import { CalendarRange } from 'lucide-react'
 
-type MetricKey = 'mql' | 'sql' | 'direct' | 'event' | 'seats'
+type MetricKey = 'mql' | 'sql' | 'direct' | 'event' | 'total' | 'seats'
 const METRICS: { key: MetricKey; label: string }[] = [
   { key: 'mql', label: 'MQL' }, { key: 'sql', label: 'SQL' },
-  { key: 'direct', label: 'Direct SQL' }, { key: 'event', label: 'Event SQL' }, { key: 'seats', label: 'Seats' },
+  { key: 'direct', label: 'Direct SQL' }, { key: 'event', label: 'Event SQL' },
+  { key: 'total', label: 'Total' }, { key: 'seats', label: 'Seats' },
 ]
 const WEEKS = 12
 
@@ -26,7 +27,7 @@ export default function WeeklyAchievement({ leads, settings }: { leads: Lead[]; 
   const t = deriveTargets(settings)
   const wt: Record<MetricKey, number> = {
     mql: t.digital_mqls / 52, sql: t.annual_sqls / 52, direct: t.digital_sqls / 52,
-    event: t.event_sqls / 52, seats: settings.annual_seats_target / 52,
+    event: t.event_sqls / 52, total: (t.digital_mqls + t.annual_sqls) / 52, seats: settings.annual_seats_target / 52,
   }
 
   const thisMon = mondayOf(new Date())
@@ -43,7 +44,7 @@ export default function WeeklyAchievement({ leads, settings }: { leads: Lead[]; 
     const seats = leads.filter(l => l.lead_stage === 'Closed Won' && inRange(l.closed_date, f, tt))
       .reduce((s, l) => s + hoursToSeats(l.closed_hours ?? 0), 0)
     const label = from.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    return { label, current: i === WEEKS - 1, actual: { mql, sql: direct + event, direct, event, seats } as Record<MetricKey, number> }
+    return { label, current: i === WEEKS - 1, actual: { mql, sql: direct + event, direct, event, total: mql + direct + event, seats } as Record<MetricKey, number> }
   })
 
   return (
