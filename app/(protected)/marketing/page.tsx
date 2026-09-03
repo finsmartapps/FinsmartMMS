@@ -1,11 +1,11 @@
 import type { ElementType } from 'react'
 import { createClient } from '@/lib/supabase/server'
 import { deriveTargets, formatCurrency, formatNumber, getStatus } from '@/lib/calculations'
-import { Table, TableBody, TableCell, TableHeader, TableRow } from '@/components/marketing/ui/table'
-import type { Settings, Segment, Channel, PlanEvent } from '@/types'
+import type { Settings, Segment, Channel } from '@/types'
 import type { Lead } from '@/types'
 import { ConversionFunnel, DonutChart, HBarChart, RadialGauge } from '@/components/marketing/charts/dashboard-charts'
-import { Panel, Th, ConvBadge, QuarterPill } from '@/components/marketing/ui/panel'
+import { Panel } from '@/components/marketing/ui/panel'
+import MonthlyGoalTracker from '@/components/marketing/leads/monthly-goal-tracker'
 import { hoursToSeats, formatSeats } from '@/lib/leads'
 import {
   TrendingUp, Users, Zap, Trophy, Activity,
@@ -19,13 +19,11 @@ export default async function DashboardPage() {
     { data: settingsRows },
     { data: segments },
     { data: channels },
-    { data: events },
     { data: leadRows },
   ] = await Promise.all([
     supabase.from('marketing_settings').select('*').limit(1),
     supabase.from('segments').select('*').order('sort_order'),
     supabase.from('channels').select('*').order('sort_order'),
-    supabase.from('plan_events').select('*').order('sort_order'),
     supabase.from('leads').select('*'),
   ])
 
@@ -37,7 +35,6 @@ export default async function DashboardPage() {
   const targets = deriveTargets(settings)
   const segs    = (segments ?? []) as Segment[]
   const chs     = (channels  ?? []) as Channel[]
-  const evts    = (events    ?? []) as PlanEvent[]
   const leads   = (leadRows  ?? []) as Lead[]
 
   // ── Actuals from leads ───────────────────────────────────────────────────
@@ -221,72 +218,8 @@ export default async function DashboardPage() {
         </Panel>
       </div>
 
-      {/* ══ Channel performance ══════════════════════════════════════════ */}
-      <Panel icon={Layers} title="Channel Performance — Targets" accent="emerald" noPad>
-        <DataTable>
-          <TableHeader>
-            <TableRow className="bg-slate-50/80 hover:bg-slate-50/80 border-b border-slate-100">
-              <Th className="pl-5">Channel</Th>
-              <Th right>Monthly MQL</Th>
-              <Th right>MQL→SQL</Th>
-              <Th right>Monthly SQL</Th>
-              <Th right>Annual SQL</Th>
-              <Th className="pr-5">Owner</Th>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {chs.map(ch => {
-              const conv = ch.mql_sql_conversion * 100
-              return (
-                <TableRow key={ch.id} className="hover:bg-emerald-50/30 transition-colors border-b border-slate-50 last:border-0">
-                  <TableCell className="font-semibold text-slate-800 py-3.5 pl-5">{ch.name}</TableCell>
-                  <TableCell className="text-right text-slate-600 tabular-nums">{ch.monthly_mql_target || '—'}</TableCell>
-                  <TableCell className="text-right">{ch.mql_sql_conversion ? <ConvBadge pct={conv} /> : '—'}</TableCell>
-                  <TableCell className="text-right text-slate-600 tabular-nums">{ch.monthly_mql_target ? (ch.monthly_mql_target * ch.mql_sql_conversion).toFixed(1) : '—'}</TableCell>
-                  <TableCell className="text-right font-medium text-slate-800 tabular-nums">{ch.monthly_mql_target ? Math.round(ch.monthly_mql_target * ch.mql_sql_conversion * 12) : '—'}</TableCell>
-                  <TableCell className="text-slate-400 text-xs pr-5">{ch.owner_role}</TableCell>
-                </TableRow>
-              )
-            })}
-            <TableRow className="bg-gradient-to-r from-emerald-50 to-teal-50 font-bold border-t-2 border-emerald-100">
-              <TableCell className="text-slate-900 py-3.5 pl-5">Total</TableCell>
-              <TableCell className="text-right text-slate-700 tabular-nums">{chs.reduce((s, c) => s + c.monthly_mql_target, 0)}</TableCell>
-              <TableCell />
-              <TableCell className="text-right text-slate-700 tabular-nums">{chs.reduce((s, c) => s + c.monthly_mql_target * c.mql_sql_conversion, 0).toFixed(1)}</TableCell>
-              <TableCell className="text-right text-emerald-700 tabular-nums">{chs.reduce((s, c) => s + Math.round(c.monthly_mql_target * c.mql_sql_conversion * 12), 0)}</TableCell>
-              <TableCell className="pr-5" />
-            </TableRow>
-          </TableBody>
-        </DataTable>
-      </Panel>
-
-      {/* ══ Event ROI ════════════════════════════════════════════════════ */}
-      <Panel icon={Trophy} title="Event ROI Tracker" accent="amber" noPad>
-        <DataTable>
-          <TableHeader>
-            <TableRow className="bg-slate-50/80 hover:bg-slate-50/80 border-b border-slate-100">
-              <Th className="pl-5">Event</Th>
-              <Th>Quarter</Th>
-              <Th right>SQL Target</Th>
-              <Th right>Meetings</Th>
-              <Th>Segment</Th>
-              <Th className="pr-5">Notes</Th>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {evts.map(evt => (
-              <TableRow key={evt.id} className="hover:bg-amber-50/30 transition-colors border-b border-slate-50 last:border-0">
-                <TableCell className="font-semibold text-slate-800 py-3.5 pl-5">{evt.name}</TableCell>
-                <TableCell><QuarterPill>{evt.quarter}</QuarterPill></TableCell>
-                <TableCell className="text-right font-medium text-slate-700 tabular-nums">{evt.sql_target_min === evt.sql_target_max ? evt.sql_target_min : `${evt.sql_target_min}–${evt.sql_target_max}`}</TableCell>
-                <TableCell className="text-right text-slate-600 tabular-nums">{evt.meetings_target}</TableCell>
-                <TableCell className="text-slate-600 text-sm">{evt.primary_segment}</TableCell>
-                <TableCell className="text-slate-400 text-xs pr-5">{evt.notes}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </DataTable>
-      </Panel>
+      {/* ══ Monthly Goal vs Achievement ══════════════════════════════════ */}
+      <MonthlyGoalTracker leads={leads} settings={settings} />
     </div>
   )
 }
@@ -327,6 +260,3 @@ function KpiCard({
   )
 }
 
-function DataTable({ children }: { children: React.ReactNode }) {
-  return <Table>{children}</Table>
-}
