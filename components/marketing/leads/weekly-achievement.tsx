@@ -1,13 +1,17 @@
 import type { Settings, Lead } from '@/types'
 import { deriveTargets } from '@/lib/calculations'
-import { classifyLeadSource, hoursToSeats, formatSeats } from '@/lib/leads'
+import { leadBucket, isSql, hoursToSeats, formatSeats } from '@/lib/leads'
 import { CalendarRange } from 'lucide-react'
 
-type MetricKey = 'mql' | 'sql' | 'direct' | 'event' | 'total' | 'seats'
-const METRICS: { key: MetricKey; label: string }[] = [
-  { key: 'mql', label: 'MQL' }, { key: 'sql', label: 'SQL' },
-  { key: 'direct', label: 'Direct SQL' }, { key: 'event', label: 'Event SQL' },
-  { key: 'total', label: 'Total' }, { key: 'seats', label: 'Seats' },
+type MetricKey = 'digMql' | 'digSql' | 'evMql' | 'evSql' | 'totMql' | 'totSql' | 'seats'
+const METRICS: { key: MetricKey; label: string; targeted: boolean }[] = [
+  { key: 'digMql', label: 'Digital MQL', targeted: false },
+  { key: 'digSql', label: 'Digital SQL', targeted: true },
+  { key: 'evMql',  label: 'Event MQL',   targeted: false },
+  { key: 'evSql',  label: 'Event SQL',   targeted: true },
+  { key: 'totMql', label: 'Total MQL',   targeted: true },
+  { key: 'totSql', label: 'Total SQL',   targeted: true },
+  { key: 'seats',  label: 'Seats',       targeted: true },
 ]
 const WEEKS = 12
 
@@ -25,9 +29,10 @@ const num = (v: number) => (Number.isInteger(v) ? v.toString() : v.toFixed(1).re
 
 export default function WeeklyAchievement({ leads, settings }: { leads: Lead[]; settings: Settings }) {
   const t = deriveTargets(settings)
-  const wt: Record<MetricKey, number> = {
-    mql: t.digital_mqls / 52, sql: t.annual_sqls / 52, direct: t.digital_sqls / 52,
-    event: t.event_sqls / 52, total: (t.digital_mqls + t.annual_sqls) / 52, seats: settings.annual_seats_target / 52,
+  const wt: Record<MetricKey, number | null> = {
+    digMql: null, evMql: null,
+    digSql: t.digital_sqls / 52, evSql: t.event_sqls / 52,
+    totMql: t.digital_mqls / 52, totSql: t.annual_sqls / 52, seats: settings.annual_seats_target / 52,
   }
 
   const thisMon = mondayOf(new Date())
@@ -35,16 +40,18 @@ export default function WeeklyAchievement({ leads, settings }: { leads: Lead[]; 
     const from = new Date(thisMon); from.setDate(thisMon.getDate() - (WEEKS - 1 - i) * 7)
     const to = new Date(from); to.setDate(from.getDate() + 6)
     const f = iso(from), tt = iso(to)
-    const inRange = (dt: string | null | undefined, a: string, b: string) => !!dt && dt >= a && dt <= b
-    const ml = leads.filter(l => inRange(l.lead_date, f, tt))
-    const cat = (l: Lead) => classifyLeadSource(l.lead_source)
-    const direct = ml.filter(l => cat(l) === 'Direct SQL').length
-    const event = ml.filter(l => cat(l) === 'Event SQL').length
-    const mql = ml.filter(l => cat(l) === 'Digital MQL').length
-    const seats = leads.filter(l => l.lead_stage === 'Closed Won' && inRange(l.closed_date, f, tt))
+    const inR = (dt: string | null | undefined, a: string, b: string) => !!dt && dt >= a && dt <= b
+    const ml = leads.filter(l => inR(l.lead_date, f, tt))
+    const dig = ml.filter(l => leadBucket(l.lead_source) === 'Digital')
+    const evl = ml.filter(l => leadBucket(l.lead_source) === 'Event')
+    const digSql = dig.filter(isSql).length, evSql = evl.filter(isSql).length
+    const seats = leads.filter(l => l.lead_stage === 'Closed Won' && inR(l.closed_date, f, tt))
       .reduce((s, l) => s + hoursToSeats(l.closed_hours ?? 0), 0)
+    const actual: Record<MetricKey, number> = {
+      digMql: dig.length, evMql: evl.length, digSql, evSql, totMql: ml.length, totSql: digSql + evSql, seats,
+    }
     const label = from.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-    return { label, current: i === WEEKS - 1, actual: { mql, sql: direct + event, direct, event, total: mql + direct + event, seats } as Record<MetricKey, number> }
+    return { label, current: i === WEEKS - 1, actual }
   })
 
   return (
@@ -54,10 +61,10 @@ export default function WeeklyAchievement({ leads, settings }: { leads: Lead[]; 
         <h2 className="text-base font-extrabold text-slate-800">Weekly Achievement — last {WEEKS} weeks</h2>
       </div>
       <p className="text-xs text-slate-500 mb-4">
-        Weekly run-rate vs pace (annual ÷ 52): MQL {num(wt.mql)} · SQL {num(wt.sql)} · Direct {num(wt.direct)} · Event {num(wt.event)} · Seats {num(wt.seats)} per week.
+        Weekly pace (annual ÷ 52): Total MQL {num(wt.totMql!)} · Digital SQL {num(wt.digSql!)} · Event SQL {num(wt.evSql!)} · Total SQL {num(wt.totSql!)} · Seats {num(wt.seats!)} /wk. MQL = every lead; SQL = completed meeting.
       </p>
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[680px] text-xs">
+        <table className="w-full min-w-[780px] text-xs">
           <thead>
             <tr className="text-slate-400 border-b border-slate-100">
               <th className="text-left font-bold uppercase tracking-wider py-2 pl-1">Week of</th>
@@ -68,12 +75,16 @@ export default function WeeklyAchievement({ leads, settings }: { leads: Lead[]; 
             {weeks.map(w => (
               <tr key={w.label} className={`${w.current ? 'bg-violet-50/40' : ''} hover:bg-slate-50/60`}>
                 <td className="py-2 pl-1 font-semibold text-slate-700">{w.label}{w.current ? ' •' : ''}</td>
-                {METRICS.map(m => (
-                  <td key={m.key} className="py-2 px-3 text-right tabular-nums">
-                    <span className={`font-bold ${tone(w.actual[m.key], wt[m.key])}`}>{m.key === 'seats' ? formatSeats(w.actual[m.key]) : w.actual[m.key]}</span>
-                    <span className="text-slate-300"> / {num(wt[m.key])}</span>
-                  </td>
-                ))}
+                {METRICS.map(m => {
+                  const a = w.actual[m.key], tg = wt[m.key]
+                  return (
+                    <td key={m.key} className="py-2 px-3 text-right tabular-nums">
+                      {m.targeted
+                        ? <><span className={`font-bold ${tone(a, tg ?? 0)}`}>{m.key === 'seats' ? formatSeats(a) : a}</span><span className="text-slate-300"> / {num(tg ?? 0)}</span></>
+                        : <span className="font-semibold text-slate-600">{a}</span>}
+                    </td>
+                  )
+                })}
               </tr>
             ))}
           </tbody>

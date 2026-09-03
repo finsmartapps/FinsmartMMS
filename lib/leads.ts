@@ -33,6 +33,16 @@ export const CATEGORY_STYLES: Record<LeadCategory, { badge: string; dot: string 
   'Unclassified':{ badge: 'bg-slate-100 text-slate-500 ring-slate-200',      dot: 'bg-slate-400' },
 }
 
+// ── Funnel buckets (new model): every lead is MQL; SQL = completed meeting ──
+// Event source = Event bucket; everything else = Digital bucket.
+export function leadBucket(source: string): 'Digital' | 'Event' {
+  return (source || '').trim() === 'Event' ? 'Event' : 'Digital'
+}
+// SQL = a lead whose meeting reached "Completed".
+export function isSql(l: { meeting_outcome?: string | null }): boolean {
+  return (l.meeting_outcome ?? '').trim().toLowerCase() === 'completed'
+}
+
 export const LEAD_FROM = ['Website', 'Cold Calling', 'Sales Email', 'Marketing Email', 'Social Media', 'Landing Page']
 
 export const LEAD_STAGES = [

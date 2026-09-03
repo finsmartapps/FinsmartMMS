@@ -115,6 +115,7 @@ function buildLeads(text: string, hasHeader: boolean): { rows: ParsedLead[]; ski
   // fall back to the conventional position 26.
   const headerCells = (allRows[0] ?? []).map(h => (h ?? '').trim().toLowerCase())
   const reasonIdx = hasHeader && headerCells.indexOf('reason') >= 0 ? headerCells.indexOf('reason') : 26
+  const meetingOutcomeIdx = hasHeader && headerCells.indexOf('meeting outcome') >= 0 ? headerCells.indexOf('meeting outcome') : 25
 
   const rows: ParsedLead[] = []
   // Key: email (non-CW) or email|closed_date (CW) → row index
@@ -161,6 +162,7 @@ function buildLeads(text: string, hasHeader: boolean): { rows: ParsedLead[]; ski
       one_time_revenue: parseNum(c(22)),
       seat_type: c(23),
       successful_meetings: c(24).toLowerCase() === 'yes',
+      meeting_outcome: c(meetingOutcomeIdx) || null,
       loss_reason: c(reasonIdx) || null,
       category: classifyLeadSource(lead_source),
       updated_at: new Date().toISOString(),
