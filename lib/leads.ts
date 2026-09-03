@@ -52,12 +52,12 @@ export function isSql(l: { meeting_outcome?: string | null }): boolean {
 export const FUNNEL_PLAN = {
   channels: {
     Digital: { mql: 661, sql: 150, seats: 45 },
-    Event:   { mql: 575, sql: 100, seats: 20 },
-    SSG:     { mql: 556, sql: 150, seats: 15 },
+    Event:   { mql: 718, sql: 125, seats: 25 },
+    SSG:     { mql: 370, sql: 100, seats: 10 },
   } as Record<Channel3, { mql: number; sql: number; seats: number }>,
   upgradeSeats: 20,     // existing clients upgrading — no new leads
   seatsTotal: 100,
-  meetingsYear: 400,    // = total SQL/yr
+  meetingsYear: 375,    // = total SQL/yr
   reps: 4,
 }
 
