@@ -61,6 +61,19 @@ export const FUNNEL_PLAN = {
   reps: 4,
 }
 
+// Import safety-net: tidy a Data Source (event) name so casing/space typos
+// don't split one event into many. Trims, collapses spaces, Title-Cases —
+// but keeps all-caps acronyms (SNH, AICPA, CFO) and numbers (2026) intact.
+export function normalizeDataSource(raw: string | null | undefined): string {
+  const s = String(raw ?? '').replace(/\s+/g, ' ').trim()
+  if (!s) return ''
+  return s.split(' ').map(w =>
+    /^[A-Z0-9][A-Z0-9/&.-]*$/.test(w)   // all-caps / numeric token → leave as-is
+      ? w
+      : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+  ).join(' ')
+}
+
 export const LEAD_FROM = ['Website', 'Cold Calling', 'Sales Email', 'Marketing Email', 'Social Media', 'Landing Page']
 
 export const LEAD_STAGES = [

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/marketing/ui/button'
 import { Upload, X, Loader2, Check, FileText, ClipboardPaste, AlertCircle, TriangleAlert, Info } from 'lucide-react'
-import { parseSheetDate, classifyLeadSource, defaultStatusFromSource, normalizeStatus, CATEGORY_STYLES, HOURS_PER_SEAT } from '@/lib/leads'
+import { parseSheetDate, classifyLeadSource, defaultStatusFromSource, normalizeStatus, CATEGORY_STYLES, HOURS_PER_SEAT, normalizeDataSource } from '@/lib/leads'
 
 const CLOSED_WON = 'Closed Won'
 
@@ -146,7 +146,7 @@ function buildLeads(text: string, hasHeader: boolean): { rows: ParsedLead[]; ski
       company_name: c(6),
       industry: c(7),
       service_required: c(8),
-      data_source: c(9),
+      data_source: normalizeDataSource(c(9)),
       lead_from: c(10),
       lead_source,
       state: c(12),
