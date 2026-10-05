@@ -185,6 +185,7 @@ export default async function LeadsPage() {
               company_name:         l.company_name,
               assigned_to:          l.assigned_to,
               successful_meetings:  l.successful_meetings,
+              meeting_outcome:      l.meeting_outcome,
             }))} />
           ),
         },

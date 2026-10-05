@@ -31,6 +31,7 @@ interface LeadLite {
   company_name:        string | null
   assigned_to:         string | null
   successful_meetings: boolean | null
+  meeting_outcome:     string | null
 }
 
 function isoDate(d: Date) {
@@ -166,7 +167,7 @@ export default function LeadsFunnelSection({ leads }: { leads: LeadLite[] }) {
         groupBy={groupBy}
       />
       <EventFunnelChart
-        leads={filtered.map(l => ({ data_source: l.data_source, lead_status: l.lead_status }))}
+        leads={filtered.map(l => ({ data_source: l.data_source, lead_source: l.lead_source, meeting_outcome: l.meeting_outcome }))}
       />
       <OtherSourcesFunnelChart
         leads={filtered.map(l => ({ lead_source: l.lead_source, lead_status: l.lead_status }))}
