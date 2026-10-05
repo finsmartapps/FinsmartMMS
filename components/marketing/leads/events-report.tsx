@@ -18,14 +18,18 @@ export default function EventsReport({ leads }: { leads: Lead[] }) {
       if (!m.has(ev)) m.set(ev, [])
       m.get(ev)!.push(l)
     }
-    const rows = [...m.entries()].map(([event, ls]) => ({
-      event, count: ls.length,
-      meetings: ls.filter(l => l.successful_meetings).length,
-      sql: ls.filter(isSql).length,
-      won: ls.filter(l => l.lead_stage === 'Closed Won').length,
-      seats: ls.filter(l => l.lead_stage === 'Closed Won').reduce((s, l) => s + hoursToSeats(l.closed_hours ?? 0), 0),
-    })).sort((a, b) => b.count - a.count)
-    const tot = rows.reduce((a, r) => ({ count: a.count + r.count, meetings: a.meetings + r.meetings, sql: a.sql + r.sql, won: a.won + r.won, seats: a.seats + r.seats }), { count: 0, meetings: 0, sql: 0, won: 0, seats: 0 })
+    const rows = [...m.entries()].map(([event, ls]) => {
+      const won = ls.filter(l => l.lead_stage === 'Closed Won')
+      return {
+        event, count: ls.length,
+        meetings: ls.filter(l => l.successful_meetings).length,
+        sql: ls.filter(isSql).length,
+        won: won.length,
+        seats: won.reduce((s, l) => s + hoursToSeats(l.closed_hours ?? 0), 0),
+        acv: won.reduce((s, l) => s + annualContractValue(l.mrr_value ?? 0, l.one_time_revenue ?? 0), 0),
+      }
+    }).sort((a, b) => b.count - a.count)
+    const tot = rows.reduce((a, r) => ({ count: a.count + r.count, meetings: a.meetings + r.meetings, sql: a.sql + r.sql, won: a.won + r.won, seats: a.seats + r.seats, acv: a.acv + r.acv }), { count: 0, meetings: 0, sql: 0, won: 0, seats: 0, acv: 0 })
     return { rows, tot, byEvent: m }
   }, [leads, year])
 
@@ -42,7 +46,7 @@ export default function EventsReport({ leads }: { leads: Lead[] }) {
         <p className="text-xs text-slate-400 py-8 text-center">No event leads this year yet.</p>
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[680px] text-xs">
+          <table className="w-full min-w-[780px] text-xs">
             <thead>
               <tr className="text-slate-400 border-b border-slate-100">
                 <th className="text-left font-bold uppercase tracking-wider py-2 pl-1">Event</th>
@@ -52,6 +56,7 @@ export default function EventsReport({ leads }: { leads: Lead[] }) {
                 <th className="text-right font-bold uppercase tracking-wider py-2 px-3">Lead→SQL</th>
                 <th className="text-right font-bold uppercase tracking-wider py-2 px-3">Deals</th>
                 <th className="text-right font-bold uppercase tracking-wider py-2 px-3">Seats</th>
+                <th className="text-right font-bold uppercase tracking-wider py-2 px-3">Revenue (ACV)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -68,6 +73,11 @@ export default function EventsReport({ leads }: { leads: Lead[] }) {
                       ? <button onClick={e => { e.stopPropagation(); setActiveSeats(r.event) }} className="hover:underline cursor-pointer" title="View closed deals">{formatSeats(r.seats)}</button>
                       : '—'}
                   </td>
+                  <td className="py-2.5 px-3 text-right tabular-nums font-bold text-indigo-600">
+                    {r.acv > 0
+                      ? <button onClick={e => { e.stopPropagation(); setActiveSeats(r.event) }} className="hover:underline cursor-pointer" title="View closed deals">{formatUSD(r.acv)}</button>
+                      : '—'}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -80,6 +90,7 @@ export default function EventsReport({ leads }: { leads: Lead[] }) {
                 <td className="py-2.5 px-3 text-right tabular-nums text-slate-500">{rate(tot.sql, tot.count)}</td>
                 <td className="py-2.5 px-3 text-right tabular-nums text-slate-700">{tot.won}</td>
                 <td className="py-2.5 px-3 text-right tabular-nums text-emerald-700">{formatSeats(tot.seats)}</td>
+                <td className="py-2.5 px-3 text-right tabular-nums text-indigo-700">{tot.acv > 0 ? formatUSD(tot.acv) : '—'}</td>
               </tr>
             </tfoot>
           </table>
