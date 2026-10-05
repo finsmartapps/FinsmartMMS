@@ -2,12 +2,13 @@
 
 import { useState, useMemo } from 'react'
 import type { Lead } from '@/types'
-import { leadBucket, isSql, hoursToSeats, formatSeats } from '@/lib/leads'
+import { leadBucket, isSql, hoursToSeats, formatSeats, annualContractValue, formatUSD } from '@/lib/leads'
 import { CalendarCheck2, X } from 'lucide-react'
 
 export default function EventsReport({ leads }: { leads: Lead[] }) {
   const year = new Date().getFullYear().toString()
   const [active, setActive] = useState<string | null>(null)
+  const [activeSeats, setActiveSeats] = useState<string | null>(null)
 
   const { rows, tot, byEvent } = useMemo(() => {
     const evLeads = leads.filter(l => leadBucket(l.lead_source) === 'Event' && (l.lead_date ?? '').startsWith(year))
@@ -62,7 +63,11 @@ export default function EventsReport({ leads }: { leads: Lead[] }) {
                   <td className="py-2.5 px-3 text-right tabular-nums font-bold text-blue-600">{r.sql}</td>
                   <td className="py-2.5 px-3 text-right tabular-nums text-slate-500">{rate(r.sql, r.count)}</td>
                   <td className="py-2.5 px-3 text-right tabular-nums text-slate-600">{r.won}</td>
-                  <td className="py-2.5 px-3 text-right tabular-nums font-bold text-emerald-600">{r.seats > 0 ? formatSeats(r.seats) : '—'}</td>
+                  <td className="py-2.5 px-3 text-right tabular-nums font-bold text-emerald-600">
+                    {r.seats > 0
+                      ? <button onClick={e => { e.stopPropagation(); setActiveSeats(r.event) }} className="hover:underline cursor-pointer" title="View closed deals">{formatSeats(r.seats)}</button>
+                      : '—'}
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -82,6 +87,73 @@ export default function EventsReport({ leads }: { leads: Lead[] }) {
       )}
 
       {active && <EventModal event={active} leads={byEvent.get(active) ?? []} onClose={() => setActive(null)} />}
+      {activeSeats && <SeatsModal event={activeSeats} leads={(byEvent.get(activeSeats) ?? []).filter(l => l.lead_stage === 'Closed Won')} onClose={() => setActiveSeats(null)} />}
+    </div>
+  )
+}
+
+function SeatsModal({ event, leads, onClose }: { event: string; leads: Lead[]; onClose: () => void }) {
+  const mrr = leads.reduce((s, l) => s + (l.mrr_value ?? 0), 0)
+  const oneTime = leads.reduce((s, l) => s + (l.one_time_revenue ?? 0), 0)
+  const acv = annualContractValue(mrr, oneTime)
+  const seats = leads.reduce((s, l) => s + hoursToSeats(l.closed_hours ?? 0), 0)
+  const sorted = [...leads].sort((a, b) => (b.closed_date ?? '').localeCompare(a.closed_date ?? ''))
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
+      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onClick={onClose} aria-hidden />
+      <div className="relative bg-white rounded-2xl shadow-2xl ring-1 ring-slate-200 w-full max-w-4xl max-h-[85vh] flex flex-col overflow-hidden">
+        <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-emerald-500 via-teal-600 to-cyan-700">
+          <div>
+            <p className="text-sm font-extrabold text-white">{event} — Closed Won</p>
+            <p className="text-[11px] text-white/75">{leads.length} deal{leads.length === 1 ? '' : 's'} · {formatSeats(seats)} seats · ACV {formatUSD(acv)}</p>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-lg bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors" aria-label="Close"><X className="h-4 w-4 text-white" /></button>
+        </div>
+        <div className="overflow-auto flex-1">
+          {leads.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-16">No closed-won deals for this event.</p>
+          ) : (
+            <table className="w-full text-xs">
+              <thead className="sticky top-0 bg-slate-50 border-b border-slate-100">
+                <tr>
+                  {['#', 'Name', 'Company', 'Type', 'Seats', 'MRR', 'One-time', 'ACV', 'Assigned'].map(h => (
+                    <th key={h} className="px-4 py-2.5 text-left font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {sorted.map((l, i) => {
+                  const m = l.mrr_value ?? 0, ot = l.one_time_revenue ?? 0, a = annualContractValue(m, ot)
+                  const se = hoursToSeats(l.closed_hours ?? 0)
+                  return (
+                    <tr key={l.id} className="hover:bg-emerald-50/30">
+                      <td className="px-4 py-2.5 text-slate-400 tabular-nums">{i + 1}</td>
+                      <td className="px-4 py-2.5 font-semibold text-slate-800 whitespace-nowrap">{l.name || '—'}</td>
+                      <td className="px-4 py-2.5 text-slate-600 whitespace-nowrap">{l.company_name || '—'}</td>
+                      <td className="px-4 py-2.5">{l.customer_type ? <span className="text-[10px] font-bold rounded px-1.5 py-0.5 bg-slate-100 text-slate-600">{l.customer_type}</span> : '—'}</td>
+                      <td className="px-4 py-2.5 tabular-nums text-emerald-700 font-semibold">{se > 0 ? formatSeats(se) : '—'}</td>
+                      <td className="px-4 py-2.5 tabular-nums text-slate-700">{m > 0 ? formatUSD(m) : '—'}</td>
+                      <td className="px-4 py-2.5 tabular-nums text-slate-700">{ot > 0 ? formatUSD(ot) : '—'}</td>
+                      <td className="px-4 py-2.5 tabular-nums font-semibold text-indigo-700">{a > 0 ? formatUSD(a) : '—'}</td>
+                      <td className="px-4 py-2.5 text-slate-500 whitespace-nowrap">{l.assigned_to || '—'}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+              <tfoot className="sticky bottom-0 bg-slate-50 border-t-2 border-slate-200">
+                <tr>
+                  <td colSpan={4} className="px-4 py-2.5 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Total · {leads.length} deals</td>
+                  <td className="px-4 py-2.5 font-extrabold text-emerald-700 tabular-nums">{formatSeats(seats)}</td>
+                  <td className="px-4 py-2.5 font-extrabold text-slate-700 tabular-nums">{formatUSD(mrr)}</td>
+                  <td className="px-4 py-2.5 font-extrabold text-slate-700 tabular-nums">{formatUSD(oneTime)}</td>
+                  <td className="px-4 py-2.5 font-extrabold text-indigo-700 tabular-nums">{formatUSD(acv)}</td>
+                  <td />
+                </tr>
+              </tfoot>
+            </table>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
