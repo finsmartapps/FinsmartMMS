@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { llmJson, llmConfigured, LlmError } from '@/lib/agents/llm'
 
-// AI "draft next message" — reads the account/contact/thread + offer context
-// (RLS-scoped to the signed-in user) and asks Claude for follow-up options.
+// AI "draft next message" (LinkedIn notes/DMs) — reads the account/contact/thread + offer
+// context (RLS-scoped to the signed-in user) and asks the free LLM wrapper for options.
+
+export const maxDuration = 60
 
 const CHANNEL_LABEL: Record<string, string> = {
   connect_note: 'LinkedIn connection request note',
@@ -15,9 +18,8 @@ const CHANNEL_LIMIT: Record<string, number | null> = {
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) {
-    return NextResponse.json({ error: 'AI drafting is not configured yet. Add ANTHROPIC_API_KEY in your environment.' }, { status: 503 })
+  if (!llmConfigured()) {
+    return NextResponse.json({ error: 'AI drafting is not configured yet. Add GEMINI_API_KEY (free) in your environment.' }, { status: 503 })
   }
 
   const { id } = await params
@@ -105,40 +107,13 @@ TASK
 ${rules}`
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: 'claude-sonnet-5',
-        max_tokens: 1024,
-        system,
-        messages: [{ role: 'user', content: userMsg }],
-      }),
-    })
-
-    if (!res.ok) {
-      const detail = await res.text()
-      return NextResponse.json({ error: `AI request failed (${res.status}).`, detail: detail.slice(0, 300) }, { status: 502 })
-    }
-
-    const data = await res.json()
-    const text: string = (data.content ?? []).map((b: { type: string; text?: string }) => b.text ?? '').join('').trim()
-
-    // Extract the JSON object even if wrapped in prose/code fences.
-    let drafts: string[] = []
-    const match = text.match(/\{[\s\S]*\}/)
-    if (match) {
-      try { drafts = JSON.parse(match[0]).drafts ?? [] } catch { /* fall through */ }
-    }
-    if (!Array.isArray(drafts) || drafts.length === 0) drafts = text ? [text] : []
-    drafts = drafts.map(d => String(d).trim()).filter(Boolean).slice(0, 3)
-
+    const { data } = await llmJson<{ drafts?: unknown }>({ system, user: userMsg, temperature: 0.9 })
+    const raw = Array.isArray(data.drafts) ? data.drafts : []
+    const drafts = raw.map(d => String(d).trim()).filter(Boolean).slice(0, 3)
+    if (drafts.length === 0) return NextResponse.json({ error: 'The AI returned no usable draft. Try again.' }, { status: 502 })
     return NextResponse.json({ drafts })
-  } catch {
-    return NextResponse.json({ error: 'Could not reach the AI service. Try again.' }, { status: 502 })
+  } catch (e) {
+    const msg = e instanceof LlmError ? e.message : 'Could not reach the AI service. Try again.'
+    return NextResponse.json({ error: msg }, { status: 502 })
   }
 }

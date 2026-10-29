@@ -105,6 +105,47 @@ export interface AbmMessage {
   created_at: string
 }
 
+export type DraftStatus = 'pending_approval' | 'approved' | 'rejected' | 'sent' | 'failed'
+
+export interface AbmDraft {
+  id: string
+  contact_id: string
+  account_id: string | null
+  owner_id: string | null
+  channel: Channel
+  sequence_step: number
+  subject: string | null
+  body: string
+  status: DraftStatus
+  angle: string | null
+  fact_used: string | null
+  variant: Record<string, unknown> | null
+  qa_score: number | null
+  qa_notes: { issues?: string[]; warnings?: string[] } | null
+  model: string | null
+  approved_by: string | null
+  approved_at: string | null
+  sent_at: string | null
+  send_error: string | null
+  rfc_message_id: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface AbmAgentSettings {
+  id: number
+  mode: 'approval' | 'auto'
+  daily_cap: number
+  send_start_hour: number
+  send_end_hour: number
+  timezone: string
+  kill_switch: boolean
+  sender_name: string
+  sender_title: string
+  sender_company: string
+  sender_email: string | null
+}
+
 export interface AbmTemplate {
   id: string
   name: string

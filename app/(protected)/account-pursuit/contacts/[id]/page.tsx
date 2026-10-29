@@ -13,6 +13,7 @@ import {
   CONNECTION_STATUSES, CONVERSATION_STAGES, CHANNELS, COMMITTEE_ROLES, NEXT_STEP_PRESETS,
 } from '@/lib/account-pursuit/constants'
 import { RoleBadge } from '@/components/account-pursuit/badges'
+import EmailDraftPanel from '@/components/account-pursuit/email-draft-panel'
 import type {
   AbmAccount, AbmContact, AbmMessage, AbmTemplate,
   ConnectionStatus, ConversationStage, Channel, Direction,
@@ -312,6 +313,8 @@ export default function ContactThreadPage({ params }: { params: Promise<{ id: st
               </button>
             </div>
           </div>
+
+          <EmailDraftPanel contact={contact} viewerId={viewer?.id ?? null} />
         </div>
 
         {/* RIGHT: lifecycle + next step */}
