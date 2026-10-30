@@ -74,6 +74,8 @@ export default function EmailDraftPanel({ contact, viewerId, isManager = false }
   }
 
   async function sendDraft(d: AbmDraft, mode: 'now' | 'test') {
+    // "Send now" emails a REAL PERSON. Make that impossible to do by accident.
+    if (mode === 'now' && !window.confirm(`Send this email to ${contact.first_name} ${contact.last_name ?? ''} <${contact.email}> right now?\n\nThis goes to a real prospect. To check how it looks first, use "Send test to me".`)) return
     setBusy(d.id)
     setNotice(n => { const x = { ...n }; delete x[d.id]; return x })
     try {
