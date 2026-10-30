@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
 import {
-  LayoutDashboard, CalendarCheck, ListTodo, LogOut, Menu, X,
+  LayoutDashboard, CalendarCheck, ListTodo, LogOut, Menu, X, MailCheck,
   Phone, BarChart2, BookUser, ClipboardList,
   Inbox, Settings, ChevronDown, ChevronRight,
   Package, CalendarDays, Truck, FileBarChart2, Users,
@@ -85,6 +85,7 @@ const marketingGroups: NavGroup[] = [
 function getAccountPursuitGroups(isManagerOrAdmin: boolean): NavGroup[] {
   const links: NavLink[] = [
     { href: '/account-pursuit',          label: 'Follow-ups Due', icon: CalendarCheck },
+    { href: '/account-pursuit/drafts',    label: 'Email approvals', icon: MailCheck    },
     { href: '/account-pursuit/accounts',  label: 'Accounts',       icon: Target        },
     { href: '/account-pursuit/awaiting',  label: 'Awaiting',       icon: Clock         },
     { href: '/account-pursuit/import',    label: 'Import',         icon: FileBarChart2 },

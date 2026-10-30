@@ -25,5 +25,7 @@ jobs:
           if [ -z "$BASE" ] || [ -z "$SECRET" ]; then echo "ABM_BASE_URL / CRON_SECRET secrets are not set"; exit 1; fi
           # 1. read replies / bounces first, so nobody who just replied gets a follow-up
           curl -sS --fail-with-body -m 90 -H "Authorization: Bearer $SECRET" "$BASE/api/account-pursuit/cron/replies"; echo
-          # 2. then send a few approved emails
+          # 2. write follow-up drafts (touch 2 / 3) for people who have not replied; they wait for your approval
+          curl -sS --fail-with-body -m 90 -H "Authorization: Bearer $SECRET" "$BASE/api/account-pursuit/cron/followups"; echo
+          # 3. then send a few approved emails
           curl -sS --fail-with-body -m 90 -H "Authorization: Bearer $SECRET" "$BASE/api/account-pursuit/cron/send"

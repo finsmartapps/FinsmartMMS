@@ -98,8 +98,8 @@ export function roleContext(title: string | null | undefined): string {
 }
 
 export function stepGoal(step: number): string {
-  if (step <= 1) return 'TOUCH 1 — a clear, specific cold email with exactly three parts: (1) one sentence tying to the FACT or their role, (2) one plain sentence saying who you are and what Finsmart does, (3) ONE specific question they can answer in a single line. Do NOT ask for a call, meeting or calendar time.'
-  if (step === 2) return 'TOUCH 2 — add one genuinely useful observation or insight relevant to them. Refer to the first email only lightly (not "following up"). Still no hard pitch, no meeting grab.'
+  if (step <= 1) return 'TOUCH 1 — a clear, specific cold email with exactly three parts: (1) one sentence tying to the FACT or their role, (2) one plain sentence saying who you are and what Finsmart does (touch 1 only), (3) ONE specific question they can answer in a single line. Do NOT ask for a call, meeting or calendar time.'
+  if (step === 2) return 'TOUCH 2 — they did not reply to the first email. Add one genuinely useful observation relevant to them, using a DIFFERENT angle from the first email. Do NOT repeat the sentence about what Finsmart does (they already read it) and do not say "following up" or "checking in". Keep it shorter than the first email. End with one easy question. No pitch, no meeting grab.'
   return 'TOUCH 3 — a short, low-pressure close-the-loop note. Acknowledge they are busy, leave the door open, make it easy to ignore. No pressure.'
 }
 

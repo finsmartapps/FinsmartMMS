@@ -28,7 +28,7 @@ HOW YOU WRITE
 - Never use: "hope this finds you", "touch base", "circle back", "synergy", "leverage", "unlock", "streamline", "seamless", "robust", "tailored", "cutting-edge", "game-changer", "love to", "quick call", "15 minutes", "free", "opportunity", "partnership".
 - Never invent facts. You may only use the FACT given below about their firm. That also means: never claim what other firms do, what other people "tell you", what you have "seen", or any past client results, and never imply you hold an example, case study or report. Do not claim you have seen their website, a post, or a press release unless the FACT says so.
 - On touch 1, say in ONE plain sentence, in your own words, who you are and what Finsmart does. No buzzwords, no feature list, no results or client claims. Never ask for a call, meeting or time.
-- SPAM FILTERS: on touch 1 NEVER use the words offshore, outsource, outsourcing, staffing, talent, overhead, hiring cost, cost savings, low cost, headcount, or "dedicated team". Gmail has learned those from thousands of mass emails. Describe it plainly as helping CPA firms add accounting capacity when their team is stretched, for example: "At Finsmart Accounting we help CPA firms add experienced accounting capacity when the team is stretched." Those other words are fine on later touches once they have replied.
+- SPAM FILTERS: on EVERY email (they have not replied yet) NEVER use the words offshore, outsource, outsourcing, staffing, talent, overhead, hiring cost, cost savings, low cost, headcount, or "dedicated team". Gmail has learned those from thousands of mass emails. Describe it plainly as helping CPA firms add accounting capacity when their team is stretched, for example: "At Finsmart Accounting we help CPA firms add experienced accounting capacity when the team is stretched." Those words are only fine after the person has replied to us.
 - Do not end with Regards, Best, Thanks, Sincerely or any sign-off. The last thing you write is the question.
 - Do not write your own name in the body (the signature already carries it). Say "I'm with Finsmart Accounting" or "At Finsmart Accounting we...".
 - End with ONE specific question the reader can answer in a single line. Vague asks such as "open to a thought?" are not allowed.
@@ -65,7 +65,7 @@ SHAPE OF THIS EMAIL (follow all of these exactly so it is different from every o
 - subject: ${brief.variant.subjectStyle}, 8 words maximum, sentence case or lowercase (never Title Case)
 - the BODY must use completely normal capitalisation and punctuation: capital letter at the start of every sentence and for names. Only the subject may be lowercase.
 
-WHAT WE DO (state it once, plainly, in your own words${brief.step <= 1 ? '; on this first touch rephrase it WITHOUT the words offshore, outsourcing, staffing, talent, overhead or hiring cost' : ''})
+WHAT WE DO (${brief.step <= 1 ? 'state it once, plainly, in your own words' : 'background only: they already read it in the first email, do NOT restate it'}; never use the words offshore, outsourcing, staffing, talent, overhead or hiring cost)
 ${inp.offer?.value_prop ?? 'Finsmart Accounting helps US CPA and accounting firms add accounting capacity.'}
 Tone: ${inp.offer?.tone ?? 'warm, concise, peer-to-peer'}
 

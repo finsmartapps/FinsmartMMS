@@ -136,7 +136,7 @@ export function critique(inp: CriticInput): QaResult {
     soft('never says who you are (Finsmart Accounting), so the reader will not know why you wrote', 10)
   }
   // Words that Gmail has learned from mass offshore-accounting outreach. Fine after they reply, fatal on touch 1.
-  if (inp.step === 1) {
+  {
     const trig = body.match(/\b(off-?shore|outsourc\w*|staffing|talent|overhead|hiring costs?|cost sav\w*|low[- ]cost|cheaper|headcount|virtual (assistants?|teams?)|dedicated (teams?|accountants?))\b/i)
     if (trig) hard(`"${trig[0]}" is a classic spam-filter trigger in cold email about accounting support; say it plainly (e.g. "add accounting capacity")`, 18)
   }
