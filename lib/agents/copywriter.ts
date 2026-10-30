@@ -45,7 +45,9 @@ ${name}, ${c.job_title ?? 'role unknown'} (${c.committee_role.replace('_', ' ')}
 Firm: ${[account.industry, account.employee_size ? `about ${account.employee_size} people` : '', account.state].filter(Boolean).join(', ') || 'details unknown'}.
 
 THE ONE FACT TO BUILD ON (${brief.fact ? brief.fact.label : 'none available'})
-${brief.fact ? brief.fact.text : 'No account-specific fact is known. Write a short, honest, curious note based only on their role and firm name. Do not pretend to know more.'}
+${brief.fact ? brief.fact.text : 'No account-specific fact is known. Write a short, honest, curious note based only on their role and firm name. Do not pretend to know more.'}${brief.fact?.evidence ? `
+VERIFIED EVIDENCE (exact words from ${brief.fact.source_url}): "${brief.fact.evidence}"
+Say only what this evidence supports. Do not add details, numbers, names or dates that are not in the evidence or in the details given above.` : ''}
 
 ROLE CONTEXT (general to the role, NOT a claim about their firm: use it to choose what to ask, phrase as a question or light observation, never state it as fact about them)
 ${brief.roleContext}

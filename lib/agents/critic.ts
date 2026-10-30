@@ -31,6 +31,8 @@ const SUBJECT_BAD = /\b(free|quick|opportunity|partnership|proposal|offer|exclus
 
 const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u
 
+const BS = String.fromCharCode(92)
+
 export function wordCount(s: string): number {
   return (s.match(/\b[\w'’-]+\b/g) ?? []).length
 }
@@ -71,6 +73,8 @@ export interface CriticInput {
   factText: string | null      // the account fact the email was meant to use
   corpus: string[]             // earlier drafts/messages (core text) for duplicate detection
   senderName?: string          // the body should not repeat it (the signature has it)
+  allowedText?: string         // every fact the writer may use; names outside it are unsupported
+  numbersText?: string         // numbers may ONLY come from here (the chosen fact + the account's size/revenue)
 }
 
 export function critique(inp: CriticInput): QaResult {
@@ -152,6 +156,27 @@ export function critique(inp: CriticInput): QaResult {
     if (keys.length > 0 && hits === 0) hard('does not actually use the account-specific fact it was given', 20)
   } else {
     soft('no account-specific fact available — add a compelling event / pain to the account for a sharper email', 10)
+  }
+
+  // ── grounding: numbers and proper names must come from the research / account data ──
+  if (inp.allowedText) {
+    const allowed = ' ' + inp.allowedText.toLowerCase().replace(/[‘’]/g, "'").replace(/[^a-z0-9$%.' ]+/g, ' ').replace(/\s+/g, ' ') + ' '
+    const nums = [...new Set((body.match(/\b\d[\d,]*(?:\.\d+)?%?/g) ?? []).map(n => n.replace(/,/g, '')))]
+      .filter(n => n.replace(/\D/g, '').length >= 2)
+    const numSrc = ' ' + (inp.numbersText ?? inp.allowedText).toLowerCase().replace(/,/g, '') + ' '
+    const badNums = nums.filter(n => !new RegExp('(?<![0-9.])' + n.replace('%', '').replace(/[.]/g, BS + '.') + '(?![0-9])').test(numSrc))
+    if (badNums.length) hard(`number(s) not found in the research: ${badNums.join(', ')}`, 18)
+
+    const stop = new Set(['finsmart', 'accounting', 'hello', 'january', 'february', 'march', 'april', 'june', 'july', 'august', 'september', 'october', 'november', 'december', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 'cpas', 'quickbooks'])
+    const names = new Set<string>()
+    for (const sent of sentences(body)) {
+      sent.split(/\s+/).slice(1).forEach(w => {
+        const t = w.replace(/^[^A-Za-z]+|[^A-Za-z'&]+$/g, '').replace(/'s$/i, '')
+        if (t.length >= 4 && /^[A-Z]/.test(t) && !stop.has(t.toLowerCase())) names.add(t)
+      })
+    }
+    const badNames = [...names].filter(n => !allowed.includes(n.toLowerCase()))
+    if (badNames.length) hard(`name(s) not found in the research: ${badNames.slice(0, 4).join(', ')}`, 16)
   }
 
   // ── duplicate / template detection against earlier drafts ──

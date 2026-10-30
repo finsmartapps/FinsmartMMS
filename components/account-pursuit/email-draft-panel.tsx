@@ -1,10 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Sparkles, Loader2, Check, X, Copy, Save, RotateCcw, ShieldCheck, AlertTriangle } from 'lucide-react'
+import { Sparkles, Loader2, Check, X, Copy, Save, RotateCcw, ShieldCheck, AlertTriangle, Search, ExternalLink, ChevronDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { fmtDate } from '@/lib/account-pursuit/helpers'
-import type { AbmContact, AbmDraft, DraftStatus } from '@/lib/account-pursuit/types'
+import type { AbmContact, AbmDraft, AbmResearch, DraftStatus } from '@/lib/account-pursuit/types'
 
 const STATUS_STYLE: Record<DraftStatus, string> = {
   pending_approval: 'bg-amber-50 text-amber-700',
@@ -35,6 +35,15 @@ export default function EmailDraftPanel({ contact, viewerId }: { contact: AbmCon
   const [edits, setEdits] = useState<Record<string, { subject: string; body: string }>>({})
   const [busy, setBusy] = useState<string | null>(null)
   const [copied, setCopied] = useState<string | null>(null)
+  const [research, setResearch] = useState<AbmResearch | null>(null)
+  const [stage, setStage] = useState<'researching' | 'writing' | null>(null)
+  const [showResearch, setShowResearch] = useState(false)
+
+  const loadResearch = useCallback(async () => {
+    const supabase = createClient()
+    const { data } = await supabase.from('abm_research').select('*').eq('contact_id', contact.id).order('created_at', { ascending: false }).limit(1)
+    setResearch(((data as AbmResearch[]) ?? [])[0] ?? null)
+  }, [contact.id])
 
   const load = useCallback(async () => {
     const supabase = createClient()
@@ -43,11 +52,30 @@ export default function EmailDraftPanel({ contact, viewerId }: { contact: AbmCon
     setLoading(false)
   }, [contact.id])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { load(); loadResearch() }, [load, loadResearch])
+
+  // Re-run (or run) the Researcher on its own.
+  async function runResearch(force: boolean) {
+    setStage('researching'); setError('')
+    try {
+      const r = await fetch(`/api/account-pursuit/contacts/${contact.id}/research`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ force }),
+      })
+      const d = await r.json()
+      if (!r.ok) setError(d.error || 'Research failed.')
+      else { setResearch(d.research as AbmResearch); setShowResearch(true) }
+      return r.ok
+    } catch { setError('Could not reach the server.'); return false }
+    finally { setStage(null) }
+  }
 
   async function generate() {
     setGenerating(true); setError('')
     try {
+      // 1. research first (cached for 14 days, so repeat drafts are fast)
+      setStage('researching')
+      await runResearch(false)
+      setStage('writing')
       const r = await fetch(`/api/account-pursuit/contacts/${contact.id}/email-draft`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ instructions: instructions.trim() || undefined }),
@@ -56,6 +84,7 @@ export default function EmailDraftPanel({ contact, viewerId }: { contact: AbmCon
       if (!r.ok) setError(d.error || 'Could not write a draft.')
       else { setInstructions(''); await load() }
     } catch { setError('Could not reach the server.') }
+    setStage(null)
     setGenerating(false)
   }
 
@@ -96,7 +125,7 @@ export default function EmailDraftPanel({ contact, viewerId }: { contact: AbmCon
         <button onClick={generate} disabled={generating || !contact.email || contact.do_not_contact}
           className="flex items-center gap-1.5 h-8 px-3 text-[12px] font-semibold rounded-lg bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-50 transition">
           {generating ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
-          {generating ? 'Strategist + Copywriter + Critic working…' : 'Write email draft'}
+          {generating ? (stage === 'researching' ? 'Researching the firm…' : 'Writing + fact-checking…') : 'Write email draft'}
         </button>
       </div>
       <p className="text-[11px] text-[#AEAEB2] mb-3">
@@ -107,6 +136,42 @@ export default function EmailDraftPanel({ contact, viewerId }: { contact: AbmCon
       <input value={instructions} onChange={e => setInstructions(e.target.value)} placeholder="Optional angle, e.g. mention they are hiring in Austin (leave blank for auto)"
         className={`${field} mb-3`} disabled={generating} />
       {error && <p className="text-[12px] text-rose-600 bg-rose-50 px-3 py-2 rounded-lg mb-3">{error}</p>}
+
+      {/* Researcher */}
+      <div className="border border-[#E5E5EA] rounded-xl mb-3">
+        <div className="flex items-center gap-2 px-3 py-2">
+          <button onClick={() => setShowResearch(v => !v)} className="flex items-center gap-1.5 text-[12px] font-semibold text-[#1D1D1F] flex-1 text-left">
+            <Search size={13} className="text-teal-600" />
+            Research
+            {research && <span className="text-[11px] font-normal text-[#6E6E73]">{research.facts.length} verified fact{research.facts.length === 1 ? '' : 's'} · {fmtDate(research.created_at)}</span>}
+            {!research && <span className="text-[11px] font-normal text-[#AEAEB2]">not run yet, runs automatically with the first draft</span>}
+            <ChevronDown size={13} className={`ml-auto text-[#AEAEB2] transition ${showResearch ? 'rotate-180' : ''}`} />
+          </button>
+          <button onClick={() => runResearch(true)} disabled={stage !== null || generating}
+            className="text-[11px] px-2 py-1 rounded-lg border border-[#E5E5EA] text-[#6E6E73] hover:text-teal-700 hover:border-teal-300 disabled:opacity-50 transition flex items-center gap-1">
+            {stage === 'researching' && !generating ? <Loader2 size={11} className="animate-spin" /> : <Search size={11} />} {research ? 'Re-run' : 'Run'}
+          </button>
+        </div>
+        {showResearch && research && (
+          <div className="px-3 pb-3 space-y-2 border-t border-[#F0F0F2] pt-2">
+            {research.note && <p className="text-[11px] text-[#AEAEB2]">{research.note}</p>}
+            {research.facts.length === 0 && <p className="text-[12px] text-amber-700">Nothing verifiable found. Drafts will rely on the account details only.</p>}
+            {research.facts.map(f => (
+              <div key={f.id} className="text-[12px]">
+                <div className="flex items-start gap-2">
+                  <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-teal-50 text-teal-700 mt-0.5 flex-shrink-0">{f.subject === 'contact' ? 'person' : f.type}</span>
+                  <p className="text-[#1D1D1F]">
+                    {f.claim}
+                    {f.date && <span className="text-[#AEAEB2]"> · {f.date}</span>}
+                    {' '}<a href={f.source_url} target="_blank" rel="noopener noreferrer" className="text-teal-700 hover:underline inline-flex items-center gap-0.5">source <ExternalLink size={9} /></a>
+                  </p>
+                </div>
+                <p className="text-[11px] italic text-[#6E6E73] ml-[52px]">&ldquo;{f.evidence}&rdquo;</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {loading ? (
         <div className="flex justify-center py-6"><Loader2 size={18} className="animate-spin text-teal-600" /></div>
@@ -129,7 +194,14 @@ export default function EmailDraftPanel({ contact, viewerId }: { contact: AbmCon
                   <span className="text-[10px] text-[#AEAEB2]">Touch {d.sequence_step} · {fmtDate(d.created_at)}{d.model ? ` · ${d.model}` : ''}</span>
                 </div>
 
-                {d.fact_used && <p className="text-[11px] text-[#6E6E73] mb-2">Built on: <span className="italic">{d.fact_used}</span></p>}
+                {d.fact_used && (() => {
+                  const src = research?.facts.find(f => f.claim === d.fact_used)
+                  return (
+                    <p className="text-[11px] text-[#6E6E73] mb-2">Built on: <span className="italic">{d.fact_used}</span>
+                      {src && <> <a href={src.source_url} target="_blank" rel="noopener noreferrer" className="text-teal-700 hover:underline inline-flex items-center gap-0.5">verify source <ExternalLink size={9} /></a></>}
+                    </p>
+                  )
+                })()}
 
                 <input value={c.subject} onChange={e => setEdit(d, { subject: e.target.value })} disabled={locked}
                   className={`${field} font-semibold mb-2`} placeholder="Subject" />

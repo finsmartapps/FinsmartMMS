@@ -3,9 +3,16 @@
 // 2. Picks a random structural "variant" so no two emails share a skeleton
 //    (identical skeletons are what spam filters cluster as bulk mail).
 
-import type { AbmAccount, AbmContact } from '@/lib/account-pursuit/types'
+import type { AbmAccount, AbmContact, ResearchFact } from '@/lib/account-pursuit/types'
 
-export interface Fact { key: string; label: string; text: string }
+export interface Fact {
+  key: string
+  label: string
+  text: string
+  evidence?: string       // verbatim quote from a real source (research facts only)
+  source_url?: string
+  verified?: boolean
+}
 
 export interface Variant {
   opening: string
@@ -84,7 +91,7 @@ export function roleContext(title: string | null | undefined): string {
   const t = (title ?? '').toLowerCase()
   if (/controller|accounting manager|financial reporting|bookkeep/.test(t)) return 'Controllers usually own the month-end close, reconciliations, audit prep and staffing the accounting team.'
   if (/cfo|chief financial|finance director|vp finance|treasurer/.test(t)) return 'Finance leaders are usually judged on close speed, cost per transaction and team capacity without adding headcount.'
-  if (/coo|operations|ops/.test(t)) return 'Operations leaders usually own throughput, the hiring pipeline and how fully the team is used.'
+  if (/coo|operations|ops\b/.test(t)) return 'Operations leaders usually own throughput, the hiring pipeline and how fully the team is used.'
   if (/partner|owner|principal|president|ceo|founder|managing|shareholder/.test(t)) return 'Firm leaders usually care about busy-season capacity, keeping staff, and protecting margin as the firm grows.'
   if (/hr|talent|recruit|people/.test(t)) return 'People leaders usually deal with hiring pace, retention and cost of local hires.'
   return 'People in this kind of role usually feel the pressure of staffing and capacity during busy periods.'
@@ -96,15 +103,34 @@ export function stepGoal(step: number): string {
   return 'TOUCH 3 — a short, low-pressure close-the-loop note. Acknowledge they are busy, leave the door open, make it easy to ignore. No pressure.'
 }
 
+const RESEARCH_PRIORITY: Record<string, number> = { trigger: 0, people: 1, hiring: 2, growth: 3, award: 4, service: 5, tech: 6, other: 7 }
+const RESEARCH_LABEL: Record<string, string> = {
+  trigger: 'a recent event at the firm', people: 'something about this specific person (professional)', hiring: 'a hiring signal',
+  growth: 'growth of the firm', award: 'a recognition the firm received', service: 'what the firm specialises in',
+  tech: 'software the firm uses', other: 'a fact about the firm',
+}
+
+// Verified research first (best = recent trigger events), then the imported account columns.
+export function researchToFacts(research: ResearchFact[]): Fact[] {
+  return [...research]
+    .sort((a, b) => (RESEARCH_PRIORITY[a.type] ?? 9) - (RESEARCH_PRIORITY[b.type] ?? 9) || (b.date ?? '').localeCompare(a.date ?? ''))
+    .map(f => ({
+      key: `r:${f.claim.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim().slice(0, 40)}`,
+      label: f.subject === 'contact' ? RESEARCH_LABEL.people : (RESEARCH_LABEL[f.type] ?? RESEARCH_LABEL.other),
+      text: f.claim, evidence: f.evidence, source_url: f.source_url, verified: true,
+    }))
+}
+
 export function plan(input: {
   account: AbmAccount
   contact: AbmContact
   step: number
   usedFactKeys: string[]          // facts already used in recent drafts to this account
   recentVariants: Partial<Variant>[]
+  research?: ResearchFact[]
 }): Brief {
-  const facts = collectFacts(input.account)
-  const top = facts.slice(0, 4)
+  const facts = [...researchToFacts(input.research ?? []), ...collectFacts(input.account)]
+  const top = facts.slice(0, 5)
   const fact = top.length
     ? (top.find(f => !input.usedFactKeys.includes(f.key)) ?? top[0])
     : null

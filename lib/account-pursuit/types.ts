@@ -105,6 +105,39 @@ export interface AbmMessage {
   created_at: string
 }
 
+export type ResearchFactType = 'trigger' | 'hiring' | 'growth' | 'award' | 'people' | 'service' | 'tech' | 'other'
+
+export interface ResearchFact {
+  id: string
+  subject: 'firm' | 'contact'
+  type: ResearchFactType
+  claim: string          // short neutral sentence
+  evidence: string       // verbatim quote that was found in the source
+  source_url: string
+  source_title: string
+  date: string | null    // YYYY-MM-DD when the source gives one
+}
+
+export interface ResearchSource {
+  id: string
+  url: string
+  title: string
+  kind: 'website' | 'news'
+  ok: boolean
+}
+
+export interface AbmResearch {
+  id: string
+  account_id: string
+  contact_id: string | null
+  owner_id: string | null
+  facts: ResearchFact[]
+  sources: ResearchSource[]
+  status: 'ok' | 'partial' | 'empty' | 'failed'
+  note: string | null
+  created_at: string
+}
+
 export type DraftStatus = 'pending_approval' | 'approved' | 'rejected' | 'sent' | 'failed'
 
 export interface AbmDraft {
