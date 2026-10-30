@@ -27,7 +27,9 @@ HOW YOU WRITE
 - Do not flatter. Do not say you were impressed. Do not say you came across them or are reaching out.
 - Never use: "hope this finds you", "touch base", "circle back", "synergy", "leverage", "unlock", "streamline", "seamless", "robust", "tailored", "cutting-edge", "game-changer", "love to", "quick call", "15 minutes", "free", "opportunity", "partnership".
 - Never invent facts. You may only use the FACT given below about their firm. That also means: never claim what other firms do, what other people "tell you", what you have "seen", or any past client results, and never imply you hold an example, case study or report. Do not claim you have seen their website, a post, or a press release unless the FACT says so.
-- On touch 1, say in ONE plain sentence, in your own words, who you are and what Finsmart does (use WHAT WE DO below). No buzzwords, no feature list, no results or client claims. Never ask for a call, meeting or time.
+- On touch 1, say in ONE plain sentence, in your own words, who you are and what Finsmart does. No buzzwords, no feature list, no results or client claims. Never ask for a call, meeting or time.
+- SPAM FILTERS: on touch 1 NEVER use the words offshore, outsource, outsourcing, staffing, talent, overhead, hiring cost, cost savings, low cost, headcount, or "dedicated team". Gmail has learned those from thousands of mass emails. Describe it plainly as helping CPA firms add accounting capacity when their team is stretched, for example: "At Finsmart Accounting we help CPA firms add experienced accounting capacity when the team is stretched." Those other words are fine on later touches once they have replied.
+- Do not end with Regards, Best, Thanks, Sincerely or any sign-off. The last thing you write is the question.
 - Do not write your own name in the body (the signature already carries it). Say "I'm with Finsmart Accounting" or "At Finsmart Accounting we...".
 - End with ONE specific question the reader can answer in a single line. Vague asks such as "open to a thought?" are not allowed.
 - Write numbers as digits (140, not one hundred forty). Use the firm's real name when it is a real name.
@@ -63,8 +65,8 @@ SHAPE OF THIS EMAIL (follow all of these exactly so it is different from every o
 - subject: ${brief.variant.subjectStyle}, 8 words maximum, sentence case or lowercase (never Title Case)
 - the BODY must use completely normal capitalisation and punctuation: capital letter at the start of every sentence and for names. Only the subject may be lowercase.
 
-WHAT WE DO (state it once, plainly, in your own words)
-${inp.offer?.value_prop ?? 'Finsmart Accounting provides offshore accounting talent to US CPA and accounting firms.'}
+WHAT WE DO (state it once, plainly, in your own words${brief.step <= 1 ? '; on this first touch rephrase it WITHOUT the words offshore, outsourcing, staffing, talent, overhead or hiring cost' : ''})
+${inp.offer?.value_prop ?? 'Finsmart Accounting helps US CPA and accounting firms add accounting capacity.'}
 Tone: ${inp.offer?.tone ?? 'warm, concise, peer-to-peer'}
 
 EARLIER CONVERSATION
@@ -84,8 +86,21 @@ Write the email now.`
 }
 
 // Greeting + signature are code, not LLM — exact format, every time.
+// Models sometimes add "Regards," and a name anyway. The signature is code-controlled, so strip those.
+export function stripSignoff(core: string, senderName: string): string {
+  const lines = core.trim().split(/\r?\n/)
+  const signoff = /^(best|regards|best regards|kind regards|warm regards|thanks|thank you|sincerely|cheers|best wishes)[,.!]*$/i
+  const first = senderName.split(/\s+/)[0].toLowerCase()
+  while (lines.length > 1) {
+    const last = lines[lines.length - 1].trim()
+    if (last === '' || signoff.test(last) || last.toLowerCase().startsWith(first) || /^(sr\.?|senior)?\s*business strategist$/i.test(last) || /^finsmart accounting$/i.test(last)) lines.pop()
+    else break
+  }
+  return lines.join('\n').trim()
+}
+
 export function assemble(core: string, firstName: string, brief: Brief, s: AbmAgentSettings): string {
   const greeting = brief.variant.greeting.replace('{first}', firstName)
   const signature = [s.sender_name, s.sender_title, s.sender_company].join('\n')
-  return `${greeting}\n\n${core.trim()}\n\n${signature}`
+  return `${greeting}\n\n${stripSignoff(core, s.sender_name)}\n\n${signature}`
 }

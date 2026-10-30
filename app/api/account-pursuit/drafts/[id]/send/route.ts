@@ -29,10 +29,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!settings) return NextResponse.json({ error: 'Agent settings missing. Run the migration.' }, { status: 500 })
 
   if (mode === 'test') {
-    if (!user.email) return NextResponse.json({ error: 'Your account has no email address.' }, { status: 400 })
+    // Test to an address OUTSIDE the company (ABM_TEST_EMAIL): mail from finsmartaccounting.net to finsmartaccounting.com
+    // looks like a look-alike-domain trick to Google, so it is a harsher test than a real prospect would see.
+    const testTo = process.env.ABM_TEST_EMAIL || user.email
+    if (!testTo) return NextResponse.json({ error: 'No test address. Set ABM_TEST_EMAIL.' }, { status: 400 })
     try {
-      await sendPlain({ to: user.email, subject: `[TEST] ${draft.subject ?? ''}`.trim(), text: draft.body, fromName: settings.sender_name })
-      return NextResponse.json({ ok: true, message: `Test sent to ${user.email}. Check the inbox (and spam) to see where it lands.` })
+      await sendPlain({ to: testTo, subject: `[TEST] ${draft.subject ?? ''}`.trim(), text: draft.body, fromName: settings.sender_name })
+      return NextResponse.json({ ok: true, message: `Test sent to ${testTo}. Check the inbox (and spam) to see where it lands.` })
     } catch (e) {
       return NextResponse.json({ error: `SMTP error: ${(e as Error).message.slice(0, 200)}` }, { status: 502 })
     }

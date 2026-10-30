@@ -171,7 +171,7 @@ export default function EmailDraftPanel({ contact, viewerId, isManager = false }
         <div className="flex items-center gap-2 flex-wrap text-[11px] text-[#6E6E73] bg-[#FAFAFA] border border-[#E5E5EA] rounded-lg px-3 py-1.5 mb-3">
           <span className={`inline-block w-1.5 h-1.5 rounded-full ${settings.kill_switch ? 'bg-rose-500' : 'bg-emerald-500'}`} />
           <span>{settings.kill_switch ? 'Sending is PAUSED' : 'Sending is on'}</span>
-          <span>· {sentToday}/{settings.daily_cap} sent today</span>
+          <span>· {sentToday} sent today (limit starts at 5/day and rises weekly to {settings.daily_cap})</span>
           <span>· {settings.send_start_hour}:00-{settings.send_end_hour}:00 {settings.timezone.split('/')[1]?.replace('_', ' ')}, weekdays</span>
           {isManager && (
             <button onClick={toggleKill} className="ml-auto flex items-center gap-1 text-[11px] font-semibold text-[#1D1D1F] hover:text-teal-700 transition">

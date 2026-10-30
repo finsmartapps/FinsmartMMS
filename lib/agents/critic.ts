@@ -132,9 +132,15 @@ export function critique(inp: CriticInput): QaResult {
   }
 
   // ── pitch discipline on the first touch ──
-  if (inp.step === 1 && !/\b(finsmart|offshore|outsourc\w*|accounting (talent|staff|team|support)|managed staffing)\b/i.test(body)) {
-    soft('never says who you are or what Finsmart does, so the reader will not know why you wrote', 10)
+  if (inp.step === 1 && !/\bfinsmart\b/i.test(body)) {
+    soft('never says who you are (Finsmart Accounting), so the reader will not know why you wrote', 10)
   }
+  // Words that Gmail has learned from mass offshore-accounting outreach. Fine after they reply, fatal on touch 1.
+  if (inp.step === 1) {
+    const trig = body.match(/\b(off-?shore|outsourc\w*|staffing|talent|overhead|hiring costs?|cost sav\w*|low[- ]cost|cheaper|headcount|virtual (assistants?|teams?)|dedicated (teams?|accountants?))\b/i)
+    if (trig) hard(`"${trig[0]}" is a classic spam-filter trigger in cold email about accounting support; say it plainly (e.g. "add accounting capacity")`, 18)
+  }
+  if (/(^|\n)\s*(best|regards|best regards|kind regards|warm regards|thanks|thank you|sincerely|cheers)[,.!]?\s*$/i.test(body)) hard('ends with a sign-off line (the signature is added separately)', 10)
   const senderFirst = (inp.senderName ?? '').split(/\s+/)[0]
   if (senderFirst && new RegExp(`\\b${senderFirst}\\b`, 'i').test(body)) soft('repeats your own name in the body, the signature already has it', 6)
   const qs = (body.match(/\?/g) ?? []).length
@@ -175,6 +181,12 @@ export function critique(inp: CriticInput): QaResult {
         if (t.length >= 4 && /^[A-Z]/.test(t) && !stop.has(t.toLowerCase())) names.add(t)
       })
     }
+    // the subject must not contain words that appear nowhere in the email or the research (models invent names there)
+    const bodyLower = ' ' + body.toLowerCase().replace(/[^a-z0-9' ]+/g, ' ') + ' '
+    const COMMON = new Set(['growth', 'growing', 'capacity', 'office', 'offices', 'season', 'busy', 'workload', 'workloads', 'team', 'teams', 'practice', 'practices', 'clients', 'client', 'firm', 'firms', 'about', 'question', 'questions', 'plans', 'planning', 'coverage', 'handle', 'handling', 'managing', 'manage', 'expansion', 'merger', 'acquisition', 'integration', 'integrating', 'closing', 'close', 'month', 'quarter', 'review', 'reviews', 'tax', 'audit', 'accounting', 'advisory', 'staff', 'peak', 'periods', 'period', 'thoughts', 'idea', 'ideas', 'quick', 'general', 'support', 'process', 'processes', 'balance', 'balancing', 'scaling', 'scale', 'ahead', 'before', 'after', 'during', 'across', 'multi', 'multiple', 'location', 'locations', 'workflow', 'workflows', 'bandwidth', 'prep', 'seasonal', 'strategy', 'operations', 'operational', 'partners', 'partner', 'leadership', 'role', 'work'])
+    const strangeSubject = (subject.toLowerCase().match(/[a-z]{5,}/g) ?? []).filter(w => !COMMON.has(w) && !allowed.includes(w) && !bodyLower.includes(w))
+    if (strangeSubject.length) hard(`subject has word(s) not found in the email or research: ${strangeSubject.slice(0, 3).join(', ')}`, 16)
+
     const badNames = [...names].filter(n => !allowed.includes(n.toLowerCase()))
     if (badNames.length) hard(`name(s) not found in the research: ${badNames.slice(0, 4).join(', ')}`, 16)
   }

@@ -72,9 +72,9 @@ const STRUCTURES = [
 ]
 // Every ending is ONE specific question answerable in a line. Vague "open to a thought?" asks get ignored.
 const CTAS = [
-  'end with one specific either-or question about how they handle this today (in-house, offshore, or a mix)',
+  'end with one specific either-or question about how they cover peak workload today (the existing team, temporary help, or a mix)',
   'end with one specific yes/no question about whether this particular pressure is real for them right now',
-  'end by asking who on their side owns offshore or outsourced support, if anyone does',
+  'end by asking what they do when the workload outgrows the team',
   'end with one short, concrete question about their current setup for this exact task',
 ]
 const SUBJECT_STYLES = [

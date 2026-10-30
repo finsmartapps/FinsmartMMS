@@ -23,6 +23,15 @@ function addBusinessDays(days: number): string {
 // Split "subject line" and body — the draft stores greeting + body + signature in `body`.
 const stripRe = (s: string) => s.replace(/^(re|fwd?):\s*/i, '').trim()
 
+export async function warmupCap(db: Db, base: number): Promise<number> {
+  const { data } = await db.from('abm_drafts').select('sent_at').eq('status', 'sent').order('sent_at', { ascending: true }).limit(1)
+  const first = data?.[0]?.sent_at
+  if (!first) return Math.min(base, 5)
+  const days = Math.floor((Date.now() - new Date(first).getTime()) / 86_400_000)
+  const ramp = days < 7 ? 5 : days < 14 ? 10 : days < 21 ? 15 : 20
+  return Math.min(base, ramp)
+}
+
 async function sentTodayCount(db: Db, startISO: string): Promise<number> {
   const { count } = await db.from('abm_drafts').select('id', { count: 'exact', head: true }).eq('status', 'sent').gte('sent_at', startISO)
   return count ?? 0
@@ -109,9 +118,11 @@ export async function sendApprovedDrafts(db: Db, opts: { limit?: number; draftId
     }
   }
 
+  // Warm-up: a new sending domain has no reputation, so ramp 5 -> 10 -> 15 -> up to the configured cap by week.
+  const cap = await warmupCap(db, settings.daily_cap)
   const already = await sentTodayCount(db, clock.startOfDayISO)
-  const remaining = Math.max(0, settings.daily_cap - already)
-  if (remaining === 0) return { sent: 0, remainingToday: 0, note: `daily cap of ${settings.daily_cap} reached`, outcomes: [] }
+  const remaining = Math.max(0, cap - already)
+  if (remaining === 0) return { sent: 0, remainingToday: 0, note: `daily cap of ${cap} reached${cap < settings.daily_cap ? ' (warm-up limit, it rises each week)' : ''}`, outcomes: [] }
 
   let q = db.from('abm_drafts').select('*').eq('status', 'approved').eq('channel', 'email').order('approved_at', { ascending: true })
   if (opts.draftId) q = q.eq('id', opts.draftId)
