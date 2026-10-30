@@ -84,6 +84,7 @@ const marketingGroups: NavGroup[] = [
 
 function getAccountPursuitGroups(isManagerOrAdmin: boolean): NavGroup[] {
   const links: NavLink[] = [
+    { href: '/account-pursuit/dashboard', label: 'Dashboard',      icon: LayoutDashboard },
     { href: '/account-pursuit',          label: 'Follow-ups Due', icon: CalendarCheck },
     { href: '/account-pursuit/drafts',    label: 'Email approvals', icon: MailCheck    },
     { href: '/account-pursuit/accounts',  label: 'Accounts',       icon: Target        },
