@@ -9,7 +9,7 @@ type Provider = {
   call: (system: string, user: string, temperature: number) => Promise<string>
 }
 
-const TIMEOUT_MS = 25_000
+const TIMEOUT_MS = 15_000
 
 async function postJson(url: string, headers: Record<string, string>, body: unknown): Promise<unknown> {
   const res = await fetch(url, {
@@ -25,29 +25,37 @@ async function postJson(url: string, headers: Record<string, string>, body: unkn
   return res.json()
 }
 
-function buildProviders(): Provider[] {
-  const all: Record<string, Provider | null> = {
-    gemini: process.env.GEMINI_API_KEY ? (() => {
-      const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash'
-      const key = process.env.GEMINI_API_KEY!
-      return {
-        name: 'gemini', model,
-        call: async (system, user, temperature) => {
-          const d = await postJson(
-            `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
-            { 'x-goog-api-key': key },
-            {
-              systemInstruction: { parts: [{ text: system }] },
-              contents: [{ role: 'user', parts: [{ text: user }] }],
-              generationConfig: { temperature, responseMimeType: 'application/json' },
-            },
-          ) as { candidates?: { content?: { parts?: { text?: string }[] } }[] }
-          return (d.candidates?.[0]?.content?.parts ?? []).map(p => p.text ?? '').join('')
-        },
-      } satisfies Provider
-    })() : null,
+// Gemini: several models tried in order. The big "latest" aliases can take 50s+, so the
+// default is a fast mid-size model with lite models behind it. Override with GEMINI_MODELS.
+const GEMINI_DEFAULT_MODELS = 'gemini-3.6-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite'
 
-    groq: process.env.GROQ_API_KEY ? (() => {
+function geminiProviders(): Provider[] {
+  const key = process.env.GEMINI_API_KEY
+  if (!key) return []
+  const models = (process.env.GEMINI_MODELS || process.env.GEMINI_MODEL || GEMINI_DEFAULT_MODELS)
+    .split(',').map(s => s.trim()).filter(Boolean)
+  return models.map(model => ({
+    name: 'gemini', model,
+    call: async (system, user, temperature) => {
+      const d = await postJson(
+        `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`,
+        { 'x-goog-api-key': key },
+        {
+          systemInstruction: { parts: [{ text: system }] },
+          contents: [{ role: 'user', parts: [{ text: user }] }],
+          generationConfig: { temperature, responseMimeType: 'application/json' },
+        },
+      ) as { candidates?: { content?: { parts?: { text?: string }[] } }[] }
+      return (d.candidates?.[0]?.content?.parts ?? []).map(p => p.text ?? '').join('')
+    },
+  }))
+}
+
+function buildProviders(): Provider[] {
+  const all: Record<string, Provider[]> = {
+    gemini: geminiProviders(),
+
+    groq: process.env.GROQ_API_KEY ? [(() => {
       const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
       const key = process.env.GROQ_API_KEY!
       return {
@@ -65,9 +73,9 @@ function buildProviders(): Provider[] {
           return d.choices?.[0]?.message?.content ?? ''
         },
       } satisfies Provider
-    })() : null,
+    })()] : [],
 
-    openrouter: process.env.OPENROUTER_API_KEY ? (() => {
+    openrouter: process.env.OPENROUTER_API_KEY ? [(() => {
       const model = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.3-70b-instruct:free'
       const key = process.env.OPENROUTER_API_KEY!
       return {
@@ -84,11 +92,11 @@ function buildProviders(): Provider[] {
           return d.choices?.[0]?.message?.content ?? ''
         },
       } satisfies Provider
-    })() : null,
+    })()] : [],
   }
 
   const order = (process.env.LLM_ORDER || 'gemini,groq,openrouter').split(',').map(s => s.trim())
-  return order.map(n => all[n]).filter((p): p is Provider => !!p)
+  return order.flatMap(n => all[n] ?? [])
 }
 
 export class LlmError extends Error {}

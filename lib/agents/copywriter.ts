@@ -26,7 +26,7 @@ HOW YOU WRITE
 - Specific beats polite. One concrete observation is worth more than three compliments.
 - Do not flatter. Do not say you were impressed. Do not say you came across them or are reaching out.
 - Never use: "hope this finds you", "touch base", "circle back", "synergy", "leverage", "unlock", "streamline", "seamless", "robust", "tailored", "cutting-edge", "game-changer", "love to", "quick call", "15 minutes", "free", "opportunity", "partnership".
-- Never invent facts. You may only use the FACT given below about their firm. Do not claim you have seen their website, a post, or a press release unless the FACT says so.
+- Never invent facts. You may only use the FACT given below about their firm. That also means: never claim what other firms do, what other people "tell you", what you have "seen", or any past client results, and never imply you hold an example, case study or report. Do not claim you have seen their website, a post, or a press release unless the FACT says so.
 - Do not describe or sell services on touch 1. The seller's offer is private background so you stay relevant, never to be listed.
 - Do NOT write a greeting line (like "Hi Sam,") and do NOT write a sign-off or signature. Those are added separately.
 
@@ -52,7 +52,8 @@ SHAPE OF THIS EMAIL (follow all of these exactly so it is different from every o
 - structure: ${brief.variant.structure}
 - about ${brief.variant.targetWords} words (hard maximum 110)
 - ${brief.variant.cta}
-- subject: ${brief.variant.subjectStyle}, 8 words maximum, no capital letters at the start of every word
+- subject: ${brief.variant.subjectStyle}, 8 words maximum, sentence case or lowercase (never Title Case)
+- the BODY must use completely normal capitalisation and punctuation: capital letter at the start of every sentence and for names. Only the subject may be lowercase.
 
 PRIVATE BACKGROUND ON THE SELLER (do not list or pitch this)
 ${inp.offer?.value_prop ?? 'n/a'}

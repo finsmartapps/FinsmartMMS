@@ -23,6 +23,10 @@ const BANNED: { re: RegExp; why: string }[] = [
   { re: /\bas an ai\b|\bcertainly\b|\babsolutely\b|\bI trust this\b/i, why: 'assistant-style phrasing' },
 ]
 
+// Claims about experience / other firms that the data can't back up. The writer is only
+// allowed to use the one account fact it was given, so these are invented.
+const UNVERIFIABLE = /\b(tell|told) me\b|\bi('ve| have) (seen|worked with|helped|talked to|spoken|heard)\b|\bin my experience\b|\bwe('ve| have) (helped|worked|seen)\b|\b(our|my) (clients?|customers?)\b|\bother (\w+ ){0,2}(firms|practices|partners|cpas)\b|\bmost (\w+ ){0,3}(firms|partners|owners|directors|leaders)\b|\bfirms (like yours|i work with)\b/i
+
 const SUBJECT_BAD = /\b(free|quick|opportunity|partnership|proposal|offer|exclusive|urgent|invitation|re:|fwd:)\b/i
 
 const EMOJI = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u
@@ -90,6 +94,14 @@ export function critique(inp: CriticInput): QaResult {
     const m = body.match(b.re)
     if (m) hard(`"${m[0]}" — ${b.why}`, 14)
   }
+
+  // body must use normal sentence capitalisation (a lowercase style is only for the subject)
+  const sents = sentences(body)
+  const lower = sents.filter(s => /^[a-z]/.test(s)).length
+  if (sents.length > 0 && lower / sents.length >= 0.34) hard('body sentences are not capitalised normally')
+
+  const claim = body.match(UNVERIFIABLE)
+  if (claim) hard(`"${claim[0]}" — invented claim about other firms or your experience; only state the given fact`, 16)
 
   // ── subject ──
   const sw = wordCount(subject)

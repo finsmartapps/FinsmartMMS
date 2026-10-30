@@ -64,7 +64,7 @@ const STRUCTURES = [
 ]
 const CTAS = [
   'end with a soft question about their view or experience',
-  'end by saying you can share a short example if it would be useful, only if they want it',
+  'end by offering to share a thought or two on it, only if they would find that useful',
   'end by asking if it is even on their radar right now',
   'end with a no-pressure line that leaves the door open, no question mark',
 ]
