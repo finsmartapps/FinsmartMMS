@@ -19,6 +19,7 @@ export interface Variant {
 export interface Brief {
   step: number
   stepGoal: string
+  roleContext: string
   fact: Fact | null
   variant: Variant
   needsResearch: boolean
@@ -62,11 +63,12 @@ const STRUCTURES = [
   'a single compact paragraph',
   'one short paragraph then a one-line question on its own',
 ]
+// Every ending is ONE specific question answerable in a line. Vague "open to a thought?" asks get ignored.
 const CTAS = [
-  'end with a soft question about their view or experience',
-  'end by offering to share a thought or two on it, only if they would find that useful',
-  'end by asking if it is even on their radar right now',
-  'end with a no-pressure line that leaves the door open, no question mark',
+  'end with one specific either-or question about how they handle this today (in-house, offshore, or a mix)',
+  'end with one specific yes/no question about whether this particular pressure is real for them right now',
+  'end by asking who on their side owns offshore or outsourced support, if anyone does',
+  'end with one short, concrete question about their current setup for this exact task',
 ]
 const SUBJECT_STYLES = [
   'two to four lowercase words about their firm or the trigger',
@@ -77,8 +79,19 @@ const SUBJECT_STYLES = [
 const GREETINGS = ['Hi {first},', 'Hi {first},', 'Hello {first},', '{first},']
 const LENGTHS = [55, 75, 95]
 
+// General, role-based context (true of the role, NOT a claim about this firm).
+export function roleContext(title: string | null | undefined): string {
+  const t = (title ?? '').toLowerCase()
+  if (/controller|accounting manager|financial reporting|bookkeep/.test(t)) return 'Controllers usually own the month-end close, reconciliations, audit prep and staffing the accounting team.'
+  if (/cfo|chief financial|finance director|vp finance|treasurer/.test(t)) return 'Finance leaders are usually judged on close speed, cost per transaction and team capacity without adding headcount.'
+  if (/coo|operations|ops/.test(t)) return 'Operations leaders usually own throughput, the hiring pipeline and how fully the team is used.'
+  if (/partner|owner|principal|president|ceo|founder|managing|shareholder/.test(t)) return 'Firm leaders usually care about busy-season capacity, keeping staff, and protecting margin as the firm grows.'
+  if (/hr|talent|recruit|people/.test(t)) return 'People leaders usually deal with hiring pace, retention and cost of local hires.'
+  return 'People in this kind of role usually feel the pressure of staffing and capacity during busy periods.'
+}
+
 export function stepGoal(step: number): string {
-  if (step <= 1) return 'TOUCH 1 — start a genuine peer conversation. Be relevant and curious. Do NOT pitch or describe what the seller sells, and do NOT ask for a meeting or a call.'
+  if (step <= 1) return 'TOUCH 1 — a clear, specific cold email with exactly three parts: (1) one sentence tying to the FACT or their role, (2) one plain sentence saying who you are and what Finsmart does, (3) ONE specific question they can answer in a single line. Do NOT ask for a call, meeting or calendar time.'
   if (step === 2) return 'TOUCH 2 — add one genuinely useful observation or insight relevant to them. Refer to the first email only lightly (not "following up"). Still no hard pitch, no meeting grab.'
   return 'TOUCH 3 — a short, low-pressure close-the-loop note. Acknowledge they are busy, leave the door open, make it easy to ignore. No pressure.'
 }
@@ -106,5 +119,5 @@ export function plan(input: {
     greeting: pickOne(GREETINGS, []),
   }
 
-  return { step: input.step, stepGoal: stepGoal(input.step), fact, variant, needsResearch: !fact }
+  return { step: input.step, stepGoal: stepGoal(input.step), roleContext: roleContext(input.contact.job_title), fact, variant, needsResearch: !fact }
 }

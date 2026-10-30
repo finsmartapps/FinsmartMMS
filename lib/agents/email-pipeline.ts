@@ -54,7 +54,7 @@ export async function generateEmailDraft(inp: PipelineInput): Promise<PipelineRe
 
     const qa = critique({
       subject: w.subject, body: w.body, step: inp.step, accountName: inp.account.name,
-      factText: brief.fact?.text ?? null, corpus,
+      factText: brief.fact?.text ?? null, corpus, senderName: inp.settings.sender_name,
     })
 
     const result: PipelineResult = {

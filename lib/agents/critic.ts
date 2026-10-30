@@ -25,7 +25,7 @@ const BANNED: { re: RegExp; why: string }[] = [
 
 // Claims about experience / other firms that the data can't back up. The writer is only
 // allowed to use the one account fact it was given, so these are invented.
-const UNVERIFIABLE = /\b(tell|told) me\b|\bi('ve| have) (seen|worked with|helped|talked to|spoken|heard)\b|\bin my experience\b|\bwe('ve| have) (helped|worked|seen)\b|\b(our|my) (clients?|customers?)\b|\bother (\w+ ){0,2}(firms|practices|partners|cpas)\b|\bmost (\w+ ){0,3}(firms|partners|owners|directors|leaders)\b|\bfirms (like yours|i work with)\b/i
+const UNVERIFIABLE = /\b(tell|told) me\b|\bi('ve| have) (seen|worked with|helped|talked to|spoken|heard|spent|been (doing|working))\b|\bdecades\b|\b\d+\+? years\b|\byears of experience\b|\bin my experience\b|\bwe('ve| have) (helped|worked|seen)\b|\b(our|my) (clients?|customers?)\b|\bother (\w+ ){0,2}(firms|practices|partners|cpas)\b|\bmost (\w+ ){0,3}(firms|partners|owners|directors|leaders)\b|\bfirms (like yours|i work with)\b/i
 
 const SUBJECT_BAD = /\b(free|quick|opportunity|partnership|proposal|offer|exclusive|urgent|invitation|re:|fwd:)\b/i
 
@@ -70,6 +70,7 @@ export interface CriticInput {
   accountName: string
   factText: string | null      // the account fact the email was meant to use
   corpus: string[]             // earlier drafts/messages (core text) for duplicate detection
+  senderName?: string          // the body should not repeat it (the signature has it)
 }
 
 export function critique(inp: CriticInput): QaResult {
@@ -127,9 +128,16 @@ export function critique(inp: CriticInput): QaResult {
   }
 
   // ── pitch discipline on the first touch ──
-  if (inp.step === 1 && /\b(we (offer|provide|specialize|help)|our (services|team of|solutions?)|offshore (staff|team|talent)|outsourc\w+|staffing)\b/i.test(body)) {
-    soft('first email pitches services — keep touch 1 about them, not us', 10)
+  if (inp.step === 1 && !/\b(finsmart|offshore|outsourc\w*|accounting (talent|staff|team|support)|managed staffing)\b/i.test(body)) {
+    soft('never says who you are or what Finsmart does, so the reader will not know why you wrote', 10)
   }
+  const senderFirst = (inp.senderName ?? '').split(/\s+/)[0]
+  if (senderFirst && new RegExp(`\\b${senderFirst}\\b`, 'i').test(body)) soft('repeats your own name in the body, the signature already has it', 6)
+  const qs = (body.match(/\?/g) ?? []).length
+  if (inp.step <= 2 && qs === 0) hard('no question, end with one specific easy-to-answer question', 16)
+  if (qs > (inp.step === 1 ? 1 : 2)) hard('asks more than one question, keep touch 1 to a single specific question', 12)
+  if (/\b(thought or two|open to (hearing|swapping|exchanging|a chat|connecting)|if you would find that useful|worth a (chat|conversation))\b/i.test(body)) hard('vague ask, replace with one specific question', 14)
+  if (/\b(one|two|three|four|five|six|seven|eight|nine)\s+(hundred|thousand)\b|\bone hundred\b/i.test(body)) soft('numbers should be digits (e.g. 140)', 4)
 
   // ── personalisation ──
   const firm = inp.accountName.toLowerCase().replace(/\b(llc|llp|cpas?|inc|pc|p\.c\.|co|company|group|&|and)\b/g, ' ').replace(/[^a-z0-9\s]/g, ' ').trim()
