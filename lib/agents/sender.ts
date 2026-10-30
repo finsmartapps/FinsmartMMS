@@ -46,6 +46,7 @@ async function deliverOne(db: Db, draft: any, settings: AbmAgentSettings, startI
   const { data: contact } = await db.from('abm_contacts').select('*').eq('id', draft.contact_id).single()
   if (!contact) return fail('contact no longer exists')
   if (contact.do_not_contact) return fail('contact is marked Do Not Contact', 'rejected')
+  if (contact.email_status === 'bounced') return fail('this address bounced earlier, find a new one', 'rejected')
   const to = (contact.email ?? '').trim()
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) return fail('no valid email address on file')
 

@@ -19,6 +19,15 @@ import type {
   ConnectionStatus, ConversationStage, Channel, Direction,
 } from '@/lib/account-pursuit/types'
 
+const REPLY_LABEL: Record<string, string> = {
+  interested: 'Interested', question: 'Question', not_now: 'Not now', not_interested: 'Not interested',
+  referral: 'Referral', unsubscribe: 'Unsubscribe', out_of_office: 'Auto-reply', bounce: 'Bounced', other: 'Reply',
+}
+const REPLY_TONE: Record<string, string> = {
+  interested: 'text-emerald-600', question: 'text-sky-600', referral: 'text-violet-600', not_now: 'text-amber-600',
+  not_interested: 'text-rose-600', unsubscribe: 'text-rose-600', bounce: 'text-rose-600', out_of_office: 'text-[#6E6E73]',
+}
+
 const input = 'w-full border border-[#E5E5EA] rounded-lg px-3 py-2 text-[13px] text-[#1D1D1F] focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/10 transition bg-white'
 const label = 'text-[10px] font-semibold text-[#AEAEB2] uppercase tracking-wider mb-1 block'
 
@@ -243,6 +252,11 @@ export default function ContactThreadPage({ params }: { params: Promise<{ id: st
                   return (
                     <div key={m.id} className={`flex ${sent ? 'justify-end' : 'justify-start'}`}>
                       <div className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 ${sent ? 'bg-teal-600 text-white' : 'bg-white border border-[#E5E5EA] text-[#1D1D1F]'}`}>
+                        {m.classification && (
+                          <p className={`text-[10px] font-bold uppercase tracking-wider mb-1 ${sent ? 'text-teal-100' : REPLY_TONE[m.classification] ?? 'text-[#6E6E73]'}`}>
+                            {REPLY_LABEL[m.classification] ?? m.classification}{m.summary ? ` · ${m.summary}` : ''}
+                          </p>
+                        )}
                         <p className="text-[13px] whitespace-pre-wrap leading-relaxed">{m.body}</p>
                         <p className={`text-[10px] mt-1 ${sent ? 'text-teal-100' : 'text-[#AEAEB2]'}`}>
                           {ch?.label ?? m.channel} · {fmtDate(m.occurred_at)}

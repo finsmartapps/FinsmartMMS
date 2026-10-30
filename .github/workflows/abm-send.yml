@@ -17,10 +17,13 @@ jobs:
   send:
     runs-on: ubuntu-latest
     steps:
-      - name: Trigger sender
+      - name: Check replies, then send
         env:
           BASE: ${{ secrets.ABM_BASE_URL }}
           SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           if [ -z "$BASE" ] || [ -z "$SECRET" ]; then echo "ABM_BASE_URL / CRON_SECRET secrets are not set"; exit 1; fi
+          # 1. read replies / bounces first, so nobody who just replied gets a follow-up
+          curl -sS --fail-with-body -m 90 -H "Authorization: Bearer $SECRET" "$BASE/api/account-pursuit/cron/replies"; echo
+          # 2. then send a few approved emails
           curl -sS --fail-with-body -m 90 -H "Authorization: Bearer $SECRET" "$BASE/api/account-pursuit/cron/send"

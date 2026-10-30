@@ -85,6 +85,7 @@ export interface AbmContact {
   last_touch_at: string | null
   touch_count: number
   do_not_contact: boolean
+  email_status?: 'ok' | 'bounced' | 'unsubscribed'
   owner_id: string | null
   notes: string | null
   created_by: string | null
@@ -103,6 +104,9 @@ export interface AbmMessage {
   occurred_at: string
   logged_by: string | null
   created_at: string
+  subject?: string | null
+  classification?: string | null
+  summary?: string | null
 }
 
 export type ResearchFactType = 'trigger' | 'hiring' | 'growth' | 'award' | 'people' | 'service' | 'tech' | 'other'

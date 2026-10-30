@@ -53,6 +53,19 @@ export default function EmailDraftPanel({ contact, viewerId, isManager = false }
     setSentToday(count ?? 0)
   }, [])
 
+  const [checking, setChecking] = useState(false)
+  const [replyNote, setReplyNote] = useState('')
+  async function checkReplies() {
+    setChecking(true); setReplyNote('')
+    try {
+      const r = await fetch('/api/account-pursuit/replies/check', { method: 'POST' })
+      const j = await r.json()
+      setReplyNote(r.ok ? `${j.note}${j.items?.length ? ': ' + j.items.map((i: { contactName: string; cls: string }) => `${i.contactName} (${i.cls.replace('_', ' ')})`).join(', ') : ''}` : (j.error ?? 'Could not check.'))
+      if (r.ok) { await load(); window.dispatchEvent(new Event('abm-replies-checked')) }
+    } catch { setReplyNote('Could not reach the server.') }
+    setChecking(false)
+  }
+
   async function toggleKill() {
     if (!settings) return
     const supabase = createClient()
@@ -173,13 +186,18 @@ export default function EmailDraftPanel({ contact, viewerId, isManager = false }
           <span>{settings.kill_switch ? 'Sending is PAUSED' : 'Sending is on'}</span>
           <span>· {sentToday} sent today (limit starts at 5/day and rises weekly to {settings.daily_cap})</span>
           <span>· {settings.send_start_hour}:00-{settings.send_end_hour}:00 {settings.timezone.split('/')[1]?.replace('_', ' ')}, weekdays</span>
+          <button onClick={checkReplies} disabled={checking}
+            className="ml-auto flex items-center gap-1 text-[11px] font-semibold text-[#1D1D1F] hover:text-teal-700 disabled:opacity-60 transition">
+            {checking ? <Loader2 size={12} className="animate-spin" /> : <Search size={12} />} Check for replies
+          </button>
           {isManager && (
-            <button onClick={toggleKill} className="ml-auto flex items-center gap-1 text-[11px] font-semibold text-[#1D1D1F] hover:text-teal-700 transition">
+            <button onClick={toggleKill} className="flex items-center gap-1 text-[11px] font-semibold text-[#1D1D1F] hover:text-teal-700 transition">
               {settings.kill_switch ? <><PlayCircle size={13} /> Resume sending</> : <><PauseCircle size={13} /> Pause all sending</>}
             </button>
           )}
         </div>
       )}
+      {replyNote && <p className="text-[11px] text-[#6E6E73] bg-[#FAFAFA] border border-[#E5E5EA] rounded-lg px-3 py-1.5 mb-3">Replies: {replyNote}</p>}
       {!contact.email && <p className="text-[12px] text-amber-700 bg-amber-50 px-3 py-2 rounded-lg mb-2">Add this contact's email under Contact info to draft an email.</p>}
       <input value={instructions} onChange={e => setInstructions(e.target.value)} placeholder="Optional angle, e.g. mention they are hiring in Austin (leave blank for auto)"
         className={`${field} mb-3`} disabled={generating} />
