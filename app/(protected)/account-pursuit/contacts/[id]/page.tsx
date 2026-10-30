@@ -314,7 +314,7 @@ export default function ContactThreadPage({ params }: { params: Promise<{ id: st
             </div>
           </div>
 
-          <EmailDraftPanel contact={contact} viewerId={viewer?.id ?? null} />
+          <EmailDraftPanel contact={contact} viewerId={viewer?.id ?? null} isManager={viewer?.isManager ?? false} />
         </div>
 
         {/* RIGHT: lifecycle + next step */}

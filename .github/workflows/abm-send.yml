@@ -1,0 +1,26 @@
+name: ABM sender
+
+# Every 15 minutes on weekdays, ask the app to send a few APPROVED outreach emails.
+# The app itself enforces the daily cap (20), the send window and the kill switch,
+# so extra runs are harmless. Free: GitHub Actions minutes on a public repo are unlimited.
+#
+# Required repository secrets (Settings > Secrets and variables > Actions):
+#   ABM_BASE_URL  e.g. https://finsmart-mms-hazel.vercel.app   (no trailing slash)
+#   CRON_SECRET   the same value as CRON_SECRET in Vercel
+
+on:
+  schedule:
+    - cron: '*/15 12-22 * * 1-5'   # UTC; the app checks the real send window in its own timezone
+  workflow_dispatch:
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger sender
+        env:
+          BASE: ${{ secrets.ABM_BASE_URL }}
+          SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$BASE" ] || [ -z "$SECRET" ]; then echo "ABM_BASE_URL / CRON_SECRET secrets are not set"; exit 1; fi
+          curl -sS --fail-with-body -m 90 -H "Authorization: Bearer $SECRET" "$BASE/api/account-pursuit/cron/send"

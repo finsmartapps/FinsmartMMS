@@ -1,10 +1,11 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { Sparkles, Loader2, Check, X, Copy, Save, RotateCcw, ShieldCheck, AlertTriangle, Search, ExternalLink, ChevronDown } from 'lucide-react'
+import { Sparkles, Loader2, Check, X, Copy, Save, RotateCcw, ShieldCheck, AlertTriangle, Search, ExternalLink, ChevronDown, Send, PauseCircle, PlayCircle } from 'lucide-react'
+import { localClock } from '@/lib/agents/clock'
 import { createClient } from '@/lib/supabase/client'
 import { fmtDate } from '@/lib/account-pursuit/helpers'
-import type { AbmContact, AbmDraft, AbmResearch, DraftStatus } from '@/lib/account-pursuit/types'
+import type { AbmContact, AbmDraft, AbmResearch, AbmAgentSettings, DraftStatus } from '@/lib/account-pursuit/types'
 
 const STATUS_STYLE: Record<DraftStatus, string> = {
   pending_approval: 'bg-amber-50 text-amber-700',
@@ -14,7 +15,7 @@ const STATUS_STYLE: Record<DraftStatus, string> = {
   failed: 'bg-rose-50 text-rose-700',
 }
 const STATUS_LABEL: Record<DraftStatus, string> = {
-  pending_approval: 'Needs approval', approved: 'Approved', rejected: 'Rejected', sent: 'Sent', failed: 'Failed',
+  pending_approval: 'Needs approval', approved: 'Approved, queued to send', rejected: 'Rejected', sent: 'Sent', failed: 'Failed',
 }
 
 const field = 'w-full border border-[#E5E5EA] rounded-lg px-3 py-2 text-[13px] text-[#1D1D1F] focus:outline-none focus:border-teal-500 focus:ring-1 focus:ring-teal-500/10 transition bg-white'
@@ -26,7 +27,7 @@ function scoreCls(n: number | null) {
   return 'bg-rose-50 text-rose-700'
 }
 
-export default function EmailDraftPanel({ contact, viewerId }: { contact: AbmContact; viewerId: string | null }) {
+export default function EmailDraftPanel({ contact, viewerId, isManager = false }: { contact: AbmContact; viewerId: string | null; isManager?: boolean }) {
   const [drafts, setDrafts] = useState<AbmDraft[]>([])
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
@@ -38,6 +39,40 @@ export default function EmailDraftPanel({ contact, viewerId }: { contact: AbmCon
   const [research, setResearch] = useState<AbmResearch | null>(null)
   const [stage, setStage] = useState<'researching' | 'writing' | null>(null)
   const [showResearch, setShowResearch] = useState(false)
+  const [settings, setSettings] = useState<AbmAgentSettings | null>(null)
+  const [sentToday, setSentToday] = useState(0)
+  const [notice, setNotice] = useState<Record<string, { ok: boolean; text: string }>>({})
+
+  const loadSending = useCallback(async () => {
+    const supabase = createClient()
+    const { data: s } = await supabase.from('abm_agent_settings').select('*').eq('id', 1).single()
+    if (!s) return
+    setSettings(s as AbmAgentSettings)
+    const start = localClock((s as AbmAgentSettings).timezone).startOfDayISO
+    const { count } = await supabase.from('abm_drafts').select('id', { count: 'exact', head: true }).eq('status', 'sent').gte('sent_at', start)
+    setSentToday(count ?? 0)
+  }, [])
+
+  async function toggleKill() {
+    if (!settings) return
+    const supabase = createClient()
+    await supabase.from('abm_agent_settings').update({ kill_switch: !settings.kill_switch }).eq('id', 1)
+    await loadSending()
+  }
+
+  async function sendDraft(d: AbmDraft, mode: 'now' | 'test') {
+    setBusy(d.id)
+    setNotice(n => { const x = { ...n }; delete x[d.id]; return x })
+    try {
+      const r = await fetch(`/api/account-pursuit/drafts/${d.id}/send`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ mode }) })
+      const j = await r.json()
+      setNotice(n => ({ ...n, [d.id]: { ok: r.ok, text: r.ok ? (j.message ?? 'Done.') : (j.error ?? 'Failed.') } }))
+      if (r.ok && mode === 'now') { await load(); await loadSending() }
+    } catch {
+      setNotice(n => ({ ...n, [d.id]: { ok: false, text: 'Could not reach the server.' } }))
+    }
+    setBusy(null)
+  }
 
   const loadResearch = useCallback(async () => {
     const supabase = createClient()
@@ -52,7 +87,7 @@ export default function EmailDraftPanel({ contact, viewerId }: { contact: AbmCon
     setLoading(false)
   }, [contact.id])
 
-  useEffect(() => { load(); loadResearch() }, [load, loadResearch])
+  useEffect(() => { load(); loadResearch(); loadSending() }, [load, loadResearch, loadSending])
 
   // Re-run (or run) the Researcher on its own.
   async function runResearch(force: boolean) {
@@ -132,6 +167,19 @@ export default function EmailDraftPanel({ contact, viewerId }: { contact: AbmCon
         A strategist picks one real fact about the firm, a copywriter writes a unique plain-text email, a critic rejects anything that reads like a template. Nothing is sent without your approval.
       </p>
 
+      {settings && (
+        <div className="flex items-center gap-2 flex-wrap text-[11px] text-[#6E6E73] bg-[#FAFAFA] border border-[#E5E5EA] rounded-lg px-3 py-1.5 mb-3">
+          <span className={`inline-block w-1.5 h-1.5 rounded-full ${settings.kill_switch ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+          <span>{settings.kill_switch ? 'Sending is PAUSED' : 'Sending is on'}</span>
+          <span>· {sentToday}/{settings.daily_cap} sent today</span>
+          <span>· {settings.send_start_hour}:00-{settings.send_end_hour}:00 {settings.timezone.split('/')[1]?.replace('_', ' ')}, weekdays</span>
+          {isManager && (
+            <button onClick={toggleKill} className="ml-auto flex items-center gap-1 text-[11px] font-semibold text-[#1D1D1F] hover:text-teal-700 transition">
+              {settings.kill_switch ? <><PlayCircle size={13} /> Resume sending</> : <><PauseCircle size={13} /> Pause all sending</>}
+            </button>
+          )}
+        </div>
+      )}
       {!contact.email && <p className="text-[12px] text-amber-700 bg-amber-50 px-3 py-2 rounded-lg mb-2">Add this contact's email under Contact info to draft an email.</p>}
       <input value={instructions} onChange={e => setInstructions(e.target.value)} placeholder="Optional angle, e.g. mention they are hiring in Austin (leave blank for auto)"
         className={`${field} mb-3`} disabled={generating} />
@@ -229,6 +277,18 @@ export default function EmailDraftPanel({ contact, viewerId }: { contact: AbmCon
                         <X size={13} /> Reject
                       </button>
                     )}
+                    {d.status === 'approved' && (
+                      <button onClick={() => sendDraft(d, 'now')} disabled={busy === d.id}
+                        className="flex items-center gap-1.5 text-[12px] font-semibold px-3 py-1.5 rounded-lg bg-teal-600 text-white hover:bg-teal-700 disabled:opacity-60 transition">
+                        {busy === d.id ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />} Send now
+                      </button>
+                    )}
+                    {(d.status === 'approved' || d.status === 'pending_approval') && (
+                      <button onClick={() => sendDraft(d, 'test')} disabled={busy === d.id}
+                        className="flex items-center gap-1.5 text-[12px] px-3 py-1.5 rounded-lg border border-[#E5E5EA] text-[#6E6E73] hover:text-teal-700 hover:border-teal-300 disabled:opacity-60 transition">
+                        <Send size={13} /> Send test to me
+                      </button>
+                    )}
                     {(d.status === 'approved' || d.status === 'rejected' || d.status === 'failed') && (
                       <button onClick={() => reopen(d)} disabled={busy === d.id}
                         className="flex items-center gap-1.5 text-[12px] px-3 py-1.5 rounded-lg border border-[#E5E5EA] text-[#6E6E73] hover:bg-[#F5F5F7] transition">
@@ -246,6 +306,7 @@ export default function EmailDraftPanel({ contact, viewerId }: { contact: AbmCon
                     </button>
                   </div>
                 )}
+                {notice[d.id] && <p className={`text-[11px] mt-2 ${notice[d.id].ok ? 'text-emerald-700' : 'text-rose-600'}`}>{notice[d.id].text}</p>}
                 {d.send_error && <p className="text-[11px] text-rose-600 mt-2">Send error: {d.send_error}</p>}
               </div>
             )
