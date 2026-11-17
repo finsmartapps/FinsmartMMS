@@ -141,7 +141,7 @@ end $$;
 -- Seed brands.
 insert into public.aiv_brands (name, domain, aliases, exclude, is_us) values
   ('Finsmart Accounting', 'finsmartaccounting.com', array['finsmart accounting','finsmartaccounting','finsmart'], array['finsmart financial solutions','finsmart financial'], true),
-  ('MyCPE ONE', 'mycpe.com', array['mycpe','my-cpe','my cpe','mycpe one'], '{}', false),
+  ('MyCPE ONE / Entigrity', 'my-cpe.com', array['mycpe','my-cpe','my cpe','mycpe one','entigrity'], '{}', false),
   ('QX Accounting Services', 'qxaccounting.com', array['qx accounting','qxaccounting','qxas','qx global'], '{}', false)
 on conflict (domain) do nothing;
 
