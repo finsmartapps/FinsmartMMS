@@ -10,7 +10,7 @@ import {
   Phone, BarChart2, BookUser, ClipboardList,
   Inbox, Settings, ChevronDown, ChevronRight,
   Package, CalendarDays, Truck, FileBarChart2, Users,
-  Megaphone, Trophy, LayoutList, Share2, Target, Clock,
+  Megaphone, Trophy, LayoutList, Share2, Target, Clock, Radar,
 } from 'lucide-react'
 
 interface NavLink {
@@ -76,6 +76,7 @@ const marketingGroups: NavGroup[] = [
       { href: '/marketing/leads',        label: 'Leads',        icon: Inbox           },
       { href: '/marketing/weekly',       label: 'Weekly Review',icon: ClipboardList   },
       { href: '/marketing/kpi-scorecard',label: 'KPI Scorecard',icon: BarChart2       },
+      { href: '/marketing/ai-visibility',label: 'AI Visibility',icon: Radar           },
     ],
   },
 ]

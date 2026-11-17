@@ -112,12 +112,18 @@ function extractJson<T>(text: string): T {
   return JSON.parse(text.slice(start, end + 1)) as T
 }
 
+// Names of the provider families that have a key set (e.g. ['gemini','groq']).
+export function configuredEngines(): string[] {
+  return [...new Set(buildProviders().map(p => p.name))]
+}
+
 export async function llmJson<T>(opts: {
   system: string
   user: string
   temperature?: number
+  only?: string // restrict to one provider family (still falls back across that family's models)
 }): Promise<{ data: T; provider: string; model: string }> {
-  const providers = buildProviders()
+  const providers = buildProviders().filter(p => !opts.only || p.name === opts.only)
   if (providers.length === 0) {
     throw new LlmError('No free AI provider configured. Add GEMINI_API_KEY, GROQ_API_KEY or OPENROUTER_API_KEY to the environment.')
   }
