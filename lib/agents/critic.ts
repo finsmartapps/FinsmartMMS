@@ -61,6 +61,7 @@ export function stripFrame(text: string, senderName: string): string {
   let t = text.trim()
   const sig = t.lastIndexOf(`\n\n${senderName}`)
   if (sig > 0) t = t.slice(0, sig)
+  t = t.replace(/\n*If easier, you can pick a time here: \S+\s*$/i, '')
   t = t.replace(/^(hi|hello|hey)?\s*[\w'’-]+,\s*\n+/i, '')
   return t.trim()
 }

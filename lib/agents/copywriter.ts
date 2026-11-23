@@ -102,5 +102,7 @@ export function stripSignoff(core: string, senderName: string): string {
 export function assemble(core: string, firstName: string, brief: Brief, s: AbmAgentSettings): string {
   const greeting = brief.variant.greeting.replace('{first}', firstName)
   const signature = [s.sender_name, s.sender_title, s.sender_company].join('\n')
-  return `${greeting}\n\n${stripSignoff(core, s.sender_name)}\n\n${signature}`
+  // Meeting link is added in code (never by the LLM), as its own line above the signature.
+  const link = process.env.ABM_MEETING_LINK || 'https://finsmartaccounting.com/schedule-a-call/'
+  return `${greeting}\n\n${stripSignoff(core, s.sender_name)}\n\nIf easier, you can pick a time here: ${link}\n\n${signature}`
 }
