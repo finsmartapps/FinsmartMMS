@@ -170,7 +170,7 @@ function buildLeads(text: string, hasHeader: boolean): { rows: ParsedLead[]; ski
     // For Closed Won rows with a closed date, use email|date as the dedup key so
     // the same client with multiple packages (different dates) are kept as separate rows.
     const rowKey = emailKey
-      ? (leadStage === CLOSED_WON && closedDate ? `${emailKey}|${closedDate}` : emailKey)
+      ? (closedDate ? `${emailKey}|${closedDate}|${row.seat_type ?? ''}` : emailKey)
       : null
     if (rowKey && idxByKey.has(rowKey)) {
       const existingIdx = idxByKey.get(rowKey)!
@@ -232,7 +232,7 @@ export default function ImportLeads({ existingEmails = [] }: { existingEmails?: 
 
     // Fetch the current id↔email map fresh so we update the right rows and
     // never collide with the unique-email index.
-    const { data: dbLeads, error: fetchErr } = await supabase.from('leads').select('id, email, closed_date, lead_stage')
+    const { data: dbLeads, error: fetchErr } = await supabase.from('leads').select('id, email, closed_date, lead_stage, seat_type')
     if (fetchErr) { setImporting(false); setError(fetchErr.message); return }
     const idByEmail = new Map<string, string>()        // email → id
     const idByEmailDate = new Map<string, string>()    // email|closed_date → id (Closed Won)
@@ -240,8 +240,8 @@ export default function ImportLeads({ existingEmails = [] }: { existingEmails?: 
       const k = (l.email || '').trim().toLowerCase()
       if (!k) continue
       idByEmail.set(k, l.id as string)
-      if (l.lead_stage === CLOSED_WON && l.closed_date)
-        idByEmailDate.set(`${k}|${l.closed_date}`, l.id as string)
+      if (l.closed_date)
+        idByEmailDate.set(`${k}|${l.closed_date}|${l.seat_type ?? ''}`, l.id as string)
     }
 
     // For Closed Won rows with a closed_date, match by email+date so that one
@@ -249,8 +249,10 @@ export default function ImportLeads({ existingEmails = [] }: { existingEmails?: 
     const matchKey = (r: ParsedLead) => {
       const k = emailKey(r)
       if (!k) return null
-      if ((r.lead_stage as string) === CLOSED_WON && r.closed_date)
-        return idByEmailDate.has(`${k}|${r.closed_date}`) ? `${k}|${r.closed_date}` : k
+      if (r.closed_date) {
+        const dk = `${k}|${r.closed_date}|${r.seat_type ?? ''}`
+        return idByEmailDate.has(dk) ? dk : `${k}|new-package|${dk}`
+      }
       return k
     }
     const idMap = new Map([...idByEmail, ...idByEmailDate])
