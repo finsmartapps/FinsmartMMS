@@ -198,17 +198,17 @@ export default async function LeadsPage() {
         {
           id: 'meetings-maanoj',
           label: 'Successful Meetings — Maanoj Shah',
-          content: <MeetingsByOwner leads={successfulMeetingLeads} owner="Maanoj Shah" match={/maanoj/i} color="#6366f1" />,
+          content: <MeetingsByOwner leads={successfulMeetingLeads} owner="Maanoj Shah" match="maanoj" color="#6366f1" />,
         },
         {
           id: 'meetings-nathan',
           label: 'Successful Meetings — Nathan',
-          content: <MeetingsByOwner leads={successfulMeetingLeads} owner="Nathan" match={/nathan/i} color="#10b981" />,
+          content: <MeetingsByOwner leads={successfulMeetingLeads} owner="Nathan" match="nathan" color="#10b981" />,
         },
         {
           id: 'meetings-piyush',
           label: 'Successful Meetings — Piyush',
-          content: <MeetingsByOwner leads={successfulMeetingLeads} owner="Piyush" match={/piyush/i} color="#f59e0b" />,
+          content: <MeetingsByOwner leads={successfulMeetingLeads} owner="Piyush" match="piyush" color="#f59e0b" />,
         },
         {
           id: 'seats',

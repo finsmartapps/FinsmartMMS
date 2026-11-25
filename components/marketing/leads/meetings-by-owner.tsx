@@ -66,13 +66,13 @@ function MeetingsModal({ owner, month, leads, onClose }: { owner: string; month:
 export default function MeetingsByOwner({ leads, owner, match, color }: {
   leads: Lead[]
   owner: string
-  match: RegExp
+  match: string
   color: string
 }) {
   const [offset, setOffset] = useState(0)
   const [activeMonth, setActiveMonth] = useState<MonthMeta | null>(null)
 
-  const mine = useMemo(() => leads.filter(l => l.successful_meetings && match.test(l.assigned_to ?? '')), [leads, match])
+  const mine = useMemo(() => leads.filter(l => l.successful_meetings && (l.assigned_to ?? '').toLowerCase().includes(match.toLowerCase())), [leads, match])
 
   const { data, months } = useMemo(() => {
     const today = new Date()
