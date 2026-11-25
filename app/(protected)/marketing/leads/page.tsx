@@ -11,6 +11,7 @@ import PageSortableLayout from '@/components/marketing/leads/page-sortable-layou
 import SeatsSection from '@/components/marketing/leads/seats-section'
 import LeadsFunnelSection from '@/components/marketing/leads/leads-funnel-section'
 import ClosedWonBySource from '@/components/marketing/leads/closed-won-by-source'
+import MeetingsByOwner from '@/components/marketing/leads/meetings-by-owner'
 import LossReasonBreakdown from '@/components/marketing/leads/loss-reason-breakdown'
 import {
   classifyLeadSource, CATEGORY_STYLES,
@@ -193,6 +194,21 @@ export default async function LeadsPage() {
           id: 'closed-won',
           label: 'Closed Won by Source',
           content: <ClosedWonBySource won={won} />,
+        },
+        {
+          id: 'meetings-maanoj',
+          label: 'Successful Meetings — Maanoj Shah',
+          content: <MeetingsByOwner leads={successfulMeetingLeads} owner="Maanoj Shah" match={/maanoj/i} color="#6366f1" />,
+        },
+        {
+          id: 'meetings-nathan',
+          label: 'Successful Meetings — Nathan',
+          content: <MeetingsByOwner leads={successfulMeetingLeads} owner="Nathan" match={/nathan/i} color="#10b981" />,
+        },
+        {
+          id: 'meetings-piyush',
+          label: 'Successful Meetings — Piyush',
+          content: <MeetingsByOwner leads={successfulMeetingLeads} owner="Piyush" match={/piyush/i} color="#f59e0b" />,
         },
         {
           id: 'seats',

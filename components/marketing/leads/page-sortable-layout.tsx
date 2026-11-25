@@ -66,8 +66,15 @@ export default function PageSortableLayout({ sections, storageKey }: Props) {
       if (saved) {
         const parsed = JSON.parse(saved) as string[]
         const valid   = parsed.filter(id => defaultOrder.includes(id))
-        const missing = defaultOrder.filter(id => !valid.includes(id))
-        setOrder([...valid, ...missing])
+        // New sections (added after the user saved their layout) go right after the section
+        // that precedes them in the default order, not at the very bottom.
+        const next = [...valid]
+        defaultOrder.forEach((id, i) => {
+          if (next.includes(id)) return
+          const prev = i > 0 ? next.indexOf(defaultOrder[i - 1]) : -1
+          next.splice(prev + 1, 0, id)
+        })
+        setOrder(next)
       }
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
