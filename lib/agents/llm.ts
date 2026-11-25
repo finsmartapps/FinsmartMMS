@@ -1,7 +1,7 @@
-// Free-tier LLM wrapper with provider fallback. No paid Claude/OpenAI calls.
+﻿// Free-tier LLM wrapper with provider fallback. No paid Claude/OpenAI calls.
 // Providers are tried in order (LLM_ORDER, default gemini,groq,openrouter); a provider
 // is only used if its API key is set. Model names are env-overridable because free-tier
-// model names change — if one starts returning 404, just update the env var.
+// model names change â€” if one starts returning 404, just update the env var.
 
 type Provider = {
   name: string
@@ -56,7 +56,7 @@ function buildProviders(): Provider[] {
     gemini: geminiProviders(),
 
     groq: process.env.GROQ_API_KEY ? [(() => {
-      const model = process.env.GROQ_MODEL || 'llama-3.3-70b-versatile'
+      const model = process.env.GROQ_MODEL || 'openai/gpt-oss-120b'
       const key = process.env.GROQ_API_KEY!
       return {
         name: 'groq', model,
@@ -76,7 +76,7 @@ function buildProviders(): Provider[] {
     })()] : [],
 
     openrouter: process.env.OPENROUTER_API_KEY ? [(() => {
-      const model = process.env.OPENROUTER_MODEL || 'meta-llama/llama-3.3-70b-instruct:free'
+      const model = process.env.OPENROUTER_MODEL || 'nvidia/nemotron-3-ultra-550b-a55b:free'
       const key = process.env.OPENROUTER_API_KEY!
       return {
         name: 'openrouter', model,
@@ -136,5 +136,5 @@ export async function llmJson<T>(opts: {
       failures.push(`${p.name}: ${(e as Error).message}`)
     }
   }
-  throw new LlmError(`All AI providers failed — ${failures.join(' | ')}`)
+  throw new LlmError(`All AI providers failed â€” ${failures.join(' | ')}`)
 }
