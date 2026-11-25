@@ -18,7 +18,7 @@ function authorized(req: NextRequest): boolean {
 async function run(req: NextRequest) {
   if (!authorized(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const db = await createAdminClient()
-  const result = await sendApprovedDrafts(db, { limit: 2 })
+  const result = await sendApprovedDrafts(db, { limit: 5 })
   return NextResponse.json(result)
 }
 

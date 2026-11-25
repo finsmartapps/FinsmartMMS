@@ -127,7 +127,7 @@ export async function sendApprovedDrafts(db: Db, opts: { limit?: number; draftId
 
   let q = db.from('abm_drafts').select('*').eq('status', 'approved').eq('channel', 'email').order('approved_at', { ascending: true })
   if (opts.draftId) q = q.eq('id', opts.draftId)
-  const { data: drafts } = await q.limit(Math.min(remaining, opts.limit ?? 2))
+  const { data: drafts } = await q.limit(Math.min(remaining, opts.limit ?? 5))
 
   const outcomes: SendOutcome[] = []
   for (const d of drafts ?? []) outcomes.push(await deliverOne(db, d, settings as AbmAgentSettings, clock.startOfDayISO))
