@@ -34,15 +34,16 @@ export default function SourceFunnelChart({ leads }: { leads: LeadLite[] }) {
   const [drill, setDrill] = useState<DrillDown | null>(null)
 
   const rows = useMemo(() => {
-    const map: Record<string, { total: number; mql: number; sql: number; nbec: number; nbnc: number; other: number; meetings: number }> = {}
+    const map: Record<string, { total: number; mql: number; sql: number; nbec: number; nbnc: number; other: number; meetings: number; arr: number }> = {}
     for (const l of leads) {
       const src = l.lead_source?.trim() || 'Unspecified'
-      if (!map[src]) map[src] = { total: 0, mql: 0, sql: 0, nbec: 0, nbnc: 0, other: 0, meetings: 0 }
+      if (!map[src]) map[src] = { total: 0, mql: 0, sql: 0, nbec: 0, nbnc: 0, other: 0, meetings: 0, arr: 0 }
       map[src].total++
       if (l.lead_status === 'MQL') map[src].mql++
       if (l.lead_status === 'SQL') map[src].sql++
       if (l.successful_meetings) map[src].meetings++
       if (isClosed(l)) {
+        map[src].arr += annualContractValue(Number(l.mrr_value) || 0, Number(l.one_time_revenue) || 0)
         const ct = (l.customer_type ?? '').trim().toUpperCase()
         if (ct === 'NBEC') map[src].nbec++
         else if (ct === 'NBNC') map[src].nbnc++
@@ -55,8 +56,8 @@ export default function SourceFunnelChart({ leads }: { leads: LeadLite[] }) {
   }, [leads])
 
   const totals = rows.reduce(
-    (acc, r) => ({ total: acc.total + r.total, mql: acc.mql + r.mql, sql: acc.sql + r.sql, customers: acc.customers + r.customers, nbec: acc.nbec + r.nbec, nbnc: acc.nbnc + r.nbnc, meetings: acc.meetings + r.meetings }),
-    { total: 0, mql: 0, sql: 0, customers: 0, nbec: 0, nbnc: 0, meetings: 0 },
+    (acc, r) => ({ total: acc.total + r.total, mql: acc.mql + r.mql, sql: acc.sql + r.sql, customers: acc.customers + r.customers, nbec: acc.nbec + r.nbec, nbnc: acc.nbnc + r.nbnc, meetings: acc.meetings + r.meetings, arr: acc.arr + r.arr }),
+    { total: 0, mql: 0, sql: 0, customers: 0, nbec: 0, nbnc: 0, meetings: 0, arr: 0 },
   )
 
   // Modal leads
@@ -91,7 +92,7 @@ export default function SourceFunnelChart({ leads }: { leads: LeadLite[] }) {
         title="Funnel by Lead Source"
         accent="indigo"
         noPad
-        caption="Total → MQL / SQL → Closed (SQL + revenue) · NBEC = existing customer · NBNC = new customer · click cells for details"
+        caption="Total → MQL / SQL → Closed (SQL + revenue) · ARR = MRR × 12 + one-time of closed deals · NBEC = existing customer · NBNC = new customer · click cells for details"
       >
         <div className="overflow-x-auto">
           <table className="w-full text-xs">
@@ -105,7 +106,8 @@ export default function SourceFunnelChart({ leads }: { leads: LeadLite[] }) {
                 <th className="px-4 py-2.5 text-right font-bold text-fuchsia-500 uppercase tracking-wider">NBNC</th>
                 <th className="px-4 py-2.5 text-right font-bold text-sky-500 uppercase tracking-wider">Meetings</th>
                 <th className="px-4 py-2.5 text-right font-bold text-fuchsia-600 uppercase tracking-wider">Closed</th>
-                <th className="px-4 py-2.5 text-right font-bold text-fuchsia-600 uppercase tracking-wider pr-5">Conv %</th>
+                <th className="px-4 py-2.5 text-right font-bold text-fuchsia-600 uppercase tracking-wider">Conv %</th>
+                <th className="px-4 py-2.5 text-right font-bold text-emerald-600 uppercase tracking-wider pr-5">Total ARR</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
@@ -164,13 +166,16 @@ export default function SourceFunnelChart({ leads }: { leads: LeadLite[] }) {
                         ? <span onClick={() => setDrill({ source: r.source, filter: 'ALL' })} className={`font-bold text-fuchsia-700 ${clickable}`}>{r.customers}</span>
                         : <span className="text-slate-400">0</span>}
                     </td>
-                    <td className="px-4 py-3 pr-5 text-right tabular-nums">
+                    <td className="px-4 py-3 text-right tabular-nums">
                       <div className="flex items-center justify-end gap-2">
                         <div className="w-14 h-1.5 rounded-full bg-slate-100 overflow-hidden">
                           <div className="h-full rounded-full bg-gradient-to-r from-fuchsia-500 to-purple-500" style={{ width: `${Math.min(custPct, 100)}%` }} />
                         </div>
                         <span className="font-bold text-fuchsia-700 w-10 text-right">{custPct.toFixed(1)}%</span>
                       </div>
+                    </td>
+                    <td className="px-4 py-3 pr-5 text-right tabular-nums">
+                      {r.arr > 0 ? <span className="font-bold text-emerald-700">{formatUSD(r.arr)}</span> : <span className="text-slate-300">—</span>}
                     </td>
                   </tr>
                 )
@@ -186,9 +191,10 @@ export default function SourceFunnelChart({ leads }: { leads: LeadLite[] }) {
                 <td className="px-4 py-2.5 text-right font-bold text-fuchsia-700 tabular-nums">{totals.nbnc}</td>
                 <td className="px-4 py-2.5 text-right font-bold text-sky-700 tabular-nums">{totals.meetings}</td>
                 <td className="px-4 py-2.5 text-right font-bold text-fuchsia-700 tabular-nums">{totals.customers}</td>
-                <td className="px-4 py-2.5 pr-5 text-right font-bold text-fuchsia-700 tabular-nums">
+                <td className="px-4 py-2.5 text-right font-bold text-fuchsia-700 tabular-nums">
                   {totals.total > 0 ? ((totals.customers / totals.total) * 100).toFixed(1) : '0.0'}%
                 </td>
+                <td className="px-4 py-2.5 pr-5 text-right font-extrabold text-emerald-700 tabular-nums">{formatUSD(totals.arr)}</td>
               </tr>
             </tfoot>
           </table>
